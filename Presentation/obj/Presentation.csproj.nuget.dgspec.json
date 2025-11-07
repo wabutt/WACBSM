@@ -1,0 +1,123 @@
+{
+  "format": 1,
+  "restore": {
+    "C:\\Users\\Operaciones1\\Downloads\\WACBSM\\Presentation\\Presentation.csproj": {}
+  },
+  "projects": {
+    "C:\\Users\\Operaciones1\\Downloads\\WACBSM\\DataAccess\\DataAccess.csproj": {
+      "restore": {
+        "projectUniqueName": "C:\\Users\\Operaciones1\\Downloads\\WACBSM\\DataAccess\\DataAccess.csproj",
+        "projectName": "DataAccess",
+        "projectPath": "C:\\Users\\Operaciones1\\Downloads\\WACBSM\\DataAccess\\DataAccess.csproj",
+        "frameworks": {
+          "net461": {
+            "projectReferences": {}
+          }
+        }
+      },
+      "frameworks": {
+        "net461": {}
+      }
+    },
+    "C:\\Users\\Operaciones1\\Downloads\\WACBSM\\Domain\\Domain.csproj": {
+      "restore": {
+        "projectUniqueName": "C:\\Users\\Operaciones1\\Downloads\\WACBSM\\Domain\\Domain.csproj",
+        "projectName": "Domain",
+        "projectPath": "C:\\Users\\Operaciones1\\Downloads\\WACBSM\\Domain\\Domain.csproj",
+        "frameworks": {
+          "net461": {
+            "projectReferences": {
+              "C:\\Users\\Operaciones1\\Downloads\\WACBSM\\DataAccess\\DataAccess.csproj": {
+                "projectPath": "C:\\Users\\Operaciones1\\Downloads\\WACBSM\\DataAccess\\DataAccess.csproj"
+              }
+            }
+          }
+        }
+      },
+      "frameworks": {
+        "net461": {}
+      }
+    },
+    "C:\\Users\\Operaciones1\\Downloads\\WACBSM\\Presentation\\Presentation.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\Operaciones1\\Downloads\\WACBSM\\Presentation\\Presentation.csproj",
+        "projectName": "Presentation",
+        "projectPath": "C:\\Users\\Operaciones1\\Downloads\\WACBSM\\Presentation\\Presentation.csproj",
+        "packagesPath": "C:\\Users\\Operaciones1\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\Operaciones1\\Downloads\\WACBSM\\Presentation\\obj\\",
+        "projectStyle": "PackageReference",
+        "skipContentFileWrite": true,
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\Operaciones1\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net461"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "https://api.nuget.org/v3/index.json": {}
+        },
+        "frameworks": {
+          "net461": {
+            "projectReferences": {
+              "C:\\Users\\Operaciones1\\Downloads\\WACBSM\\Domain\\Domain.csproj": {
+                "projectPath": "C:\\Users\\Operaciones1\\Downloads\\WACBSM\\Domain\\Domain.csproj"
+              }
+            }
+          }
+        }
+      },
+      "frameworks": {
+        "net461": {
+          "dependencies": {
+            "Autoupdater.NET.Official": {
+              "target": "Package",
+              "version": "[1.7.3, )"
+            },
+            "CsvHelper": {
+              "target": "Package",
+              "version": "[17.0.1, )"
+            },
+            "DotNetSeleniumExtras.WaitHelpers": {
+              "target": "Package",
+              "version": "[3.11.0, )"
+            },
+            "ILMerge": {
+              "target": "Package",
+              "version": "[3.0.41, )"
+            },
+            "Selenium.WebDriver": {
+              "target": "Package",
+              "version": "[4.38.0, )"
+            },
+            "SharpZipLib": {
+              "target": "Package",
+              "version": "[1.4.2, )"
+            },
+            "SpeedTest.NetCore": {
+              "target": "Package",
+              "version": "[2.1.0, )"
+            }
+          }
+        }
+      },
+      "runtimes": {
+        "win": {
+          "#import": []
+        },
+        "win-x64": {
+          "#import": []
+        },
+        "win-x86": {
+          "#import": []
+        }
+      }
+    }
+  }
+}

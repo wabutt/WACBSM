@@ -17,11 +17,17 @@ namespace DataAccess
 {
     public class UserDAO:ConnectionMySQL
     {
+#pragma warning disable CS0414 // El campo 'UserDAO.hwidres' está asignado pero su valor nunca se usa
         static string hwidres;
+#pragma warning restore CS0414 // El campo 'UserDAO.hwidres' está asignado pero su valor nunca se usa
         static int iduser;
+#pragma warning disable CS0169 // El campo 'UserDAO.expdate' nunca se usa
         static DateTime expdate;
+#pragma warning restore CS0169 // El campo 'UserDAO.expdate' nunca se usa
         public DateTime publicexpdate;
+#pragma warning disable CS0169 // El campo 'UserDAO.startdate' nunca se usa
         static DateTime startdate;
+#pragma warning restore CS0169 // El campo 'UserDAO.startdate' nunca se usa
         public bool hwidmatch = true;
         public bool checkedexpdate = true;
         static DateTime timenow = getTimeNow();

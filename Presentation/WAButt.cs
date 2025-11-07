@@ -20,27 +20,21 @@ using Domain;
 using System.Net;
 using AutoUpdaterDotNET;
 using System.Configuration;
-using System.Collections.Specialized;
 using ICSharpCode.SharpZipLib.Zip;
-using System.Drawing.Text;
 using System.Text.RegularExpressions;
-using System.Net.NetworkInformation;
-using OpenQA.Selenium.Remote;
 using Newtonsoft.Json;
-using WIN32 = Microsoft.Win32;
 
 namespace Presentation
 {
     public partial class WAButtfrm : Form
     {
-
-
+     
         public WA wa = new WA();
 
         public static string filenameextracted = string.Empty;
         public string filetype;
         public static StringBuilder strex;
-        private string FileName = string.Empty;
+
         private CancellationTokenSource cancellationToken;
         private CancellationTokenSource pauseToken;
         private CancellationTokenSource eachmessagetoken;
@@ -51,102 +45,68 @@ namespace Presentation
         private CancellationTokenSource eachmessagetoken2;
         private CancellationTokenSource severalpausetoken2;
 
-        int pausetiming = 0;
-        int pausetiming2 = 0;
+        private int pausetiming = 0;
+        private int pausetiming2 = 0;
+        private bool stopbtnclicked;
+        private bool stopbtnclicked2;
 
-        bool stopbtnclicked;
-        bool stopbtnclicked2;
-
-
-
-        int sendedmessage;
-        int sendedmessage2;
-
-        int notsendedmessage;
-        int notsendedmessage2;
-
-        int rowcount;
-        int rowcount2;
-
-        int eachmessagetiming = 0;
-        int eachmessagetiming2 = 0;
-
-
+        private int sendedmessage;
+        private int sendedmessage2;
+        private int notsendedmessage;
+        private int notsendedmessage2;
+        private int rowcount;
+        private int rowcount2;
+        private int eachmessagetiming = 0;
+        private int eachmessagetiming2 = 0;
 
         public string chromedriverversion;
-
         public string chromedriverdwlink;
 
         public static string chromewadefaultuserdata = "https://raw.githubusercontent.com/wabutt/itsmevsauce/master/Chrome%20WA%20Profile.zip";
-
         public static string chromesmsdefaultuserdata = "https://raw.githubusercontent.com/wabutt/itsmevsauce/master/Chrome%20SMS%20Profile.zip";
 
+      
 
         public WAButtfrm()
         {
             AutoUpdater.InstalledVersion = Version.Parse("1.0.0.14");
             UserModel user = new UserModel();
 
-
-
-
-
             if (!CheckForInternetConnection())
             {
-
-                DialogResult d;
-                d = MessageBox.Show("No cuenta con acceso a internet, le recomendamos intentar mas tarde.", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                if (d == DialogResult.OK)
-                {
-                    this.Load += (sender, e) => { this.Close(); };
-                    return;
-                }
-
-
+                MessageBox.Show("No cuenta con acceso a internet, le recomendamos intentar mas tarde.",
+                    "Observación", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                this.Load += (sender, e) => { this.Close(); };
+                return;
             }
 
             if (!user.CheckHWID(user.GetMachineGuid()))
             {
+                MessageBox.Show("Contact to Creator :) trevorcalfan2@gmail.com",
+                    "<3", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+                Clipboard.SetText(user.GetMachineGuid());
+                this.Load += (sender, e) => { this.Close(); };
+                return;
+            }
 
-                DialogResult d;
-                d = MessageBox.Show("Contact to Creator :) trevorcalfan2@gmail.com", "<3", MessageBoxButtons.OK, MessageBoxIcon.Hand);
-                if (d == DialogResult.OK)
+            // Initialize ChromeDriver asynchronously
+            Task.Run(async () =>
+            {
+                if (!await ChromeDriverStateAsync())
                 {
-                    Clipboard.SetText(user.GetMachineGuid());
-
-                    this.Load += (sender, e) => { this.Close(); };
+                    this.Invoke((MethodInvoker)delegate {
+                        this.Load += (sender, e) => { this.Close(); };
+                    });
                     return;
                 }
-
-
-            }
-
-            //AddUpdateAppSettings("cv", "true");
-
-
-            if (!ChromeDriverState())
-            {
-                this.Load += (sender, e) => { this.Close(); }; return;
-            }
-
+            });
 
             CheckUserProfileExist();
-
             InitializeComponent();
             CheckForIllegalCrossThreadCalls = false;
 
-
-
-
             updatestart();
-
             ExecuteStart();
-
-
-
-
-
-
         }
 
 
@@ -191,83 +151,111 @@ namespace Presentation
 
 
         }
-        public bool ChromeDriverState()
+        private async Task DwchromedriverAsync()
         {
-
-
-
-            if (Environment.Is64BitOperatingSystem)
+            try
             {
-                try
-                {/*
-                    await Task.Run(() =>
-                    {
-                        
-                        
-                    });*/
+                KillWebDriver();
 
-                    FetchChromeDriverVersion();
+                string driverDir = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                    "tempfilesWAButt", "webdriver"
+                );
+                Directory.CreateDirectory(driverDir);
 
+                string exePath = Path.Combine(driverDir, "chromedriver.exe");
+                string versionFile = Path.Combine(driverDir, "chromedriverversion.txt");
+                string zipPath = Path.Combine(driverDir, "chromedriver.zip");
 
-
-                    chromedriverdwlink = "https://chromedriver.storage.googleapis.com/" + chromedriverversion + "/chromedriver_win32.zip";
-                    Dwchromedriver();
-
-
-
-                }
-                catch (Exception ex) { MessageBox.Show(ex.Message, "Observación", MessageBoxButtons.OK, MessageBoxIcon.Warning); }
-
-            }
-
-            else
-            {
-                DialogResult msg = MessageBox.Show("El SO actual es Arquitectura 32 bits, actualizar a 64 bits para continuar", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Hand);
-                if (msg == DialogResult.OK)
+                // Check if already up to date
+                if (File.Exists(versionFile) && File.Exists(exePath))
                 {
-                    return false;
+                    string currentVersion = File.ReadAllText(versionFile);
+                    if (currentVersion == chromedriverversion)
+                    {
+                        Console.WriteLine("✓ ChromeDriver already up to date");
+                        return;
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Updating from {currentVersion} to {chromedriverversion}");
+                    }
                 }
 
+                // Delete old files
+                if (File.Exists(exePath)) File.Delete(exePath);
+                if (File.Exists(zipPath)) File.Delete(zipPath);
+
+                // NEW: Chrome for Testing download URL
+                chromedriverdwlink = $"https://storage.googleapis.com/chrome-for-testing-public/{chromedriverversion}/win64/chromedriver-win64.zip";
+
+                Console.WriteLine($"Downloading ChromeDriver from: {chromedriverdwlink}");
+
+                using (WebClient client = new WebClient())
+                {
+                    await client.DownloadFileTaskAsync(chromedriverdwlink, zipPath);
+                    Console.WriteLine("✓ Download complete");
+                }
+
+                // Extract
+                FastZip fastZip = new FastZip();
+                fastZip.ExtractZip(zipPath, driverDir, "");
+
+                // NEW: Chrome for Testing extracts to chromedriver-win64 subfolder
+                string extractedFolder = Path.Combine(driverDir, "chromedriver-win64");
+                if (Directory.Exists(extractedFolder))
+                {
+                    string extractedExe = Path.Combine(extractedFolder, "chromedriver.exe");
+                    if (File.Exists(extractedExe))
+                    {
+                        File.Copy(extractedExe, exePath, true);
+                        Directory.Delete(extractedFolder, true);
+                        Console.WriteLine("✓ Extracted from chromedriver-win64 folder");
+                    }
+                }
+
+                // Clean up
+                File.Delete(zipPath);
+                File.WriteAllText(versionFile, chromedriverversion);
+
+                Console.WriteLine("✓ ChromeDriver installed successfully");
             }
-
-
-            return true;
-
-
-
-
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Error: {ex.Message}");
+                throw;
+            }
         }
         private void KillWebDriver()
         {
-            Process[] _proceses = null;
-            _proceses = Process.GetProcessesByName("chromedriver");
-
-            if (_proceses.Length != 0)
+            try
             {
-                foreach (Process proces in _proceses)
+                Process[] processes = Process.GetProcessesByName("chromedriver");
+                foreach (Process process in processes)
                 {
-                    proces.Kill();
+                    process.Kill();
+                    process.WaitForExit(2000);
                 }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error killing webdriver: {ex.Message}");
             }
         }
         private void updatestart()
         {
-
             try
             {
-
                 AutoUpdater.Mandatory = true;
                 AutoUpdater.UpdateMode = Mode.Forced;
                 AutoUpdater.ShowSkipButton = false;
                 AutoUpdater.ShowRemindLaterButton = false;
                 AutoUpdater.DownloadPath = Environment.CurrentDirectory;
                 AutoUpdater.Start("https://raw.githubusercontent.com/wabutt/itsmevsauce/master/AutoUpdater.xml");
-
             }
             catch (Exception ex)
             {
-
-                Console.WriteLine(ex.Message);
+                Console.WriteLine($"Update error: {ex.Message}");
             }
         }
         private string ReadSetting(string key)
@@ -297,204 +285,236 @@ namespace Presentation
         }
 
 
-        private void Dwchromedriver()
+        private void SendDocument(string filePath, string message, Actions action, string contactNumber)
         {
+            wa.ContactFile(filePath);
+            wa.ContactSend(By.XPath(WA.SendIADButton));
+            Task.Delay(1000 + wa.preventblocktiming).Wait();
+
+            if (!CheckAttachMessageStatus())
+            {
+                // Send message separately
+                wa.ClickSearchIcon();
+                wa.ContactSearch(contactNumber);
+                action.SendKeys(Keys.Space).Build().Perform();
+                wa.ContactClick();
+                Task.Delay(1000).Wait();
+
+                wa.ContactMessage(message);
+                wa.ContactActionEnter();
+            }
+        }
+        private async Task SendMessageOrFile(string message, string filePath, string contactNumber)
+        {
+            if (string.IsNullOrEmpty(filePath))
+            {
+                // Send text only
+                await SendTextMessage(message);
+            }
+            else
+            {
+                // Send with attachment
+                await SendWithAttachment(message, filePath, contactNumber);
+            }
+        }
+        private async Task SendTextMessage(string message)
+        {
+            await Task.Run(() =>
+            {
+                if (pausetiming != 0)
+                {
+                    pausetimingaction(pausetiming, pauseToken.Token);
+                    pausetiming = 0;
+                }
+
+                try
+                {
+                    Actions action = new Actions(WA.driver);
+
+                    action.SendKeys("a").Build().Perform();
+                    Task.Delay(500).Wait();
+
+                    wa.ContactMessage(message);
+                    Task.Delay(1000 + wa.preventblocktiming).Wait();
+
+                    wa.ContactActionEnter();
+                    Console.WriteLine("✓ Text message sent");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error sending text: {ex.Message}");
+                }
+            }, cancellationToken.Token);
+        }
+        public async Task<bool> ChromeDriverStateAsync()
+        {
+            if (!Environment.Is64BitOperatingSystem)
+            {
+                MessageBox.Show("El SO actual es Arquitectura 32 bits, actualizar a 64 bits para continuar",
+                    "Observación", MessageBoxButtons.OK, MessageBoxIcon.Hand);
+                return false;
+            }
 
             try
             {
-
-                KillWebDriver();
-
-
-                string path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver";
-                DirectoryInfo di = Directory.CreateDirectory(path);
-
-
-
-                bool file1 = File.Exists(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\chromedriver.exe");
-                bool file2 = File.Exists(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\chromedriver.zip");
-                bool file3 = File.Exists(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\chromedriverversion.txt");
-
-                bool cdriverfile = File.Exists(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\chromedriverversion.txt");
-
-
-
-                if (!cdriverfile)
-                {
-
-                    if (!File.Exists(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\chromedriver.exe"))
-                    {
-                        using (WebClient Client = new WebClient())
-                        {
-                            File.WriteAllText(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\chromedriverversion.txt", chromedriverversion);
-                            Client.DownloadFile(chromedriverdwlink, Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\chromedriver.zip");
-
-                            var zipFileName = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\chromedriver.zip";
-
-                            var targetDir = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\";
-
-
-                            FastZip fastZip = new FastZip();
-                            string fileFilter = null;
-
-                            // Will always overwrite if target filenames already exist
-                            fastZip.ExtractZip(zipFileName, targetDir, fileFilter);
-
-
-                            File.Delete(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\chromedriver.zip");
-
-
-
-
-
-                        }
-
-                    }
-                    else
-                    {
-
-
-                        if (file1)
-                        {
-
-                            File.Delete(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\chromedriver.exe");
-                            Console.WriteLine("FILES 1 DELETED");
-                        }
-                        if (file2)
-                        {
-
-                            File.Delete(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\chromedriver.zip");
-                            Console.WriteLine("FILES 2 DELETED");
-
-                        }
-                        if (file3)
-                        {
-
-                            File.Delete(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\chromedriverversion.txt");
-                            Console.WriteLine("FILES 3 DELETED");
-
-                        }
-
-                        using (WebClient Client = new WebClient())
-                        {
-                            File.WriteAllText(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\chromedriverversion.txt", chromedriverversion);
-                            Client.DownloadFile(chromedriverdwlink, Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\chromedriver.zip");
-
-                            var zipFileName = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\chromedriver.zip";
-
-                            var targetDir = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\";
-
-
-                            FastZip fastZip = new FastZip();
-                            string fileFilter = null;
-
-                            // Will always overwrite if target filenames already exist
-                            fastZip.ExtractZip(zipFileName, targetDir, fileFilter);
-
-
-                            File.Delete(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\chromedriver.zip");
-
-
-
-
-
-                        }
-                    }
-
-
-                }
-                else
-                {
-
-                    string tempcdriverV = File.ReadAllText(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\chromedriverversion.txt");
-
-                    if (tempcdriverV != chromedriverversion)
-                    {
-
-                        if (file1)
-                        {
-
-                            File.Delete(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\chromedriver.exe");
-                            Console.WriteLine("FILES 1 DELETED");
-                        }
-                        if (file2)
-                        {
-
-                            File.Delete(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\chromedriver.zip");
-                            Console.WriteLine("FILES 2 DELETED");
-
-                        }
-                        if (file3)
-                        {
-
-                            File.Delete(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\chromedriverversion.txt");
-                            Console.WriteLine("FILES 3 DELETED");
-
-                        }
-
-
-                        if (!File.Exists(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\chromedriver.exe"))
-                        {
-                            using (WebClient Client = new WebClient())
-                            {
-                                File.WriteAllText(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\chromedriverversion.txt", chromedriverversion);
-
-                                Client.DownloadFile(chromedriverdwlink, Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\chromedriver.zip");
-
-
-
-                                var zipFileName = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\chromedriver.zip";
-
-                                var targetDir = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\";
-
-
-                                FastZip fastZip = new FastZip();
-                                string fileFilter = null;
-
-                                // Will always overwrite if target filenames already exist
-                                fastZip.ExtractZip(zipFileName, targetDir, fileFilter);
-
-
-                                File.Delete(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\webdriver\\chromedriver.zip");
-
-
-
-
-
-                            }
-
-                        }
-
-
-
-
-
-                    }
-
-
-
-
-
-                }
-
-
-
-
-                // AddUpdateAppSettings("cv", "false");
-
-
-
-
+                await FetchChromeDriverVersionAsync();
+                await DwchromedriverAsync();
+                return true;
             }
             catch (Exception ex)
             {
-
-                Console.WriteLine(ex.Message);
+                MessageBox.Show(ex.Message, "Observación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
             }
+        }
+        private async Task<string> FetchChromeDriverVersionAsync()
+        {
+            try
+            {
+                // NEW: Chrome for Testing JSON API (replaces deprecated googleapis)
+                using (var client = new WebClient())
+                {
+                    string json = await client.DownloadStringTaskAsync(
+                        "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions.json"
+                    );
 
+                    dynamic versionData = JsonConvert.DeserializeObject(json);
+                    chromedriverversion = versionData.channels.Stable.version.ToString();
 
+                    Console.WriteLine($"✓ Latest ChromeDriver: {chromedriverversion}");
+                    return chromedriverversion;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Error fetching version: {ex.Message}");
+                // Fallback to recent stable version
+                chromedriverversion = "131.0.6778.87";
+                return chromedriverversion;
+            }
+        }
+        private void SendImageOrVideo(string filePath, string message, Actions action, string contactNumber)
+        {
+            if (!CheckAttachMessageStatus())
+            {
+                wa.ImageMessage(filePath);
+                Task.Delay(1000 + wa.preventblocktiming).Wait();
+                wa.ContactSend(By.XPath(WA.SendIADButton));
+            }
+            else
+            {
+                if (GetImageState(filePath) || GetVideoState(filePath))
+                {
+                    wa.ImageTextMessage(filePath, message);
+                    action.SendKeys(".").Build().Perform();
+                    action.SendKeys(Keys.Backspace).Build().Perform();
+                    Task.Delay(1000 + wa.preventblocktiming).Wait();
+                    wa.ContactSend(By.XPath(WA.SendIADButton));
+                }
+                else
+                {
+                    // Send file, then message separately
+                    wa.ImageMessage(filePath);
+                    Task.Delay(1000 + wa.preventblocktiming).Wait();
+                    wa.ContactSend(By.XPath(WA.SendIADButton));
+                    Task.Delay(2000).Wait();
+
+                    // Re-search and send message
+                    wa.ClickSearchIcon();
+                    wa.ContactSearch(contactNumber);
+                    action.SendKeys(Keys.Space).Build().Perform();
+                    wa.ContactClick();
+                    Task.Delay(1000).Wait();
+
+                    wa.ContactMessage(message);
+                    wa.ContactActionEnter();
+                }
+            }
+        }
+        private async Task SearchAndClickContact(string contactNumber)
+        {
+            await Task.Run(() =>
+            {
+                if (pausetiming != 0)
+                {
+                    pausetimingaction(pausetiming, pauseToken.Token);
+                    pausetiming = 0;
+                }
+
+                try
+                {
+                    WA.driver.Manage().Window.Size = new Size(850, 650);
+
+                    Actions action = new Actions(WA.driver);
+
+                    wa.ClickSearchIcon();
+                    wa.ContactSearch(contactNumber);
+                    action.SendKeys(Keys.Space).Build().Perform();
+                    wa.ContactClick();
+
+                    Task.Delay(2000).Wait();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error searching contact: {ex.Message}");
+                }
+            }, cancellationToken.Token);
+        }
+        private async Task SendWithAttachment(string message, string filePath, string contactNumber)
+        {
+            await Task.Run(() =>
+            {
+                if (pausetiming != 0)
+                {
+                    pausetimingaction(pausetiming, pauseToken.Token);
+                    pausetiming = 0;
+                }
+
+                try
+                {
+                    Actions action = new Actions(WA.driver);
+
+                    if (filetype == "I") // Image/Video
+                    {
+                        SendImageOrVideo(filePath, message, action, contactNumber);
+                    }
+                    else if (filetype == "A") // Audio
+                    {
+                        SendAudio(filePath, message, action, contactNumber);
+                    }
+                    else if (filetype == "D") // Document
+                    {
+                        SendDocument(filePath, message, action, contactNumber);
+                    }
+
+                    Console.WriteLine($"✓ Attachment sent: {filetype}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error sending attachment: {ex.Message}");
+                }
+            }, cancellationToken.Token);
         }
 
+        private void SendAudio(string filePath, string message, Actions action, string contactNumber)
+        {
+            wa.ContactFileAudio(filePath);
+            wa.ContactSend(By.XPath(WA.SendIADButton));
+            Task.Delay(1000 + wa.preventblocktiming).Wait();
+
+            if (!CheckAttachMessageStatus())
+            {
+                // Send message separately
+                wa.ClickSearchIcon();
+                wa.ContactSearch(contactNumber);
+                action.SendKeys(Keys.Space).Build().Perform();
+                wa.ContactClick();
+                Task.Delay(1000).Wait();
+
+                wa.ContactMessage(message);
+                wa.ContactActionEnter();
+            }
+        }                               
         private void AddUpdateAppSettings(string key, string value)
         {
 
@@ -524,77 +544,53 @@ namespace Presentation
 
         private void OpenSaved()
         {
-
             Restoremessages();
 
-            if (File.Exists(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\Contacts.json"))
+            string contactsPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "tempfilesWAButt", "Contacts.json"
+            );
+
+            if (File.Exists(contactsPath) && new FileInfo(contactsPath).Length > 23)
             {
-                if (new FileInfo(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\Contacts.json").Length > 23)
+                if (MessageBox.Show("¿Desea cargar los últimos contactos de WhatsApp?",
+                    "Observación", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
                 {
-                    DialogResult d;
-
-                    d = MessageBox.Show("Desea cargar los últimos contactos de WhatsApp", "Observación", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-
-                    if (d == DialogResult.Yes)
+                    try
                     {
-                        try
-                        {
-                             ReadJsonContacts("Contacts.json");
-
-
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show(ex.Message, "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                        }
-
+                        ReadJsonContacts("Contacts.json");
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(ex.Message, "Error");
                     }
                 }
             }
-
-
-
-
-
-
         }
         private void OpenSaved2()
         {
-
             Restoremessages2();
 
-            if (File.Exists(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\datac2.csv"))
+            string contactsPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "tempfilesWAButt", "Contacts2.json"
+            );
+
+            if (File.Exists(contactsPath) && new FileInfo(contactsPath).Length > 23)
             {
-                if (new FileInfo(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\datac2.csv").Length > 23)
+                if (MessageBox.Show("¿Desea cargar los últimos contactos de Google SMS?",
+                    "Observación", MessageBoxButtons.YesNo) == DialogResult.Yes)
                 {
-                    DialogResult d;
-
-                    d = MessageBox.Show("Desea cargar los últimos contactos de Google SMS", "Observación", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-
-                    if (d == DialogResult.Yes)
+                    try
                     {
-                        try
-                        {
-                             ReadJson2Contacts("Contacts2.json");
-
-
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show(ex.Message, "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                        }
-
+                        ReadJson2Contacts("Contacts2.json");
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(ex.Message, "Error");
                     }
                 }
             }
-
-
-
-
-
-
         }
 
         public void controls(bool state)
@@ -614,21 +610,14 @@ namespace Presentation
         {
 
 
-            DialogResult result = MessageBox.Show("¿Estás seguro de salir?", "Observación", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
-
-            if (result == DialogResult.Yes)
+            if (MessageBox.Show("¿Estás seguro de salir?", "Confirmación", 
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {
                 Storecontaacts();
                 Storemessages();
-
                 StoreSettings();
-
-
                 wa.CloseWDriver();
                 wa.CloseWDriver2();
-
-
-
             }
             else
             {
@@ -638,41 +627,31 @@ namespace Presentation
 
 
         }
+        private void ResetUIAfterStop()
+        {
+            pausebtn.Enabled = false;
+            stopbtn.Enabled = false;
+            startbtn.Enabled = true;
+            uploadbtn.Enabled = true;
+            clearfilenamebtn.Enabled = true;
+            logoutbtn.Enabled = true;
+            connectwabtn.Enabled = true;
+        }
         private void WriteJSONToFile(string data, string filename)
         {
-
-            string path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt";
-
-            DirectoryInfo di = Directory.CreateDirectory(path);
-
-            File.WriteAllText(path + "\\" + filename, data);
-
+            string path = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "tempfilesWAButt"
+            );
+            Directory.CreateDirectory(path);
+            File.WriteAllText(Path.Combine(path, filename), data);
         }
 
 
 
         private void StoreSettings()
         {
-
-            /*
-            AddUpdateAppSettings("waeachmsgpausecant", eachmessagetimingtxt.Text);
-            AddUpdateAppSettings("wafullname", Convert.ToString(sendfullnamecb.Checked));
-            AddUpdateAppSettings("waevitblock", Convert.ToString(preventblockcb.Checked));
-            AddUpdateAppSettings("wasenddt", Convert.ToString(senddatetimecb.Checked));
-            AddUpdateAppSettings("wasendmanymsg", Convert.ToString(manymessagescb.Checked));
-            AddUpdateAppSettings("waseveralpausecant", severalpausetxt.Text);
-
-            AddUpdateAppSettings("smseachmsgpausecant", eachmessagetiming2txt.Text);
-            AddUpdateAppSettings("smsfullname", Convert.ToString(sendfullname2cb.Checked));
-            AddUpdateAppSettings("smsevitblock", Convert.ToString(preventblock2cb.Checked));
-            AddUpdateAppSettings("smssenddt", Convert.ToString(senddatetime2cb.Checked));
-            AddUpdateAppSettings("smssendmanymsg", Convert.ToString(manymessages2cb.Checked));
-            AddUpdateAppSettings("smsseveralpausecant", severalpause2txt.Text);
-
-            */
             DataTable dt = new DataTable();
-
-
 
             dt.Columns.Add("waeachmsgpausecant", typeof(string));
             dt.Columns.Add("wafullname", typeof(string));
@@ -681,131 +660,104 @@ namespace Presentation
             dt.Columns.Add("wasendmanymsg", typeof(string));
             dt.Columns.Add("waseveralpausecant", typeof(string));
             dt.Columns.Add("wafileatt", typeof(string));
-
-
             dt.Columns.Add("smseachmsgpausecant", typeof(string));
             dt.Columns.Add("smsfullname", typeof(string));
             dt.Columns.Add("smsevitblock", typeof(string));
             dt.Columns.Add("smssenddt", typeof(string));
             dt.Columns.Add("smssendmanymsg", typeof(string));
             dt.Columns.Add("smsseveralpausecant", typeof(string));
-
             dt.Columns.Add("filetype", typeof(string));
             dt.Columns.Add("sendonlyattach", typeof(string));
 
             DataRow row = dt.NewRow();
-
-            row["waeachmsgpausecant"] = eachmessagetimingtxt.Text;
-            row["wafullname"] = Convert.ToString(sendfullnamecb.Checked);
-            row["waevitblock"] = Convert.ToString(preventblockcb.Checked);
-            row["wasenddt"] = Convert.ToString(senddatetimecb.Checked);
-            row["wasendmanymsg"] = Convert.ToString(manymessagescb.Checked);
-            row["waseveralpausecant"] = severalpausetxt.Text;
-            row["wafileatt"] = filenametxt.Text;
-
-            row["smseachmsgpausecant"] = eachmessagetiming2txt.Text;
-            row["smsfullname"] = Convert.ToString(sendfullname2cb.Checked);
-            row["smsevitblock"] = Convert.ToString(preventblock2cb.Checked);
-            row["smssenddt"] = Convert.ToString(senddatetime2cb.Checked);
-            row["smssendmanymsg"] = Convert.ToString(manymessages2cb.Checked);
-            row["smsseveralpausecant"] = severalpause2txt.Text;
-            //row["smsseveralpausecant"] = .Text;
-
-            row["filetype"] = filetype;
-            row["sendonlyattach"] = Convert.ToString(sendonlyattachcb.Checked);
-
-
+            row[0] = eachmessagetimingtxt.Text;
+            row[1] = sendfullnamecb.Checked.ToString();
+            row[2] = preventblockcb.Checked.ToString();
+            row[3] = senddatetimecb.Checked.ToString();
+            row[4] = manymessagescb.Checked.ToString();
+            row[5] = severalpausetxt.Text;
+            row[6] = filenametxt.Text;
+            row[7] = eachmessagetiming2txt.Text;
+            row[8] = sendfullname2cb.Checked.ToString();
+            row[9] = preventblock2cb.Checked.ToString();
+            row[10] = senddatetime2cb.Checked.ToString();
+            row[11] = manymessages2cb.Checked.ToString();
+            row[12] = severalpause2txt.Text;
+            row[13] = filetype;
+            row[14] = sendonlyattachcb.Checked.ToString();
 
             dt.Rows.Add(row);
 
-
-            string JSONDataTable;
-            JSONDataTable = JsonConvert.SerializeObject(dt);
-
-
-            WriteJSONToFile(JSONDataTable, "UserSettings.json");
-
-
+            string json = JsonConvert.SerializeObject(dt);
+            WriteJSONToFile(json, "UserSettings.json");
+        }
+        private void SetDefaultSettings()
+        {
+            eachmessagetimingtxt.Text = "30";
+            severalpausetxt.Text = "300";
+            eachmessagetiming2txt.Text = "30";
+            severalpause2txt.Text = "300";
         }
         private void OpenSettings()
         {
-
-
-            string path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\" + "UserSettings.json";
-            Console.WriteLine(path);
-
-            string jsonReadResult;
+            string path = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "tempfilesWAButt", "UserSettings.json"
+            );
 
             if (File.Exists(path))
             {
-                jsonReadResult = File.ReadAllText(path);
+                try
+                {
+                    string json = File.ReadAllText(path);
+                    DataTable dt = JsonConvert.DeserializeObject<DataTable>(json);
 
+                    eachmessagetimingtxt.Text = Convert.ToString(dt.Rows[0][0]);
+                    sendfullnamecb.Checked = Convert.ToBoolean(dt.Rows[0][1]);
+                    preventblockcb.Checked = Convert.ToBoolean(dt.Rows[0][2]);
+                    senddatetimecb.Checked = Convert.ToBoolean(dt.Rows[0][3]);
+                    manymessagescb.Checked = Convert.ToBoolean(dt.Rows[0][4]);
+                    severalpausetxt.Text = Convert.ToString(dt.Rows[0][5]);
+                    filenametxt.Text = Convert.ToString(dt.Rows[0][6]);
 
-                DataTable dt = (DataTable)JsonConvert.DeserializeObject(jsonReadResult, typeof(DataTable));
+                    eachmessagetiming2txt.Text = Convert.ToString(dt.Rows[0][7]);
+                    sendfullname2cb.Checked = Convert.ToBoolean(dt.Rows[0][8]);
+                    preventblock2cb.Checked = Convert.ToBoolean(dt.Rows[0][9]);
+                    senddatetime2cb.Checked = Convert.ToBoolean(dt.Rows[0][10]);
+                    manymessages2cb.Checked = Convert.ToBoolean(dt.Rows[0][11]);
+                    severalpause2txt.Text = Convert.ToString(dt.Rows[0][12]);
 
-
-
-                eachmessagetimingtxt.Text = Convert.ToString(dt.Rows[0][0]);
-                sendfullnamecb.Checked = Convert.ToBoolean(dt.Rows[0][1]);
-                preventblockcb.Checked = Convert.ToBoolean(dt.Rows[0][2]);
-                senddatetimecb.Checked = Convert.ToBoolean(dt.Rows[0][3]);
-                manymessagescb.Checked = Convert.ToBoolean(dt.Rows[0][4]);
-                severalpausetxt.Text = Convert.ToString(dt.Rows[0][5]);
-                filenametxt.Text = Convert.ToString(dt.Rows[0][6]);
-
-                eachmessagetiming2txt.Text = Convert.ToString(dt.Rows[0][7]);
-                sendfullname2cb.Checked = Convert.ToBoolean(dt.Rows[0][8]);
-                preventblock2cb.Checked = Convert.ToBoolean(dt.Rows[0][9]);
-                senddatetime2cb.Checked = Convert.ToBoolean(dt.Rows[0][10]);
-                manymessages2cb.Checked = Convert.ToBoolean(dt.Rows[0][11]);
-                severalpause2txt.Text = Convert.ToString(dt.Rows[0][12]);
-
-                filetype = Convert.ToString(dt.Rows[0][13]);
-                sendonlyattachcb.Checked = Convert.ToBoolean(dt.Rows[0][14]);
-
-
+                    filetype = Convert.ToString(dt.Rows[0][13]);
+                    sendonlyattachcb.Checked = Convert.ToBoolean(dt.Rows[0][14]);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error loading settings: {ex.Message}");
+                    SetDefaultSettings();
+                }
             }
             else
             {
-                eachmessagetimingtxt.Text = "30";
-                sendfullnamecb.Checked = false;
-                preventblockcb.Checked = false;
-                senddatetimecb.Checked = false;
-                manymessagescb.Checked = false;
-                severalpausetxt.Text = "300";
-                filenametxt.Text = "";
-                filetype = "";
-                eachmessagetiming2txt.Text = "30";
-                sendfullname2cb.Checked = false;
-                preventblock2cb.Checked = false;
-                senddatetime2cb.Checked = false;
-                manymessages2cb.Checked = false;
-                severalpause2txt.Text = "300";
-                sendonlyattachcb.Checked = false;
+                SetDefaultSettings();
             }
-
-
-
-
-
-
-            /*
-            eachmessagetimingtxt.Text = ReadSetting("waeachmsgpausecant");
-            sendfullnamecb.Checked = Convert.ToBoolean(ReadSetting("wafullname"));
-            preventblockcb.Checked = Convert.ToBoolean(ReadSetting("waevitblock"));
-            senddatetimecb.Checked = Convert.ToBoolean(ReadSetting("wasenddt"));
-            manymessagescb.Checked = Convert.ToBoolean(ReadSetting("wasendmanymsg"));
-            severalpausetxt.Text = ReadSetting("waseveralpausecant");
-
-            eachmessagetiming2txt.Text = ReadSetting("smseachmsgpausecant");
-            sendfullname2cb.Checked = Convert.ToBoolean(ReadSetting("smsfullname"));
-            preventblock2cb.Checked = Convert.ToBoolean(ReadSetting("smsevitblock"));
-            senddatetime2cb.Checked = Convert.ToBoolean(ReadSetting("smssenddt"));
-            manymessages2cb.Checked = Convert.ToBoolean(ReadSetting("smssendmanymsg"));
-            severalpause2txt.Text = ReadSetting("smsseveralpausecant");
-            */
         }
-
+        private async Task DelayBetweenMessages()
+        {
+            if (eachmessagetiming > 0)
+            {
+                await Task.Run(() =>
+                {
+                    try
+                    {
+                        Task.Delay(eachmessagetiming, eachmessagetoken.Token).Wait();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Delay cancelled: {ex.Message}");
+                    }
+                });
+            }
+        }
         private void uploadbtn_Click(object sender, EventArgs e)
         {
 
@@ -912,47 +864,30 @@ namespace Presentation
         private async void connectwabtn_Click(object sender, EventArgs e)
         {
 
-            if (CheckForInternetConnection())
+            if (!CheckForInternetConnection())
             {
-
-                wa.CloseWDriver();
-
-
-
-                try
-                {
-                    loadmessagelbl.Text = "Estado: Conectando . . . ";
-
-
-
-                    await wa.LaunchBrowser();
-
-
-                    if (wa.driverstate)
-                    {
-                        loadmessagelbl.Text = "Estado: Navegador Abierto, escanee código QR o empiece a enviar";
-                        controls(true);
-                        logoutbtn.Enabled = true;
-
-
-                    }
-
-
-
-
-                }
-                catch (Exception ex)
-                {
-
-                    MessageBox.Show("Error :" + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-
-                }
-            }
-            else
-            {
-                MessageBox.Show("No cuenta con acceso a internet, no puedes continuar.", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("No cuenta con acceso a internet.", "Error");
+                return;
             }
 
+            wa.CloseWDriver();
+
+            try
+            {
+                loadmessagelbl.Text = "Estado: Conectando...";
+                await wa.LaunchBrowser();
+
+                if (wa.driverstate)
+                {
+                    loadmessagelbl.Text = "Estado: Navegador Abierto, escanee código QR";
+                    controls(true);
+                    logoutbtn.Enabled = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error: {ex.Message}", "Error");
+            }
 
 
 
@@ -2080,10 +2015,182 @@ namespace Presentation
             eachmessagetoken = new CancellationTokenSource();
             severalpausetoken = new CancellationTokenSource();
 
+            await ExecuteSendTask();
 
+        }
+        private string PrepareMessage(string contactName)
+        {
+            List<string> messages = new List<string>
+            {
+                m1txt.Text.Replace("\n", "<br/>"),
+                m2txt.Text.Replace("\n", "<br/>"),
+                m3txt.Text.Replace("\n", "<br/>"),
+                m4txt.Text.Replace("\n", "<br/>"),
+                m5txt.Text.Replace("\n", "<br/>")
+            };
 
-            await Excecutesendtask();
+            string message;
 
+            if (manymessagescb.Checked)
+            {
+                List<int> nonEmptyIndices = NotEmptyMessages();
+                if (nonEmptyIndices.Count > 0)
+                {
+                    Random rnd = new Random();
+                    int randomIndex = nonEmptyIndices[rnd.Next(nonEmptyIndices.Count)];
+                    message = messages[randomIndex];
+                }
+                else
+                {
+                    message = messages[0];
+                }
+            }
+            else
+            {
+                message = messages[0];
+            }
+
+            // Replace placeholders
+            if (sendfullnamecb.Checked)
+            {
+                message = Regex.Replace(message, "{nombre}",
+                    string.IsNullOrEmpty(contactName) ? "" : contactName);
+            }
+
+            if (senddatetimecb.Checked)
+            {
+                DateTime now = DateTime.Now;
+                message = Regex.Replace(message, "{fecha}",
+                    now.ToString("dddd, dd MMMM yyyy HH:mm"));
+            }
+
+            return message;
+        }
+        private void PrepareForSending()
+        {
+            stopbtnclicked = false;
+            rowcount = contactsdgv.RowCount - 1;
+            sendpbr.Value = 0;
+            sendpbr.Maximum = rowcount;
+            totalmessageslbl.Text = rowcount.ToString();
+            sendedmessage = 0;
+            notsendedmessage = 0;
+
+            notsendedmessagelbl.Text = "0";
+            sendedmessagelbl.Text = "0";
+
+            // UI Updates
+            startbtn.Enabled = false;
+            pausebtn.Enabled = true;
+            stopbtn.Enabled = true;
+            pausetiming = 0;
+            logoutbtn.Enabled = false;
+            uploadbtn.Enabled = false;
+            clearfilenamebtn.Enabled = false;
+            connectwabtn.Enabled = false;
+            loadmessagelbl.Text = "Estado: Conectado . . .";
+            contactsdgv.AllowUserToAddRows = false;
+            contactsdgv.AllowUserToDeleteRows = false;
+
+            // Configure timings
+            wa.preventblocktiming = preventblockcb.Checked ? 4000 : 0;
+            eachmessagetiming = eachmessagetimingcb.Checked
+                ? Convert.ToInt32(eachmessagetimingtxt.Text) * 1000
+                : 0;
+        }
+        private async Task<bool> ValidatePreSendConditions()
+        {
+            if (!CheckForInternetConnection())
+            {
+                MessageBox.Show("No cuenta con acceso a internet, no puedes continuar.",
+                    "Observación", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            ClearEmptyRows(contactsdgv);
+
+            if (contactsdgv.Rows.Count < 2)
+            {
+                MessageBox.Show("No existen contactos a los que enviar!",
+                    "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return false;
+            }
+
+            if (wa.IsBrowserClosed())
+            {
+                MessageBox.Show("El navegador está cerrado, no se puede enviar mensajes!",
+                    "Observación", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                return false;
+            }
+
+            if (!wa.IfConnected(By.XPath("/html/body/div[1]/div/div/div[1]/div/div[3]/div/div[4]/header/header/div/div/h1/span")))
+            {
+                MessageBox.Show("Debe escanear el codigo QR para empezar a enviar",
+                    "Observación", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                return false;
+            }
+
+            return true;
+        }
+        private void PrepareForSending2()
+        {
+            stopbtnclicked2 = false;
+            rowcount2 = contacts2dgv.RowCount - 1;
+            send2pbr.Value = 0;
+            send2pbr.Maximum = rowcount2;
+            totalmessages2lbl.Text = rowcount2.ToString();
+            sendedmessage2 = 0;
+            notsendedmessage2 = 0;
+
+            start2btn.Enabled = false;
+            pause2btn.Enabled = true;
+            stop2btn.Enabled = true;
+            logout2btn.Enabled = false;
+            connectgoobtn.Enabled = false;
+
+            loadmessage2lbl.Text = "Estado: Conectado...";
+            contacts2dgv.AllowUserToAddRows = false;
+            contacts2dgv.AllowUserToDeleteRows = false;
+
+            wa.preventblocktiming2 = preventblock2cb.Checked ? 4000 : 0;
+            eachmessagetiming2 = eachmessagetiming2cb.Checked
+                ? Convert.ToInt32(eachmessagetiming2txt.Text) * 1000
+                : 0;
+        }
+        private void FinalizeSending2()
+        {
+            if (!stopbtnclicked2)
+            {
+                MessageBox.Show("SMS enviados correctamente!", "Éxito");
+            }
+
+            stop2btn.Enabled = false;
+            pause2btn.Enabled = false;
+            start2btn.Enabled = true;
+            logout2btn.Enabled = true;
+            connectgoobtn.Enabled = true;
+
+            notsendedmessage2lbl.Text = (rowcount2 - sendedmessage2).ToString();
+            contacts2dgv.AllowUserToAddRows = true;
+            contacts2dgv.AllowUserToDeleteRows = true;
+        }
+        private string PrepareSMSMessage(string contactName)
+        {
+            string message = sms1txt.Text;
+
+            if (sendfullname2cb.Checked)
+            {
+                message = Regex.Replace(message, "{nombre}",
+                    string.IsNullOrEmpty(contactName) ? "" : contactName);
+            }
+
+            if (senddatetime2cb.Checked)
+            {
+                message = Regex.Replace(message, "{fecha}",
+                    DateTime.Now.ToString("dd/MM/yyyy HH:mm"));
+            }
+
+            return message;
         }
         public void InputNumbers(object sender, KeyPressEventArgs e)
         {
@@ -2123,119 +2230,60 @@ namespace Presentation
                 e.Handled = true;
             }
         }
+        private async Task HandlePausePoints(int currentIndex)
+        {
+            if (string.IsNullOrEmpty(severalpausetxt.Text)) return;
+
+            int pauseEvery = Convert.ToInt32(severalpausetxt.Text);
+
+            if (currentIndex == pauseEvery && !severalpausetoken.IsCancellationRequested)
+            {
+                MessageBox.Show(
+                    $"Pausa automática después de {pauseEvery} mensajes.\nEsperando 15 minutos...",
+                    "Pausa", MessageBoxButtons.OK, MessageBoxIcon.Information
+                );
+
+                await Task.Run(() =>
+                {
+                    try
+                    {
+                        Task.Delay(TimeSpan.FromMinutes(15), severalpausetoken.Token).Wait();
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Pause cancelled: {ex.Message}");
+                    }
+                });
+            }
+        }
         private void stopbtn_Click(object sender, EventArgs e)
         {
-
-
-            if (pausetiming > 0)
+            if (MessageBox.Show("¿Desea detener los envíos?", "Confirmación",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {
-                DialogResult a;
-                a = MessageBox.Show("Los envios están pausados ¿Desea detener la cola de envios? ", "Observación", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
-                if (a == DialogResult.Yes)
-                {
+                pauseToken?.Cancel();
+                cancellationToken?.Cancel();
+                eachmessagetoken?.Cancel();
+                severalpausetoken?.Cancel();
 
-                    if (cancellationToken != null)
-                    {
+                pausetiming = 0;
+                stopbtnclicked = true;
+                pausebtn.Text = "Pausar";
 
-
-                        MessageBox.Show("Los envios se detendrán en breve ", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                        pauseToken.Cancel();
-                        cancellationToken.Cancel();
-                        pausetiming = 0;
-                        pausebtn.Enabled = false;
-                        stopbtn.Enabled = false;
-                        eachmessagetoken.Cancel();
-                        severalpausetoken.Cancel();
-                        stopbtnclicked = true;
-                        uploadbtn.Enabled = true;
-                        clearfilenamebtn.Enabled = true;
-                        logoutbtn.Enabled = true;
-                        connectwabtn.Enabled = true;
-                        pausebtn.Text = "Pausar";
-
-
-
-
-                        if (!CheckForInternetConnection())
-                        {
-                            MessageBox.Show("No cuenta con acceso a internet, recomendamos esperar hasta tener conexión para continuar.", "Sugerencia", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
-
-                    }
-                }
-
+                ResetUIAfterStop();
             }
-            else
-            {
-                DialogResult b;
-                b = MessageBox.Show("Desea detener los envíos? ", "Observación", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
-                if (b == DialogResult.Yes)
-                {
-
-                    if (cancellationToken != null)
-                    {
-                        MessageBox.Show("Los envios se detendrán en breve ", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        cancellationToken.Cancel();
-                        pausetiming = 0;
-                        pausebtn.Enabled = false;
-                        stopbtn.Enabled = false;
-                        eachmessagetoken.Cancel();
-                        severalpausetoken.Cancel();
-                        stopbtnclicked = true;
-                        logoutbtn.Enabled = true;
-                        connectwabtn.Enabled = true;
-                        uploadbtn.Enabled = true;
-                        clearfilenamebtn.Enabled = true;
-
-                        pausebtn.Text = "Pausar";
-
-
-
-                        if (!CheckForInternetConnection())
-                        {
-                            MessageBox.Show("No cuenta con acceso a internet, recomendamos esperar hasta tener conexión para continuar.", "Sugerencia", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
-
-                    }
-
-                }
-
-            }
-
-
 
         }
 
         private void pausebtn_Click(object sender, EventArgs e)
         {
-
-
             if (pausetiming > 0)
             {
-                if (pauseToken != null)
-                {
-                    pausebtn.Text = "Pausar";
-                    pauseToken.Cancel();
-                    pausebtn.Enabled = true;
-                    stopbtn.Enabled = true;
-                    startbtn.Enabled = false;
-                    logoutbtn.Enabled = false;
-                    connectwabtn.Enabled = true;
-                    uploadbtn.Enabled = true;
-                    clearfilenamebtn.Enabled = true;
-
-
-                }
-
-                if (!CheckForInternetConnection())
-                {
-                    MessageBox.Show("No cuenta con acceso a internet, recomendamos esperar hasta tener conexión para continuar.", "Sugerencia", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-
-
+                pausebtn.Text = "Pausar";
+                pauseToken?.Cancel();
+                pausebtn.Enabled = true;
+                stopbtn.Enabled = true;
             }
-
             else
             {
                 cmspause.Show(Cursor.Position.X, Cursor.Position.Y);
@@ -3747,403 +3795,126 @@ namespace Presentation
 
         private void Storecontaacts()
         {
-
             ToJson(contactsdgv, "Contacts.json");
             ToJson(contacts2dgv, "Contacts2.json");
-
-
-
         }
 
         private void Storemessages()
         {
+            string path = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "tempfilesWAButt"
+            );
+            Directory.CreateDirectory(path);
 
+            File.WriteAllText(Path.Combine(path, "m1.txt"), m1txt.Text);
+            File.WriteAllText(Path.Combine(path, "m2.txt"), m2txt.Text);
+            File.WriteAllText(Path.Combine(path, "m3.txt"), m3txt.Text);
+            File.WriteAllText(Path.Combine(path, "m4.txt"), m4txt.Text);
+            File.WriteAllText(Path.Combine(path, "m5.txt"), m5txt.Text);
 
-            string path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt";
-            DirectoryInfo di = Directory.CreateDirectory(path);
-
-
-            File.WriteAllText(path + "\\m1.txt", m1txt.Text);
-            File.WriteAllText(path + "\\m2.txt", m2txt.Text);
-            File.WriteAllText(path + "\\m3.txt", m3txt.Text);
-            File.WriteAllText(path + "\\m4.txt", m4txt.Text);
-            File.WriteAllText(path + "\\m5.txt", m5txt.Text);
-
-            File.WriteAllText(path + "\\sms1.txt", sms1txt.Text);
-            File.WriteAllText(path + "\\sms2.txt", sms2txt.Text);
-            File.WriteAllText(path + "\\sms3.txt", sms3txt.Text);
-            File.WriteAllText(path + "\\sms4.txt", sms4txt.Text);
-            File.WriteAllText(path + "\\sms5.txt", sms5txt.Text);
-
-
-
-
-
+            File.WriteAllText(Path.Combine(path, "sms1.txt"), sms1txt.Text);
+            File.WriteAllText(Path.Combine(path, "sms2.txt"), sms2txt.Text);
+            File.WriteAllText(Path.Combine(path, "sms3.txt"), sms3txt.Text);
+            File.WriteAllText(Path.Combine(path, "sms4.txt"), sms4txt.Text);
+            File.WriteAllText(Path.Combine(path, "sms5.txt"), sms5txt.Text);
         }
-        
 
-        
+
+
+
         private void Restoremessages()
         {
+            string basePath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "tempfilesWAButt"
+            );
 
-
-
-
-            if (File.Exists(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\m1.txt"))
-            {
-                m1txt.Text = File.ReadAllText(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\m1.txt");
-            }
-            if (File.Exists(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\m2.txt"))
-            {
-                m2txt.Text = File.ReadAllText(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\m2.txt");
-            }
-            if (File.Exists(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\m3.txt"))
-            {
-                m3txt.Text = File.ReadAllText(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\m3.txt");
-            }
-            if (File.Exists(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\m4.txt"))
-            {
-                m4txt.Text = File.ReadAllText(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\m4.txt");
-            }
-            if (File.Exists(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\m5.txt"))
-            {
-                m5txt.Text = File.ReadAllText(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\m5.txt");
-            }
-
-
-
-
+            if (File.Exists(Path.Combine(basePath, "m1.txt")))
+                m1txt.Text = File.ReadAllText(Path.Combine(basePath, "m1.txt"));
+            if (File.Exists(Path.Combine(basePath, "m2.txt")))
+                m2txt.Text = File.ReadAllText(Path.Combine(basePath, "m2.txt"));
+            if (File.Exists(Path.Combine(basePath, "m3.txt")))
+                m3txt.Text = File.ReadAllText(Path.Combine(basePath, "m3.txt"));
+            if (File.Exists(Path.Combine(basePath, "m4.txt")))
+                m4txt.Text = File.ReadAllText(Path.Combine(basePath, "m4.txt"));
+            if (File.Exists(Path.Combine(basePath, "m5.txt")))
+                m5txt.Text = File.ReadAllText(Path.Combine(basePath, "m5.txt"));
         }
         private void Restoremessages2()
         {
+            string basePath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "tempfilesWAButt"
+            );
 
-            if (File.Exists(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\sms1.txt"))
-            {
-                sms1txt.Text = File.ReadAllText(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\sms1.txt");
-            }
-            if (File.Exists(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\sms2.txt"))
-            {
-                sms2txt.Text = File.ReadAllText(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\sms2.txt");
-            }
-            if (File.Exists(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\sms3.txt"))
-            {
-                sms3txt.Text = File.ReadAllText(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\sms3.txt");
-            }
-            if (File.Exists(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\sms4.txt"))
-            {
-                sms4txt.Text = File.ReadAllText(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\sms4.txt");
-            }
-            if (File.Exists(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\sms5.txt"))
-            {
-                sms5txt.Text = File.ReadAllText(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\sms5.txt");
-            }
-
-
-
-
+            if (File.Exists(Path.Combine(basePath, "sms1.txt")))
+                sms1txt.Text = File.ReadAllText(Path.Combine(basePath, "sms1.txt"));
+            if (File.Exists(Path.Combine(basePath, "sms2.txt")))
+                sms2txt.Text = File.ReadAllText(Path.Combine(basePath, "sms2.txt"));
+            if (File.Exists(Path.Combine(basePath, "sms3.txt")))
+                sms3txt.Text = File.ReadAllText(Path.Combine(basePath, "sms3.txt"));
+            if (File.Exists(Path.Combine(basePath, "sms4.txt")))
+                sms4txt.Text = File.ReadAllText(Path.Combine(basePath, "sms4.txt"));
+            if (File.Exists(Path.Combine(basePath, "sms5.txt")))
+                sms5txt.Text = File.ReadAllText(Path.Combine(basePath, "sms5.txt"));
         }
 
-        private void ToJson(DataGridView dGV, string filename)
+        private void ToJson(DataGridView dgv, string filename)
         {
-
             DataTable dt = new DataTable();
-
-
-
             dt.Columns.Add("number", typeof(string));
             dt.Columns.Add("name", typeof(string));
 
-            foreach (DataGridViewRow item in dGV.Rows)
+            foreach (DataGridViewRow item in dgv.Rows)
             {
-                if ( !string.IsNullOrEmpty(Convert.ToString(item.Cells[0].Value))) 
+                if (!string.IsNullOrEmpty(Convert.ToString(item.Cells[0].Value)))
                 {
                     DataRow row = dt.NewRow();
-
                     row["number"] = Convert.ToString(item.Cells[0].Value);
                     row["name"] = Convert.ToString(item.Cells[1].Value);
-
-
                     dt.Rows.Add(row);
                 }
-                
-
             }
 
-
-           
-
-
-            string JSONDataTable;
-            JSONDataTable = JsonConvert.SerializeObject(dt);
-
-
-            WriteJSONToFile(JSONDataTable, filename);
-
-
-
-
-
-
-
-            /*
-
-
-
-
-
-
-            string path = "C:\\Users\\" + actualuser + "\\Documents\\tempfilesWAButt";
-            DirectoryInfo di = Directory.CreateDirectory(path);
-
-            string value = "";
-            DataGridViewRow dr = new DataGridViewRow();
-            StreamWriter swOut = new StreamWriter(filename);
-
-            //write header rows to csv
-            for (int i = 0; i <= dGV.Columns.Count - 2; i++)
-            {
-                if (i > 0)
-                {
-                    swOut.Write(";");
-                }
-                swOut.Write(dGV.Columns[i].HeaderText);
-            }
-
-            swOut.WriteLine();
-
-            //write DataGridView rows to csv
-            for (int j = 0; j <= dGV.Rows.Count - 2; j++)
-            {
-                if (j > 0)
-                {
-                    swOut.WriteLine();
-                }
-
-                dr = dGV.Rows[j];
-
-                for (int i = 0; i <= dGV.Columns.Count - 2; i++)
-                {
-                    if (i > 0)
-                    {
-                        swOut.Write(";");
-                    }
-
-
-                    value = Convert.ToString(dr.Cells[i].Value);
-
-                    //replace comma's with spaces
-                    value = value.Replace(';', ' ');
-                    //replace embedded newlines with spaces
-                    value = value.Replace(Environment.NewLine, " ");
-
-                    swOut.Write(value);
-                }
-            }
-            swOut.Close();
-            */
-
-
-
-
-
+            string json = JsonConvert.SerializeObject(dt);
+            WriteJSONToFile(json, filename);
         }
-
         public void ReadJsonContacts(string filename)
         {
-            string path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\" + filename;
-            Console.WriteLine(path);
-
-            string jsonReadResult;
+            string path = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "tempfilesWAButt", filename
+            );
 
             if (File.Exists(path))
             {
-                jsonReadResult = File.ReadAllText(path);
-
-
-                DataTable dt = (DataTable)JsonConvert.DeserializeObject(jsonReadResult, typeof(DataTable));
-
+                string json = File.ReadAllText(path);
+                DataTable dt = JsonConvert.DeserializeObject<DataTable>(json);
 
                 foreach (DataRow item in dt.Rows)
                 {
                     contactsdgv.Rows.Add(item[0], item[1]);
                 }
-                
-
             }
-            else
-            {
-                MessageBox.Show("Contactos no encontrados", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-
-            }
-
-
-
-
-
-
-
-            /*
-
-            if (File.Exists("C:\\Users\\" + actualuser + "\\Documents\\tempfilesWAButt\\datac.csv"))
-            {
-
-                using (var reader = new StreamReader("C:\\Users\\" + actualuser + "\\Documents\\tempfilesWAButt\\datac.csv"))
-                using (var csv = new CsvReader(reader, CultureInfo.CurrentCulture))
-                {
-
-                    using (var dr = new CsvDataReader(csv))
-                    {
-
-                        contactsdgv.Columns.Clear();
-
-                        DataTable dtbl = new DataTable();
-
-
-                        await Task.Run(() =>
-                        {
-                            dtbl.Load(dr);
-                        });
-                        contactsdgv.Columns.Add("Column", "Numero o Grupo");
-                        contactsdgv.Columns.Add("Column", "Nombre");
-                        contactsdgv.Columns.Add("Column", "Enviado (S/N)");
-
-
-
-
-                        for (int i = 0; i < dtbl.Rows.Count; i++)
-                        {
-
-                            contactsdgv.Rows.Add(Convert.ToString(dtbl.Rows[i]["Numero o Grupo"]), Convert.ToString(dtbl.Rows[i]["Nombre"]));
-
-
-                        }
-                        DataGridViewColumn column = contactsdgv.Columns[0];
-                        column.Width = 200;
-
-
-
-                        DataGridViewColumn column1 = contactsdgv.Columns[1];
-                        column1.Width = 350;
-
-
-
-
-                        DataGridViewColumn column2 = contactsdgv.Columns[2];
-                        column2.Width = 100;
-                        column2.ReadOnly = true;
-
-
-
-
-
-
-
-
-
-                    }
-                }
-
-            }
-            */
-
         }
         public void ReadJson2Contacts(string filename)
         {
-
-            string path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + "\\tempfilesWAButt\\" + filename;
-            Console.WriteLine(path);
-
-            string jsonReadResult;
+            string path = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "tempfilesWAButt", filename
+            );
 
             if (File.Exists(path))
             {
-                jsonReadResult = File.ReadAllText(path);
-
-
-                DataTable dt = (DataTable)JsonConvert.DeserializeObject(jsonReadResult, typeof(DataTable));
-
+                string json = File.ReadAllText(path);
+                DataTable dt = JsonConvert.DeserializeObject<DataTable>(json);
 
                 foreach (DataRow item in dt.Rows)
                 {
                     contacts2dgv.Rows.Add(item[0], item[1]);
                 }
-
-
             }
-            else
-            {
-                MessageBox.Show("Contactos no encontrados", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-
-            }
-
-
-
-
-
-            /*
-
-            if (File.Exists("C:\\Users\\" + actualuser + "\\Documents\\tempfilesWAButt\\datac2.csv"))
-            {
-
-                using (var reader = new StreamReader("C:\\Users\\" + actualuser + "\\Documents\\tempfilesWAButt\\datac2.csv"))
-                using (var csv = new CsvReader(reader, CultureInfo.CurrentCulture))
-                {
-
-                    using (var dr = new CsvDataReader(csv))
-                    {
-
-                        contacts2dgv.Columns.Clear();
-
-                        DataTable dtbl = new DataTable();
-
-
-                        await Task.Run(() =>
-                        {
-                            dtbl.Load(dr);
-                        });
-                        contacts2dgv.Columns.Add("Column", "Numero o Grupo");
-                        contacts2dgv.Columns.Add("Column", "Nombre");
-                        contacts2dgv.Columns.Add("Column", "Enviado (S/N)");
-
-
-
-
-                        for (int i = 0; i < dtbl.Rows.Count; i++)
-                        {
-
-                            contacts2dgv.Rows.Add(Convert.ToString(dtbl.Rows[i]["Numero o Grupo"]), Convert.ToString(dtbl.Rows[i]["Nombre"]));
-
-
-                        }
-                        DataGridViewColumn column = contacts2dgv.Columns[0];
-                        column.Width = 200;
-
-
-
-                        DataGridViewColumn column1 = contacts2dgv.Columns[1];
-                        column1.Width = 350;
-
-
-
-
-                        DataGridViewColumn column2 = contacts2dgv.Columns[2];
-                        column2.Width = 100;
-                        column2.ReadOnly = true;
-
-
-
-
-
-
-
-
-
-                    }
-                }
-
-            }
-            */
-
         }
         private string DecodeEncodedNonAsciiCharacters(string value)
         {
@@ -4156,30 +3927,15 @@ namespace Presentation
         }
         private List<int> NotEmptyMessages()
         {
-            List<int> lst = new List<int>();
+            List<int> result = new List<int>();
 
-            if (!string.IsNullOrWhiteSpace(Convert.ToString(m1txt.Text)) )
-            {
-                lst.Add(0);
-            }
-            if (!string.IsNullOrWhiteSpace(Convert.ToString(m2txt.Text)))
-            {
-                lst.Add(1);
-            }
-            if (!string.IsNullOrWhiteSpace(Convert.ToString(m3txt.Text)))
-            {
-                lst.Add(2);
-            }
-            if (!string.IsNullOrWhiteSpace(Convert.ToString(m4txt.Text)))
-            {
-                lst.Add(3);
-            }
-            if (!string.IsNullOrWhiteSpace(Convert.ToString(m5txt.Text)))
-            {
-                lst.Add(4);
-            }
+            if (!string.IsNullOrWhiteSpace(m1txt.Text)) result.Add(0);
+            if (!string.IsNullOrWhiteSpace(m2txt.Text)) result.Add(1);
+            if (!string.IsNullOrWhiteSpace(m3txt.Text)) result.Add(2);
+            if (!string.IsNullOrWhiteSpace(m4txt.Text)) result.Add(3);
+            if (!string.IsNullOrWhiteSpace(m5txt.Text)) result.Add(4);
 
-            return lst;
+            return result;
         }
         private void gmailbtn_Click(object sender, EventArgs e)
         {
@@ -4446,211 +4202,170 @@ namespace Presentation
 
         }
 
-        private void pausetimingaction(Int32 pauset, CancellationToken token)
+        private void pausetimingaction(int seconds, CancellationToken token)
         {
             try
             {
-                if (pauset > 0)
+                if (seconds > 0)
                 {
-
-                    MessageBox.Show(String.Format("Se pausarán los envios por {0} minutos", pauset / 60), "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                    Task.Delay(TimeSpan.FromSeconds(pauset), token).Wait();
-
-
-
-
+                    MessageBox.Show($"Pausando por {seconds / 60} minutos", "Pausa");
+                    Task.Delay(TimeSpan.FromSeconds(seconds), token).Wait();
                 }
             }
             catch (Exception ex)
             {
-
-                Console.WriteLine(ex.Message);
+                Console.WriteLine($"Pause cancelled: {ex.Message}");
             }
-
-
         }
-
-        private void ExecuteStart()
+        private async Task ExecuteSendTask()
         {
+            if (!await ValidatePreSendConditions()) return;
 
-
+            PrepareForSending();
+            int count = 0;
 
             try
             {
+                foreach (DataGridViewRow fila in contactsdgv.Rows)
+                {
+                    if (fila.IsNewRow) continue;
 
+                    cancellationToken.Token.ThrowIfCancellationRequested();
 
+                    if (!CheckForInternetConnection())
+                    {
+                        StopSendingDueToNoInternet();
+                        break;
+                    }
+
+                    // Process contact
+                    await ProcessSingleContact(fila);
+
+                    // Update progress
+                    count++;
+                    if (count <= rowcount) sendpbr.Value = count;
+
+                    // Handle pause points
+                    await HandlePausePoints(fila.Index);
+
+                    // Delay between messages
+                    if (wa.clickstate)
+                    {
+                        await DelayBetweenMessages();
+                    }
+                }
+
+                FinalizeSending();
+            }
+            catch (OperationCanceledException)
+            {
+                Console.WriteLine("Sending cancelled by user");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in sending: {ex.Message}");
+                MessageBox.Show($"Error: {ex.Message}", "Error");
+            }
+        }
+        private void FinalizeSending()
+        {
+            if (!stopbtnclicked)
+            {
+                MessageBox.Show("Mensajes enviados correctamente!",
+                    "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+
+            uploadbtn.Enabled = true;
+            clearfilenamebtn.Enabled = true;
+            stopbtn.Enabled = false;
+            pausebtn.Enabled = false;
+            startbtn.Enabled = true;
+            logoutbtn.Enabled = true;
+            connectwabtn.Enabled = true;
+
+            notsendedmessagelbl.Text = (rowcount - sendedmessage).ToString();
+            contactsdgv.AllowUserToAddRows = true;
+            contactsdgv.AllowUserToDeleteRows = true;
+        }
+        private void StopSendingDueToNoInternet()
+        {
+            stopbtn.Enabled = false;
+            pausebtn.Enabled = false;
+            startbtn.Enabled = true;
+            MessageBox.Show("Se detuvieron los envios debido a falta de conexión a internet.",
+                "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        private void ExecuteStart()
+        {
+            try
+            {
                 detailtimer.Start();
-
-                UserModel user = new UserModel();
-
-
-
 
                 OpenSaved();
                 OpenSaved2();
-
                 controls(false);
                 controls2(false);
 
-
                 pausebtn.Enabled = false;
                 stopbtn.Enabled = false;
-
                 pause2btn.Enabled = false;
                 stop2btn.Enabled = false;
+                logoutbtn.Enabled = false;
+                logout2btn.Enabled = false;
 
                 sendpbr.Value = 0;
                 send2pbr.Value = 0;
 
-
-                logoutbtn.Enabled = false;
-                logout2btn.Enabled = false;
-
-
-
-
                 OpenSettings();
-
             }
             catch (Exception ex)
             {
-
-                Console.WriteLine(ex.Message);
+                Console.WriteLine($"ExecuteStart error: {ex.Message}");
             }
-
-
         }
 
         private void CheckUserProfileExist()
         {
+            string basePath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "tempfilesWAButt"
+            );
 
-
-            if (!Directory.Exists(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\Chrome WA Profile\\"))
+            // Download WA profile if missing
+            if (!Directory.Exists(Path.Combine(basePath, "Chrome WA Profile")))
             {
-
-                try
-                {
-
-                    string path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\";
-                    DirectoryInfo di = Directory.CreateDirectory(path);
-
-
-
-
-
-                    using (WebClient Client = new WebClient())
-                    {
-
-                        Client.DownloadFile(chromewadefaultuserdata, Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\Chrome WA Profile.zip");
-
-
-
-
-
-
-
-                        var zipFileName = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\Chrome WA Profile.zip";
-
-                        var targetDir = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\";
-
-
-                        FastZip fastZip = new FastZip();
-                        string fileFilter = null;
-
-                        // Will always overwrite if target filenames already exist
-                        fastZip.ExtractZip(zipFileName, targetDir, fileFilter);
-
-
-                        File.Delete(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\Chrome WA Profile.zip");
-
-
-
-
-                    }
-
-
-                }
-                catch (Exception ex)
-                {
-
-                    Console.WriteLine(ex.Message);
-                }
-
-
-
-
-
-
-
-
-
+                DownloadAndExtractProfile(chromewadefaultuserdata, "Chrome WA Profile.zip", basePath);
             }
 
-
-            if (!Directory.Exists(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\Chrome SMS Profile\\"))
+            // Download SMS profile if missing
+            if (!Directory.Exists(Path.Combine(basePath, "Chrome SMS Profile")))
             {
-
-                try
-                {
-
-                    string path = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\";
-                    DirectoryInfo di = Directory.CreateDirectory(path);
-
-
-
-
-
-                    using (WebClient Client = new WebClient())
-                    {
-
-                        Client.DownloadFile(chromesmsdefaultuserdata, Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\Chrome SMS Profile.zip");
-
-
-
-
-
-                        var zipFileName = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\Chrome SMS Profile.zip";
-
-                        var targetDir = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\";
-
-
-                        FastZip fastZip = new FastZip();
-                        string fileFilter = null;
-
-                        // Will always overwrite if target filenames already exist
-                        fastZip.ExtractZip(zipFileName, targetDir, fileFilter);
-
-
-                        File.Delete(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments)+"\\tempfilesWAButt\\Chrome SMS Profile.zip");
-
-
-
-
-                    }
-
-
-                }
-                catch (Exception ex)
-                {
-
-                    Console.WriteLine(ex.Message);
-                }
-
-
-
-
-
-
-
-
-
+                DownloadAndExtractProfile(chromesmsdefaultuserdata, "Chrome SMS Profile.zip", basePath);
             }
+        }
 
+        private void DownloadAndExtractProfile(string url, string zipName, string targetDir)
+        {
+            try
+            {
+                Directory.CreateDirectory(targetDir);
 
+                using (WebClient client = new WebClient())
+                {
+                    string zipPath = Path.Combine(targetDir, zipName);
+                    client.DownloadFile(url, zipPath);
 
+                    FastZip fastZip = new FastZip();
+                    fastZip.ExtractZip(zipPath, targetDir, "");
 
-
+                    File.Delete(zipPath);
+                    Console.WriteLine($"✓ Downloaded and extracted {zipName}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error downloading profile: {ex.Message}");
+            }
         }
         private void DirectoryCopy(string sourceDirName, string destDirName, bool copySubDirs)
         {
@@ -4689,61 +4404,40 @@ namespace Presentation
         }
         private async void logoutbtn_Click(object sender, EventArgs e)
         {
-
-            if (CheckForInternetConnection())
+            try
             {
-                await Task.Run(() =>
+                if (!CheckForInternetConnection())
                 {
-                    try
-                    {
-                        wa.LogoutWA();
-                    }
-                    catch (Exception ex)
-                    {
-
-                        Console.WriteLine(ex.Message);
-                    }
-
-
-
-                });
-
-                DialogResult d;
-                d = MessageBox.Show("¿Desea cerrar el programa?", "Observación", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation);
-
-                if (d == DialogResult.Yes)
-                {
-                    try
-                    {
-
-                        Storecontaacts();
-                        Storemessages();
-                        UserModel user = new UserModel();
-                        logoutbtn.Enabled = false;
-                        wa.CloseWDriver();
-                        WAButtfrm.ActiveForm.Text = "WAButt";
-                        Application.Exit();
-
-
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-                    }
-
+                    MessageBox.Show("No cuenta con acceso a internet.", "Error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
                 }
 
+                // Disable button to prevent double-clicks
+                logoutbtn.Enabled = false;
 
+                await Task.Run(() => wa.LogoutWA());
 
-
-
+                if (MessageBox.Show("¿Desea cerrar el programa?", "Confirmación",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+                {
+                    Storecontaacts();
+                    Storemessages();
+                    StoreSettings();
+                    wa.CloseWDriver();
+                    Application.Exit();
+                }
+                else
+                {
+                    logoutbtn.Enabled = true;
+                }
             }
-            else
+            catch (Exception ex)
             {
-                MessageBox.Show("No cuenta con acceso a internet, no puede continuar.", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Error al cerrar sesión: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                logoutbtn.Enabled = true;
             }
-
-
         }
         public static bool CheckForInternetConnection()
         {
@@ -4799,16 +4493,9 @@ namespace Presentation
         {
             // wa.GetContactsFromGroup();
         }
-        bool IsDigitsOnly(string str)
+        private bool IsDigitsOnly(string str)
         {
-            foreach (char c in str)
-            {
-                if (c < '0' || c > '9')
-                    return false;
-
-            }
-
-            return true;
+            return str.All(c => char.IsDigit(c));
         }
         private void severalpausetxt_KeyPress(object sender, KeyPressEventArgs e)
         {
@@ -5070,46 +4757,30 @@ namespace Presentation
         }
         private async void connectgoobtn_Click(object sender, EventArgs e)
         {
-
-            if (CheckForInternetConnection())
+            if (!CheckForInternetConnection())
             {
+                MessageBox.Show("No cuenta con acceso a internet.", "Error");
+                return;
+            }
 
+            wa.CloseWDriver2();
 
-                wa.CloseWDriver2();
+            try
+            {
+                loadmessage2lbl.Text = "Estado: Conectando...";
+                await wa.LaunchBrowser2();
 
-
-
-                try
+                if (wa.driverstate2)
                 {
-                    loadmessage2lbl.Text = "Estado: Conectando . . . ";
-
-
-                    await wa.LaunchBrowser2();
-
-
-                    loadmessage2lbl.Text = "Estado: Navegador Abierto, escanee código QR o empiece a enviar";
-
-
-
+                    loadmessage2lbl.Text = "Estado: Navegador Abierto, escanee código QR";
                     controls2(true);
                     logout2btn.Enabled = true;
-
-
-
-
-                }
-                catch (Exception ex)
-                {
-
-                    MessageBox.Show("Error :" + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-
                 }
             }
-            else
+            catch (Exception ex)
             {
-                MessageBox.Show("No cuenta con acceso a internet, no puedes continuar.", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Error: {ex.Message}", "Error");
             }
-
         }
         private void selectwabtn_Click(object sender, EventArgs e)
         {
@@ -5326,6 +4997,86 @@ namespace Presentation
 
             }
         }
+        private async Task ProcessSingleContact(DataGridViewRow fila)
+        {
+            string contactNumber = Convert.ToString(fila.Cells[0].Value);
+            string contactName = Convert.ToString(fila.Cells[1].Value);
+
+            if (string.IsNullOrEmpty(contactNumber))
+            {
+                fila.Cells[2].Value = "N";
+                notsendedmessage++;
+                notsendedmessagelbl.Text = notsendedmessage.ToString();
+                return;
+            }
+
+            Console.WriteLine($"Processing: {contactNumber}");
+
+            // Prepare message
+            string messageToSend = PrepareMessage(contactName);
+
+            // Search and click contact
+            await SearchAndClickContact(contactNumber);
+
+            if (!wa.clickstate)
+            {
+                fila.Cells[2].Value = "N";
+                notsendedmessage++;
+                notsendedmessagelbl.Text = notsendedmessage.ToString();
+                return;
+            }
+
+            // Send message/file
+            await SendMessageOrFile(messageToSend, filenametxt.Text, contactNumber);
+
+            fila.Cells[2].Value = "S";
+            sendedmessage++;
+            sendedmessagelbl.Text = sendedmessage.ToString();
+        }
+
+        private async Task ProcessSingleSMS(DataGridViewRow fila)
+        {
+            string contactNumber = Convert.ToString(fila.Cells[0].Value);
+            string contactName = Convert.ToString(fila.Cells[1].Value);
+
+            if (string.IsNullOrEmpty(contactNumber))
+            {
+                fila.Cells[2].Value = "N";
+                notsendedmessage2++;
+                return;
+            }
+
+            string message = PrepareSMSMessage(contactName);
+
+            await Task.Run(() =>
+            {
+                try
+                {
+                    Actions action = new Actions(WA.driver2);
+
+                    wa.ClickSearchIcon2();
+                    action.SendKeys(Keys.Space).Build().Perform();
+                    wa.ContactSearch2(contactNumber);
+                    wa.ContactClick2();
+                    Task.Delay(2000).Wait();
+
+                    wa.ContactMessage2(message);
+                    Task.Delay(1000 + wa.preventblocktiming2).Wait();
+                    wa.ContactActionEnter2();
+
+                    fila.Cells[2].Value = "S";
+                    sendedmessage2++;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"SMS Error: {ex.Message}");
+                    fila.Cells[2].Value = "N";
+                    notsendedmessage2++;
+                }
+            }, cancellationToken2.Token);
+
+            sendedmessage2lbl.Text = sendedmessage2.ToString();
+        }
         private void emoji2btn_Click(object sender, EventArgs e)
         {
             Process.Start("https://es.piliapp.com/twitter-symbols/");
@@ -5370,37 +5121,15 @@ namespace Presentation
 
         private void pause2btn_Click(object sender, EventArgs e)
         {
-
             if (pausetiming2 > 0)
             {
-                if (pauseToken2 != null)
-                {
-                    pause2btn.Text = "Pausar";
-                    pauseToken2.Cancel();
-                    pause2btn.Enabled = true;
-                    stop2btn.Enabled = true;
-                    start2btn.Enabled = false;
-                    logout2btn.Enabled = false;
-                    connectgoobtn.Enabled = true;
-
-
-
-                }
-
-                if (!CheckForInternetConnection())
-                {
-                    MessageBox.Show("No cuenta con acceso a internet, recomendamos esperar hasta tener conexión para continuar.", "Sugerencia", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-
-
+                pause2btn.Text = "Pausar";
+                pauseToken2?.Cancel();
             }
-
             else
             {
                 cmspause2.Show(Cursor.Position.X, Cursor.Position.Y);
             }
-
-
 
         }
 
@@ -5457,99 +5186,29 @@ namespace Presentation
         }
 
         private void stop2btn_Click(object sender, EventArgs e)
-        {
-            if (pausetiming2 > 0)
+        {if (MessageBox.Show("¿Desea detener los envíos SMS?", "Confirmación", 
+                MessageBoxButtons.YesNo) == DialogResult.Yes)
             {
-                DialogResult a;
-                a = MessageBox.Show("Los envios SMS están pausados ¿Desea detener la cola de envios? ", "Observación", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
-                if (a == DialogResult.Yes)
-                {
-
-                    if (cancellationToken2 != null)
-                    {
-
-
-                        MessageBox.Show("Los envios SMS se detendrán en breve ", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                        pauseToken2.Cancel();
-                        cancellationToken2.Cancel();
-                        pausetiming2 = 0;
-                        pause2btn.Enabled = false;
-                        stop2btn.Enabled = false;
-                        eachmessagetoken2.Cancel();
-                        severalpausetoken2.Cancel();
-                        stopbtnclicked2 = true;
-                        logout2btn.Enabled = true;
-                        connectgoobtn.Enabled = true;
-                        pause2btn.Text = "Pausar";
-
-
-
-
-                        if (!CheckForInternetConnection())
-                        {
-                            MessageBox.Show("No cuenta con acceso a internet, recomendamos esperar hasta tener conexión para continuar.", "Sugerencia", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
-
-                    }
-                }
-
-            }
-            else
-            {
-                DialogResult b;
-                b = MessageBox.Show("Desea detener los envíos SMS? ", "Observación", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
-                if (b == DialogResult.Yes)
-                {
-
-                    if (cancellationToken2 != null)
-                    {
-                        MessageBox.Show("Los envios se detendrán en breve ", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        cancellationToken2.Cancel();
-                        pausetiming2 = 0;
-                        pause2btn.Enabled = false;
-                        stop2btn.Enabled = false;
-                        eachmessagetoken2.Cancel();
-                        severalpausetoken2.Cancel();
-                        stopbtnclicked2 = true;
-                        logout2btn.Enabled = true;
-                        connectgoobtn.Enabled = true;
-
-
-                        pause2btn.Text = "Pausar";
-
-
-
-                        if (!CheckForInternetConnection())
-                        {
-                            MessageBox.Show("No cuenta con acceso a internet, recomendamos esperar hasta tener conexión para continuar.", "Sugerencia", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
-
-                    }
-
-                }
-
+                pauseToken2?.Cancel();
+                cancellationToken2?.Cancel();
+                eachmessagetoken2?.Cancel();
+                severalpausetoken2?.Cancel();
+                
+                stopbtnclicked2 = true;
+                pause2btn.Text = "Pausar";
             }
         }
 
         public void ClearEmptyRows(DataGridView dgv)
         {
-
-
-
-            for (int i = dgv.Rows.Count - 1; i > -1; i--)
+            for (int i = dgv.Rows.Count - 1; i >= 0; i--)
             {
                 DataGridViewRow row = dgv.Rows[i];
-                if (!row.IsNewRow && Convert.ToString(row.Cells[0].Value) == "")
+                if (!row.IsNewRow && string.IsNullOrEmpty(Convert.ToString(row.Cells[0].Value)))
                 {
                     dgv.Rows.RemoveAt(i);
                 }
             }
-
-
-
-
-
         }
 
         private void clearemptyrowsbtn_Click(object sender, EventArgs e)
@@ -5676,6 +5335,7 @@ namespace Presentation
 
             }
         }
+
         private string EncodeNonAsciiCharacters(string value)
         {
             StringBuilder sb = new StringBuilder();
@@ -5696,32 +5356,18 @@ namespace Presentation
         }
         private bool CheckAttachMessageStatus()
         {
-            if (!CheckAttachMessageStatusSub() || sendonlyattachcb.Checked)
-            {
-                return false;
-            }
-
-            return true;
+            return !(!CheckAttachMessageStatusSub() || sendonlyattachcb.Checked);
         }
+
         private bool CheckAttachMessageStatusSub()
         {
-            if (!string.IsNullOrEmpty(filenametxt.Text)
-                && string.IsNullOrWhiteSpace(m1txt.Text)
-                && string.IsNullOrWhiteSpace(m2txt.Text)
-                && string.IsNullOrWhiteSpace(m3txt.Text)
-                && string.IsNullOrWhiteSpace(m4txt.Text)
-                && string.IsNullOrWhiteSpace(m5txt.Text)
-
-
-
-                )
-            {
-                return false;
-            }
-
-            return true;
+            return string.IsNullOrEmpty(filenametxt.Text) ||
+                   !string.IsNullOrWhiteSpace(m1txt.Text) ||
+                   !string.IsNullOrWhiteSpace(m2txt.Text) ||
+                   !string.IsNullOrWhiteSpace(m3txt.Text) ||
+                   !string.IsNullOrWhiteSpace(m4txt.Text) ||
+                   !string.IsNullOrWhiteSpace(m5txt.Text);
         }
-
 
         private string GetExtension(string path)
         {
@@ -5729,26 +5375,14 @@ namespace Presentation
         }
         private bool GetImageState(string path)
         {
-            if (GetExtension(path) == ".svg" || GetExtension(path) == ".png" || GetExtension(path) == ".jpg"
-                || GetExtension(path) == ".jpeg" || GetExtension(path) == ".ico" || GetExtension(path) == ".gif" || GetExtension(path) == ".jfif"
-                || GetExtension(path) == ".webp" || GetExtension(path) == ".pjpeg" || GetExtension(path) == ".avif")
-            {
-                Console.WriteLine("it's a image with preview");
-                return true;
-            }
-            return false;
-
+            string ext = Path.GetExtension(path).ToLower();
+            return ext == ".svg" || ext == ".png" || ext == ".jpg" ||
+                   ext == ".jpeg" || ext == ".gif" || ext == ".webp";
         }
         private bool GetVideoState(string path)
         {
-            if (GetExtension(path) == ".m4v" || GetExtension(path) == ".mov" || GetExtension(path) == ".mp4")
-            {
-                Console.WriteLine("it's a video with preview");
-
-                return true;
-            }
-            return false;
-
+            string ext = Path.GetExtension(path).ToLower();
+            return ext == ".mp4" || ext == ".mov" || ext == ".m4v";
         }
 
         private void eliminarDuplicadosToolStripMenuItem_Click(object sender, EventArgs e)
