@@ -2581,12 +2581,6 @@ namespace Presentation
 
 
 
-
-
-
-
-
-
                                             }, cancellationToken.Token);
 
 
@@ -2596,8 +2590,6 @@ namespace Presentation
                                             {
 
                                                 Console.WriteLine("entre a escribir");
-
-
 
 
                                                 if (!string.IsNullOrEmpty(filenametxt.Text))
@@ -2654,12 +2646,12 @@ namespace Presentation
                                                                     {
 
                                                                         wa.ImageTextMessage(filename, actualmessagetosend);
-                                                                        action.SendKeys(".").Build().Perform();
-                                                                        action.SendKeys(Keys.Backspace + Keys.Backspace + Keys.Backspace + Keys.Backspace).Build().Perform();
+                                                                        //action.SendKeys(".").Build().Perform();
+                                                                       // action.SendKeys(Keys.Backspace + Keys.Backspace + Keys.Backspace + Keys.Backspace).Build().Perform();
                                                                         Task.Delay(1000 + wa.preventblocktiming).Wait();
 
 
-                                                                        wa.ContactSend(By.XPath(WA.SendIADButton));
+                                                                        //wa.ContactSend(By.XPath(WA.SendIADButton));
                                                                     }
 
                                                                     else if (GetVideoState(filename))
@@ -2987,8 +2979,8 @@ namespace Presentation
 
                                                             //  Console.WriteLine(Ascii);
                                                             
-                                                            action.SendKeys("a").Build().Perform();
-                                                            Task.Delay(2000);
+                                                            //action.SendKeys("a").Build().Perform();
+                                                           // Task.Delay(2000);
                                                             wa.ContactMessage(actualmessagetosend);
                                                             //action.SendKeys(Keys.Backspace + Keys.Backspace + Keys.Backspace + Keys.Backspace).Build().Perform();
                                                             

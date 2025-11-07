@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -44,22 +46,71 @@ namespace Presentation
         public static class WASelectors
         {
             // Search
-            public static By SearchButton => By.CssSelector("button[aria-label*='Search']");
-            public static By SearchInput => By.CssSelector("div[contenteditable='true'][data-tab='3']");
+            // 1) CSS moderno (Chrome 105+): padre <button> que CONTIENE el span del icono
+            public static By SearchButton => By.CssSelector("button:has(span[data-icon*='search'])");
+
+            // 2) Fallback (por si falla :has): encuentra el <span> y sube al <button>
+            public static By SearchButtonFallback => By.CssSelector("span[data-icon*='search']");
+
+            // Reemplaza tu SearchInput por este combo (3 opciones unidas con coma):
+            public static By SearchInput => By.CssSelector(
+                // 1) Por aria-label (inglés)
+                "div.lexical-rich-text-input div[contenteditable='true'][role='textbox'][data-lexical-editor='true'][aria-label*='Search']," +
+                // 2) Por aria-placeholder (inglés)
+                "div.lexical-rich-text-input div[contenteditable='true'][role='textbox'][data-lexical-editor='true'][aria-placeholder*='Search']," +
+                // 3) Fallback por tabindex que suele usar el buscador
+                "div.lexical-rich-text-input div[contenteditable='true'][role='textbox'][data-lexical-editor='true'][tabindex='3']"
+            );
 
             // Messaging
-            public static By MessageInput => By.CssSelector("div[contenteditable='true'][data-tab='10']");
+            public static By MessageInput => By.CssSelector("div.lexical-rich-text-input div[contenteditable='true'][role='textbox'][data-lexical-editor='true']");
             public static By SendButton => By.CssSelector("button[aria-label*='Send']");
 
             // Attachments
-            public static By AttachButton => By.CssSelector("button[aria-label*='Attach']");
-            public static By AttachImageInput => By.CssSelector("input[accept*='image'][type='file']");
+            public static By AttachButton => By.CssSelector("div[role='button'][aria-label='Attach']");
+
+            public static readonly By AttachImageInput =
+            By.CssSelector("li[role='button'] input[type='file'][multiple][accept*='image']");
+
+            public static readonly By AttachImageInputFallback =
+                By.CssSelector("input[type='file'][accept*='image']");
+
+
+
+
+
             public static By AttachDocumentInput => By.CssSelector("input[accept*='*'][type='file']");
-            public static By ImageCaptionInput => By.CssSelector("div[contenteditable='true'][data-tab='1']");
-            public static By SendAttachmentButton => By.CssSelector("span[data-icon='send']");
+
+
+
+            public static readonly By ImageCaptionInDialog =
+                   By.CssSelector("div[role='dialog'] div[contenteditable='true'][role='textbox'][data-lexical-editor='true']");
+
+            // Fallback: composer general (fuera de diálogo)
+            public static readonly By ComposerInput =
+                By.CssSelector("div[contenteditable='true'][role='textbox'][data-lexical-editor='true']");
+
+            // Botón Enviar dentro del diálogo de media
+            public static readonly By SendMediaButton =
+                By.CssSelector("div[role='dialog'] [aria-label*='Send'], div[role='dialog'] span[data-icon='send']");
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+        public static By SendAttachmentButton => By.CssSelector("span[data-icon='send']");
 
             // Navigation
-            public static By FirstSearchResult => By.CssSelector("div[role='listitem']");
+            public static By FirstSearchResult => By.CssSelector("div[role='row']");
             public static By ConversationHeader => By.CssSelector("header div._amid");
 
             // Menu
@@ -179,7 +230,68 @@ namespace Presentation
         }
 
         #endregion
+        private IWebElement WaitForComposer(int timeoutSec = 15)
+        {
+            try
+            {
+                var wait = new OpenQA.Selenium.Support.UI.WebDriverWait(driver, TimeSpan.FromSeconds(timeoutSec));
+                return wait.Until(drv =>
+                {
+                    var els = drv.FindElements(WASelectors.MessageInput);
+                    if (els == null || els.Count == 0) return null;
 
+                    var js = (IJavaScriptExecutor)drv;
+                    // Elige el último visible que NO esté dentro de un modal (role=dialog)
+                    for (int i = els.Count - 1; i >= 0; i--)
+                    {
+                        var el = els[i];
+                        if (!el.Displayed || !el.Enabled) continue;
+                        var insideDialog = (bool)js.ExecuteScript(
+                            "return !!(arguments[0].closest && arguments[0].closest('[role=\"dialog\"]'));", el);
+                        if (!insideDialog) return el;
+                    }
+                    return null;
+                });
+            }
+            catch { return null; }
+        }
+
+      
+
+        private void TypeIntoContentEditable(IWebElement el, string text)
+        {
+            try
+            {
+                el.Click();
+                el.SendKeys(OpenQA.Selenium.Keys.Control + "a");
+                el.SendKeys(OpenQA.Selenium.Keys.Delete);
+                el.SendKeys(text);
+                return;
+            }
+            catch
+            {
+                // Fallback JS para editores tipo Lexical/React
+                var js = (IJavaScriptExecutor)driver;
+                js.ExecuteScript(@"
+            var el = arguments[0], txt = arguments[1];
+            el.focus();
+            try {
+                document.execCommand('selectAll', false, null);
+                document.execCommand('insertText', false, txt);
+            } catch (e) {
+                var sel = window.getSelection();
+                sel.removeAllRanges();
+                var range = document.createRange();
+                range.selectNodeContents(el);
+                range.collapse(false);
+                sel.addRange(range);
+                el.dispatchEvent(new InputEvent('beforeinput', {inputType:'insertText', data:txt, bubbles:true}));
+                el.textContent = txt;
+                el.dispatchEvent(new InputEvent('input', {inputType:'insertText', data:txt, bubbles:true}));
+            }
+        ", el, text);
+            }
+        }
         #region Browser Launch - Google Messages
 
         /// <summary>
@@ -272,8 +384,23 @@ namespace Presentation
         {
             try
             {
-                var searchBtn = WaitForElement(WASelectors.SearchButton, 10);
-                searchBtn?.Click();
+                IWebElement btn = WaitForElement(WASelectors.SearchButton, 6);
+                if (btn == null)
+                {
+                    // Fallback: tomar el span y subir al <button> ancestro
+                    var icon = WaitForElement(WASelectors.SearchButtonFallback, 6);
+                    if (icon != null)
+                    {
+                        btn = icon.FindElement(By.XPath("./ancestor::button[1]"));
+                    }
+                }
+
+                if (btn == null) throw new NoSuchElementException("Search button not found");
+
+                ((IJavaScriptExecutor)driver)
+                    .ExecuteScript("arguments[0].scrollIntoView({block:'center',inline:'center'})", btn);
+
+                btn.Click();
                 Console.WriteLine("✓ Search icon clicked");
             }
             catch (Exception ex)
@@ -282,6 +409,7 @@ namespace Presentation
             }
         }
 
+
         /// <summary>
         /// Buscar contacto en WhatsApp
         /// </summary>
@@ -289,21 +417,52 @@ namespace Presentation
         {
             try
             {
-                var searchInput = WaitForElement(WASelectors.SearchInput, 20);
+                var input = WaitForElement(WASelectors.SearchInput, 20);
+                if (input == null) throw new NoSuchElementException("No se encontró el buscador.");
 
-                if (searchInput != null)
+                // Intenta vía SendKeys; si falla, usa JS para contenteditable (Lexical)
+                try
                 {
-                    searchInput.Clear();
-                    searchInput.SendKeys(tosearch);
-                    Thread.Sleep(500); // Esperar resultados
-                    Console.WriteLine($"✓ Buscando: {tosearch}");
+                    input.Click();
+                    input.SendKeys(OpenQA.Selenium.Keys.Control + "a");
+                    input.SendKeys(OpenQA.Selenium.Keys.Delete);
+                    if (!string.IsNullOrEmpty(tosearch))
+                        input.SendKeys(tosearch);
                 }
+                catch
+                {
+                    var js = (IJavaScriptExecutor)driver;
+                    js.ExecuteScript(@"
+                var el = arguments[0], txt = arguments[1];
+                el.focus();
+                try {
+                    document.execCommand('selectAll', false, null);
+                    document.execCommand('insertText', false, txt);
+                } catch (e) {
+                    var sel = window.getSelection();
+                    sel.removeAllRanges();
+                    var range = document.createRange();
+                    range.selectNodeContents(el);
+                    range.collapse(false);
+                    sel.addRange(range);
+                    el.dispatchEvent(new InputEvent('beforeinput', {inputType:'insertText', data:txt, bubbles:true}));
+                    el.textContent = txt;
+                    el.dispatchEvent(new InputEvent('input', {inputType:'insertText', data:txt, bubbles:true}));
+                    el.dispatchEvent(new Event('change', {bubbles:true}));
+                }
+            ", input, tosearch ?? string.Empty);
+                }
+
+                // Pequeño wait para que refresquen los resultados
+                Thread.Sleep(400);
+                Console.WriteLine($"✓ Buscando: {tosearch}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Error en búsqueda: {ex.Message}");
             }
         }
+
 
         /// <summary>
         /// Click en el primer resultado de búsqueda
@@ -342,34 +501,73 @@ namespace Presentation
         /// <summary>
         /// Escribir mensaje en el chat
         /// </summary>
-        public void ContactMessage(string message)
+        public void ContactMessage(string htmlishMessage)
         {
             try
             {
-                var messageBox = WaitForElement(WASelectors.MessageInput, 20);
+                var box = WaitForComposer(20);
+                if (box == null) throw new NoSuchElementException("Composer no encontrado.");
 
-                if (messageBox != null)
-                {
-                    // Usar JavaScript para evitar problemas con caracteres especiales
-                    var js = (IJavaScriptExecutor)driver;
+                var normalized = NormalizeHtmlBreaks(htmlishMessage); // <<< aquí interceptas los <br>
+                TypeIntoComposer(box, normalized);
 
-                    // Limpiar y establecer contenido
-                    js.ExecuteScript("arguments[0].textContent = arguments[1];", messageBox, message);
-
-                    // Disparar eventos para que WhatsApp detecte el cambio
-                    js.ExecuteScript(@"
-                        arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
-                        arguments[0].dispatchEvent(new Event('change', { bubbles: true }));
-                    ", messageBox);
-
-                    Console.WriteLine("✓ Mensaje escrito");
-                }
+                Console.WriteLine("✓ Mensaje escrito (sin enviar)");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Error escribiendo mensaje: {ex.Message}");
             }
         }
+        private void TypeIntoComposer(IWebElement el, string text)
+        {
+            if (el == null) return;
+
+            // focus + limpiar
+            new Actions(driver)
+                .MoveToElement(el).Click()
+                .KeyDown(SeleniumKeys.Control).SendKeys("a").KeyUp(SeleniumKeys.Control)
+                .SendKeys(SeleniumKeys.Delete)
+                .Perform();
+
+            // teclear líneas
+            var lines = (text ?? string.Empty).Split('\n');
+            var act = new Actions(driver);
+            for (int i = 0; i < lines.Length; i++)
+            {
+                var part = lines[i];
+                if (!string.IsNullOrEmpty(part)) act.SendKeys(part);
+                if (i < lines.Length - 1)
+                    act.KeyDown(SeleniumKeys.Shift).SendKeys(SeleniumKeys.Enter).KeyUp(SeleniumKeys.Shift); // salto sin enviar
+            }
+            act.Perform();
+
+            // pequeño “nudge” para que Lexical actualice
+            new Actions(driver).SendKeys(" ").SendKeys(SeleniumKeys.Backspace).Perform();
+        }
+        private static string NormalizeHtmlBreaks(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return string.Empty;
+
+            // normaliza finales de línea
+            s = s.Replace("\r\n", "\n").Replace("\r", "\n");
+
+            // <br>, <br/>, <br /> → \n
+            s = Regex.Replace(s, @"<br\s*/?>", "\n", RegexOptions.IgnoreCase);
+
+            // cierra <div> o <p> = salto de línea; abre no agrega nada
+            s = Regex.Replace(s, @"</div\s*>", "\n", RegexOptions.IgnoreCase);
+            s = Regex.Replace(s, @"</p\s*>", "\n", RegexOptions.IgnoreCase);
+            s = Regex.Replace(s, @"<div[^>]*>|<p[^>]*>", string.Empty, RegexOptions.IgnoreCase);
+
+            // quita cualquier otro tag “suelto”
+            s = Regex.Replace(s, @"<[^>]+>", string.Empty);
+
+            // decode de entidades (&nbsp;, &amp;, etc.)
+            s = WebUtility.HtmlDecode(s);
+
+            return s;
+        }
+
 
         /// <summary>
         /// Enviar mensaje (presionar Enter)
@@ -378,13 +576,13 @@ namespace Presentation
         {
             try
             {
-                new Actions(driver).SendKeys(SeleniumKeys.Enter).Build().Perform();
-                Thread.Sleep(500);
-                Console.WriteLine("✓ Mensaje enviado");
+                var box = WaitForComposer(5);
+                if (box == null) throw new NoSuchElementException("Composer no encontrado para enviar.");
+                box.SendKeys(OpenQA.Selenium.Keys.Enter);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"✗ Error enviando: {ex.Message}");
+                Console.WriteLine($"✗ Error enviando Enter: {ex.Message}");
             }
         }
 
@@ -399,23 +597,50 @@ namespace Presentation
         {
             try
             {
-                // Click en botón adjuntar
-                var attachBtn = WaitForElement(WASelectors.AttachButton, 10);
-                attachBtn?.Click();
-                Thread.Sleep(500);
+                var abs = Path.GetFullPath(filePath);
 
-                // Enviar archivo
-                var fileInput = WaitForElement(WASelectors.AttachImageInput, 10);
-                fileInput?.SendKeys(filePath);
+                // 1) Abre menú del clip
+                var attachBtn = WaitForElement(WASelectors.AttachButton, 10);
+                if (attachBtn == null) throw new NoSuchElementException("No encontré el botón Adjuntar (clip).");
+                attachBtn.Click();
+                Thread.Sleep(300);
+
+                // 2) Localiza el input con varios intentos
+                IWebElement fileInput = WaitForElement(WASelectors.AttachImageInput, 5);
+                if (fileInput == null)
+                    fileInput = WaitForElement(WASelectors.AttachImageInputFallback, 5);
+                if (fileInput == null)
+                {
+                    // Último recurso: XPath amplio
+                    try { fileInput = driver.FindElement(By.XPath("//input[@type='file' and contains(@accept,'image')]")); }
+                    catch { /* ignore */ }
+                }
+                if (fileInput == null) throw new NoSuchElementException("No encontré el input de archivo para Fotos/Videos.");
+
+                // 3) Envío del archivo (si está oculto, forzamos visible y reintentamos)
+                try
+                {
+                    fileInput.SendKeys(abs);
+                }
+                catch (ElementNotInteractableException)
+                {
+                    var js = (IJavaScriptExecutor)driver;
+                    js.ExecuteScript(
+                        "arguments[0].style.display='block';" +
+                        "arguments[0].style.visibility='visible';" +
+                        "arguments[0].removeAttribute('hidden');", fileInput);
+                    fileInput.SendKeys(abs);
+                }
 
                 Thread.Sleep(1000 + preventblocktiming);
-                Console.WriteLine($"✓ Imagen adjuntada: {Path.GetFileName(filePath)}");
+                Console.WriteLine($"✓ Imagen adjuntada: {Path.GetFileName(abs)}");
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"✗ Error adjuntando imagen: {ex.Message}");
             }
         }
+
 
         /// <summary>
         /// Adjuntar imagen con caption
@@ -424,21 +649,39 @@ namespace Presentation
         {
             try
             {
+                // 1) Adjunta la imagen (asegúrate de que ImageMessage SOLO adjunta y NO envía)
                 ImageMessage(filePath);
-                Thread.Sleep(1000);
+                Thread.Sleep(600);
 
-                // Escribir caption
-                var captionBox = WaitForElement(WASelectors.ImageCaptionInput, 10);
-
-                if (captionBox != null)
+                // 2) Espera el cuadro de caption dentro del diálogo de media
+                var captionBox = WaitForElement(WASelectors.ImageCaptionInDialog, 8);
+                if (captionBox == null)
                 {
-                    var js = (IJavaScriptExecutor)driver;
-                    js.ExecuteScript("arguments[0].textContent = arguments[1];", captionBox, caption);
-                    js.ExecuteScript(@"
-                        arguments[0].dispatchEvent(new Event('input', { bubbles: true }));
-                    ", captionBox);
+                    // Fallback (por si WhatsApp abre el composer general en algunos flujos)
+                    captionBox = WaitForElement(WASelectors.ComposerInput, 4);
+                }
 
-                    Console.WriteLine("✓ Caption agregado");
+                if (captionBox == null)
+                    throw new NoSuchElementException("No encontré la caja de caption (contenteditable).");
+
+                // 3) Escribe el caption de forma robusta
+                TypeIntoContentEditable(captionBox, caption ?? string.Empty);
+                Console.WriteLine("✓ Caption agregado");
+
+                Thread.Sleep(800 + preventblocktiming);
+
+                // 4) Enviar (botón del modal de media)
+                var sendBtn = WaitForElement(WASelectors.SendMediaButton, 6);
+                if (sendBtn != null)
+                {
+                    sendBtn.Click();
+                    Console.WriteLine("✓ Media enviada");
+                }
+                else
+                {
+                    // Último recurso, Enter
+                    captionBox.SendKeys(OpenQA.Selenium.Keys.Enter);
+                    Console.WriteLine("↩️ Enviado con Enter (fallback).");
                 }
             }
             catch (Exception ex)
