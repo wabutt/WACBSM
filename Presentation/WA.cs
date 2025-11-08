@@ -256,21 +256,47 @@ namespace Presentation
             catch { return null; }
         }
 
-      
+
 
         private void TypeIntoContentEditable(IWebElement el, string text)
         {
             try
             {
+                // ✅ Normalizar ANTES de enviar
+                var normalized = NormalizeHtmlBreaks(text);
+
                 el.Click();
                 el.SendKeys(OpenQA.Selenium.Keys.Control + "a");
                 el.SendKeys(OpenQA.Selenium.Keys.Delete);
-                el.SendKeys(text);
+
+                // ✅ Enviar línea por línea con Shift+Enter para saltos
+                var lines = normalized.Split('\n');
+                var actions = new Actions(driver);
+
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    if (!string.IsNullOrEmpty(lines[i]))
+                    {
+                        el.SendKeys(lines[i]);
+                    }
+
+                    if (i < lines.Length - 1)
+                    {
+                        // Shift+Enter = salto sin enviar
+                        actions.KeyDown(SeleniumKeys.Shift)
+                               .SendKeys(SeleniumKeys.Enter)
+                               .KeyUp(SeleniumKeys.Shift)
+                               .Perform();
+                    }
+                }
+
                 return;
             }
             catch
             {
-                // Fallback JS para editores tipo Lexical/React
+                // ✅ Fallback JS con normalización
+                var normalized = NormalizeHtmlBreaks(text);
+
                 var js = (IJavaScriptExecutor)driver;
                 js.ExecuteScript(@"
             var el = arguments[0], txt = arguments[1];
@@ -289,7 +315,7 @@ namespace Presentation
                 el.textContent = txt;
                 el.dispatchEvent(new InputEvent('input', {inputType:'insertText', data:txt, bubbles:true}));
             }
-        ", el, text);
+        ", el, normalized);
             }
         }
         #region Browser Launch - Google Messages
@@ -554,16 +580,21 @@ namespace Presentation
             // <br>, <br/>, <br /> → \n
             s = Regex.Replace(s, @"<br\s*/?>", "\n", RegexOptions.IgnoreCase);
 
-            // cierra <div> o <p> = salto de línea; abre no agrega nada
+            // cierra <div> o <p> = salto de línea
             s = Regex.Replace(s, @"</div\s*>", "\n", RegexOptions.IgnoreCase);
             s = Regex.Replace(s, @"</p\s*>", "\n", RegexOptions.IgnoreCase);
             s = Regex.Replace(s, @"<div[^>]*>|<p[^>]*>", string.Empty, RegexOptions.IgnoreCase);
 
-            // quita cualquier otro tag “suelto”
+            // quita tags HTML
             s = Regex.Replace(s, @"<[^>]+>", string.Empty);
 
-            // decode de entidades (&nbsp;, &amp;, etc.)
-            s = WebUtility.HtmlDecode(s);
+            // ✅ Decode solo entidades comunes (NO Unicode/emojis)
+            s = s.Replace("&nbsp;", " ")
+                 .Replace("&amp;", "&")
+                 .Replace("&lt;", "<")
+                 .Replace("&gt;", ">")
+                 .Replace("&quot;", "\"")
+                 .Replace("&#39;", "'");
 
             return s;
         }
