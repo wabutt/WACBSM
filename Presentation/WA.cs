@@ -67,7 +67,7 @@ namespace Presentation
             public static By SendButton => By.CssSelector("button[aria-label*='Send']");
 
             // Attachments
-            public static By AttachButton => By.CssSelector("div[role='button'][aria-label='Attach']");
+            public static By AttachButton => By.CssSelector("div[role='button'][aria-label='Adjuntar'], div[role='button'][aria-label='Attach']");
 
             public static readonly By AttachImageInput =
             By.CssSelector("li[role='button'] input[type='file'][multiple][accept*='image']");

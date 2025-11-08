@@ -98,7 +98,7 @@
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>5XIvFHLtIaN9Ehq7BQ9cR2lh9KOZSruYVq9a5LsMT1w=</dsig:DigestValue>
+        <dsig:DigestValue>AKyt/CzSA2bjmlHdyU3zUR7exiIQgeSPAcxQK22z+Z8=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
@@ -110,7 +110,7 @@
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>226jW0K7UU7btJcZnTAJKcwRchy8ztteWUPLNUQqjAA=</dsig:DigestValue>
+        <dsig:DigestValue>GoH8jbzOHD5Kc1P8CGc80PUPQ7awVEQugqY7wMCUvwA=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
@@ -1531,14 +1531,14 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="WAButt.exe" size="1068032">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="WAButt.exe" size="1065472">
       <assemblyIdentity name="WAButt" version="1.0.0.0" language="neutral" processorArchitecture="amd64" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>B69s2SZ9UeKYZr8/CE79rb0jcyizYKbSghIDyV8FIgc=</dsig:DigestValue>
+        <dsig:DigestValue>faWYRmFmZa5HBcRKwziPijhaaGJ2/o7Q8IeeWI2eTVo=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
