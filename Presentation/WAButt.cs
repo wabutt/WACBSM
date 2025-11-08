@@ -23,6 +23,7 @@ using System.Configuration;
 using ICSharpCode.SharpZipLib.Zip;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
+using CsvHelper.Configuration;
 
 namespace Presentation
 {
@@ -893,298 +894,148 @@ namespace Presentation
 
 
         }
-
         private void exportDgvToGmail()
         {
+            // Ajusta estos índices si tus columnas están en otro orden:
+            const int PhoneColIndex = 0;     // Columna con el teléfono
+            const int FirstNameColIndex = 1; // Columna con el nombre
 
+            var grid = contactsdgv;
 
-
-
-
-
-            if (contactsdgv.Rows.Count > 1)
+            if (grid == null || grid.Rows.Cast<DataGridViewRow>().All(r => r.IsNewRow))
             {
+                MessageBox.Show("No hay datos a exportar", "Observación",
+                    MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                return;
+            }
 
+            using (var sfd = new SaveFileDialog
+            {
+                Filter = "CSV (*.csv)|*.csv",
+                FileName = "contactos.csv",
+                AddExtension = true,
+                OverwritePrompt = true
+            })
+            {
+                if (sfd.ShowDialog() != DialogResult.OK)
+                    return;
 
-                SaveFileDialog sfd = new SaveFileDialog();
-                sfd.Filter = "CSV (*.csv)|*.csv";
-                sfd.FileName = "";
-                bool fileError = false;
-                if (sfd.ShowDialog() == DialogResult.OK)
+                try
                 {
-                    if (File.Exists(sfd.FileName))
+                    // UTF-8 con BOM para acentos/ñ correctos en Excel y Gmail
+                    using (var sw = new StreamWriter(sfd.FileName, false, new UTF8Encoding(true)))
                     {
-                        try
+                        // Encabezados que Gmail reconoce
+                        sw.WriteLine("Name,Given Name,Phone 1 - Type,Phone 1 - Value");
+
+                        foreach (DataGridViewRow row in grid.Rows)
                         {
-                            File.Delete(sfd.FileName);
-                        }
-                        catch (IOException ex)
-                        {
-                            fileError = true;
-                            MessageBox.Show("No fue posible escribir datos en el disco." + ex.Message);
+                            if (row.IsNewRow) continue;
+
+                            // NO normalizamos: tomamos el valor tal cual
+                            string firstName = Convert.ToString(row.Cells[FirstNameColIndex].Value) ?? string.Empty;
+                            string phoneRaw = Convert.ToString(row.Cells[PhoneColIndex].Value) ?? string.Empty;
+
+                            string name = firstName;       // si solo tienes nombre, úsalo como Name
+                            string phoneType = "Mobile";   // puedes cambiar a Home/Work si aplica
+
+                            sw.WriteLine(
+                                $"{Csv(name)},{Csv(firstName)},{Csv(phoneType)},{Csv(phoneRaw)}"
+                            );
                         }
                     }
-                    if (!fileError)
-                    {
-                        try
-                        {
-                            bool isgroup = false;
-                            string value = "";
-                            string headercsv = "Primary Phone,First Name";
 
-                            DataGridViewRow dr = new DataGridViewRow();
-                            StreamWriter swOut = new StreamWriter(sfd.FileName);
-
-
-                            swOut.Write(headercsv);
-                            swOut.WriteLine();
-
-                            //write DataGridView rows to csv
-                            for (int j = 0; j <= contactsdgv.Rows.Count - 2; j++)
-                            {
-
-                                if (j > 0)
-                                {
-                                    swOut.WriteLine();
-                                }
-
-                                dr = contactsdgv.Rows[j];
-
-                                for (int i = 0; i <= contactsdgv.Columns.Count - 2; i++)
-                                {
-
-                                    if (i > 0)
-                                    {
-                                        swOut.Write(",");
-                                    }
-                                    if (i < 1)
-                                    {
-                                        if (Convert.ToString(dr.Cells[i].Value).Replace(" ", "").Length > 9)
-                                        {
-
-                                            if (Convert.ToString(dr.Cells[i].Value).Contains("+") == false && IsDigitsOnly(Convert.ToString(dr.Cells[i].Value)))
-                                            {
-                                                swOut.Write("+");
-                                            }
-
-
-
-                                        }
-
-
-
-                                    }
-                                    if (i < 1)
-                                    {
-                                        if (IsDigitsOnly(Convert.ToString(dr.Cells[i].Value)) || Convert.ToString(dr.Cells[i].Value).StartsWith("+"))
-                                        {
-                                            value = Convert.ToString(dr.Cells[i].Value);
-                                        }
-                                        else
-                                        {
-                                            value = "";
-                                            isgroup = true;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        if (!isgroup)
-                                        {
-                                            value = Convert.ToString(dr.Cells[i].Value);
-                                        }
-                                        else
-                                        {
-                                            value = "";
-                                        }
-
-
-                                    }
-
-
-
-
-
-                                    //replace comma's with spaces
-                                    value = value.Replace(',', ' ');
-                                    //replace embedded newlines with spaces
-                                    value = value.Replace(Environment.NewLine, " ");
-
-                                    swOut.Write(value);
-
-
-
-
-                                }
-
-
-
-                            }
-                            swOut.Close();
-                            MessageBox.Show("Datos exportados correctamente!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show("Error :" + ex.Message);
-                        }
-                    }
+                    MessageBox.Show("Datos exportados correctamente!", "Observación",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (IOException ex)
+                {
+                    MessageBox.Show("No fue posible escribir datos en el disco. " + ex.Message,
+                        "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error: " + ex.Message,
+                        "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
-            else
-            {
-                MessageBox.Show("No hay datos a exportar", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-            }
+        }
 
+        // ---- Helper ----
+        // No alteramos el contenido; solo hacemos el escape CSV cuando hace falta.
+        private static string Csv(string value)
+        {
+            if (value == null) return string.Empty;
 
-
-
-
-
+            bool mustQuote = value.Contains(',') || value.Contains('"') || value.Contains('\r') || value.Contains('\n');
+            if (mustQuote)
+                return "\"" + value.Replace("\"", "\"\"") + "\"";
+            return value;
         }
         private void exportDgvToGmail2()
         {
 
+            // Ajusta estos índices si tus columnas están en otro orden:
+            const int PhoneColIndex = 0;     // Teléfono
+            const int FirstNameColIndex = 1; // Nombre
 
+            var grid = contacts2dgv;
 
-
-
-
-            if (contacts2dgv.Rows.Count > 1)
+            if (grid == null || grid.Rows.Cast<DataGridViewRow>().All(r => r.IsNewRow))
             {
+                MessageBox.Show("No hay datos a exportar", "Observación",
+                    MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                return;
+            }
 
+            using (var sfd = new SaveFileDialog
+            {
+                Filter = "CSV (*.csv)|*.csv",
+                FileName = "contactos.csv",
+                AddExtension = true,
+                OverwritePrompt = true
+            })
+            {
+                if (sfd.ShowDialog() != DialogResult.OK)
+                    return;
 
-                SaveFileDialog sfd = new SaveFileDialog();
-                sfd.Filter = "CSV (*.csv)|*.csv";
-                sfd.FileName = "";
-                bool fileError = false;
-                if (sfd.ShowDialog() == DialogResult.OK)
+                try
                 {
-                    if (File.Exists(sfd.FileName))
+                    // UTF-8 con BOM para acentos/ñ correctos en Excel y Gmail
+                    using (var sw = new StreamWriter(sfd.FileName, false, new UTF8Encoding(true)))
                     {
-                        try
+                        // Encabezados reconocidos por Google Contacts
+                        sw.WriteLine("Name,Given Name,Phone 1 - Type,Phone 1 - Value");
+
+                        foreach (DataGridViewRow row in grid.Rows)
                         {
-                            File.Delete(sfd.FileName);
-                        }
-                        catch (IOException ex)
-                        {
-                            fileError = true;
-                            MessageBox.Show("No fue posible escribir datos en el disco." + ex.Message);
+                            if (row.IsNewRow) continue;
+
+                            // NO se normaliza: se toma el teléfono tal cual está en la celda
+                            string firstName = Convert.ToString(row.Cells[FirstNameColIndex].Value) ?? string.Empty;
+                            string phoneRaw = Convert.ToString(row.Cells[PhoneColIndex].Value) ?? string.Empty;
+
+                            string name = firstName;     // si solo tienes nombre, úsalo como Name
+                            string phoneType = "Mobile"; // cambia a Home/Work si corresponde
+
+                            sw.WriteLine($"{Csv(name)},{Csv(firstName)},{Csv(phoneType)},{Csv(phoneRaw)}");
                         }
                     }
-                    if (!fileError)
-                    {
-                        try
-                        {
-                            bool isgroup = false;
-                            string value = "";
-                            string headercsv = "Primary Phone,First Name";
 
-                            DataGridViewRow dr = new DataGridViewRow();
-                            StreamWriter swOut = new StreamWriter(sfd.FileName);
-
-
-                            swOut.Write(headercsv);
-                            swOut.WriteLine();
-
-                            //write DataGridView rows to csv
-                            for (int j = 0; j <= contacts2dgv.Rows.Count - 2; j++)
-                            {
-
-                                if (j > 0)
-                                {
-                                    swOut.WriteLine();
-                                }
-
-                                dr = contacts2dgv.Rows[j];
-
-                                for (int i = 0; i <= contacts2dgv.Columns.Count - 2; i++)
-                                {
-
-                                    if (i > 0)
-                                    {
-                                        swOut.Write(",");
-                                    }
-                                    if (i < 1)
-                                    {
-                                        if (Convert.ToString(dr.Cells[i].Value).Replace(" ", "").Length > 9)
-                                        {
-
-                                            if (Convert.ToString(dr.Cells[i].Value).Contains("+") == false && IsDigitsOnly(Convert.ToString(dr.Cells[i].Value)))
-                                            {
-                                                swOut.Write("+");
-                                            }
-
-
-
-                                        }
-
-
-
-                                    }
-                                    if (i < 1)
-                                    {
-                                        if (IsDigitsOnly(Convert.ToString(dr.Cells[i].Value)) || Convert.ToString(dr.Cells[i].Value).StartsWith("+"))
-                                        {
-                                            value = Convert.ToString(dr.Cells[i].Value);
-                                        }
-                                        else
-                                        {
-                                            value = "";
-                                            isgroup = true;
-                                        }
-                                    }
-                                    else
-                                    {
-                                        if (!isgroup)
-                                        {
-                                            value = Convert.ToString(dr.Cells[i].Value);
-                                        }
-                                        else
-                                        {
-                                            value = "";
-                                        }
-
-
-                                    }
-
-
-
-
-
-                                    //replace comma's with spaces
-                                    value = value.Replace(',', ' ');
-                                    //replace embedded newlines with spaces
-                                    value = value.Replace(Environment.NewLine, " ");
-
-                                    swOut.Write(value);
-
-
-
-
-                                }
-
-
-
-                            }
-                            swOut.Close();
-                            MessageBox.Show("Datos exportados correctamente!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show("Error :" + ex.Message);
-                        }
-                    }
+                    MessageBox.Show("Datos exportados correctamente!", "Observación",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (IOException ex)
+                {
+                    MessageBox.Show("No fue posible escribir datos en el disco. " + ex.Message,
+                        "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Error: " + ex.Message,
+                        "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
-            else
-            {
-                MessageBox.Show("No hay datos a exportar", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-            }
-
-
 
 
 
@@ -1192,821 +1043,226 @@ namespace Presentation
         }
         private void ImportGmailToDgv()
         {
-
-
-
-
-
-
-
-            OpenFileDialog sfd = new OpenFileDialog();
-            sfd.Filter = "CSV (*.csv)|*.csv";
-            sfd.FileName = sfd.FileName;
-
-
-            if (sfd.ShowDialog() == DialogResult.OK)
+            var ofd = new OpenFileDialog
             {
+                Filter = "CSV (*.csv)|*.csv",
+                FileName = ""
+            };
 
-                if (File.Exists(sfd.FileName))
+            if (ofd.ShowDialog() != DialogResult.OK) return;
+            if (!File.Exists(ofd.FileName)) return;
+
+            try
+            {
+                // Muestra la pestaña de la lista (igual que tu código original)
+                maintab.SelectedTab = contactlisttab;
+
+                // Detectar delimitador en el header (',' o ';')
+                var delimiter = DetectDelimiter(ofd.FileName);
+
+                var cfg = new CsvConfiguration(CultureInfo.InvariantCulture)
                 {
+                    HasHeaderRecord = true,
+                    Delimiter = delimiter,
+                    IgnoreBlankLines = true,
+                    TrimOptions = TrimOptions.Trim,
+                    BadDataFound = null,
+                    MissingFieldFound = null,
+                    HeaderValidated = null
+                };
 
+                using (var sr = new StreamReader(ofd.FileName, Encoding.UTF8, true))
+                using (var csv = new CsvReader(sr, cfg))
+                {
+                    // Leer encabezados
+                    if (!csv.Read() || !csv.ReadHeader())
+                        throw new InvalidOperationException("El archivo CSV no contiene encabezados.");
 
-                    try
+                    var headers = csv.HeaderRecord?.ToList() ?? new System.Collections.Generic.List<string>();
+
+                    // Buscar columnas por posibles nombres
+                    string phoneCol = FirstExisting(headers,
+                        "Phone 1 - Value", "Primary Phone", "Mobile Phone", "Phone", "Teléfono 1 - Valor", "Teléfono principal");
+
+                    string nameCol = FirstExisting(headers,
+                        "First Name", "Given Name", "Name", "Nombre");
+
+                    // Validaciones mínimas
+                    if (string.IsNullOrEmpty(phoneCol) && string.IsNullOrEmpty(nameCol))
+                        throw new InvalidOperationException("No se encontraron columnas de teléfono ni nombre en el CSV.");
+
+                    // Preparar el DataGridView
+                    contactsdgv.SuspendLayout();
+                    contactsdgv.Columns.Clear();
+                    contactsdgv.Rows.Clear();
+
+                    contactsdgv.Columns.Add("colPhoneOrGroup", "Numero o Grupo");
+                    contactsdgv.Columns.Add("colName", "Nombre");
+                    var colSent = contactsdgv.Columns.Add("colSent", "Enviado (S/N)");
+                    contactsdgv.Columns[colSent].ReadOnly = true;
+
+                    // Ancho como en tu versión
+                    contactsdgv.Columns[0].Width = 200;
+                    contactsdgv.Columns[1].Width = 350;
+                    contactsdgv.Columns[2].Width = 100;
+
+                    // Leer filas
+                    while (csv.Read())
                     {
-                        maintab.SelectedTab = contactlisttab;
-
-                        string keywords = "First Name,";
-
-                        string keywords2 = "Name;";
-
-                        string keywords3 = "Name,";
-
-
-                        String path = sfd.FileName;
-                        List<String> lines = new List<String>();
-
-                        using (StreamReader reader = new StreamReader(path))
-                        {
-                            String line;
-
-                            while ((line = reader.ReadLine()) != null)
-                            {
-                                if (line.Contains(","))
-                                {
-                                    String[] split = line.Split(',');
-
-                                    if (split[1].Contains("34"))
-                                    {
-                                        split[1] = "100";
-                                        line = String.Join(",", split);
-                                    }
-                                }
-
-                                lines.Add(line);
-
-                            }
-
-                        }
-
-
-
-                        var match = lines.FirstOrDefault(stringToCheck => stringToCheck.Contains(keywords));
-
-                        var match2 = lines.FirstOrDefault(stringToCheck => stringToCheck.Contains(keywords2));
-
-                        var match3 = lines.FirstOrDefault(stringToCheck => stringToCheck.Contains(keywords3));
-
-
-
-
-                        if (match != null)
-                        {
-
-
-
-
-                            StreamReader sr = new StreamReader(sfd.FileName);
-                            StringBuilder sb = new StringBuilder();
-
-
-                            string s;
-
-                            contactsdgv.Columns.Clear();
-
-
-                            contactsdgv.Columns.Add("Column", "Numero o Grupo");
-                            contactsdgv.Columns.Add("Column", "Nombre");
-                            contactsdgv.Columns.Add("Column", "Enviado (S/N)");
-
-
-
-                            int indexphone, indexname;
-
-
-                            s = sr.ReadLine();
-
-                            string[] strs = s.Split(',');
-
-
-                            indexphone = strs.ToList().IndexOf("Mobile Phone");
-                            indexname = strs.ToList().IndexOf("First Name");
-
-
-
-
-                            while (!sr.EndOfStream)
-                            {
-                                s = sr.ReadLine();
-
-                                string[] str = s.Split(',');
-
-
-                                //because the first line is header
-                                string str1 = str[0].ToString();
-                                if (!str1.Equals("First Name"))
-                                {
-
-                                    contactsdgv.Rows.Add(str[indexphone].ToString(), str[indexname].ToString());
-
-
-
-                                }
-                            }
-                            sr.Close();
-
-                            DataGridViewColumn column = contactsdgv.Columns[0];
-                            column.Width = 200;
-
-
-
-                            DataGridViewColumn column1 = contactsdgv.Columns[1];
-                            column1.Width = 350;
-
-
-
-
-                            DataGridViewColumn column2 = contactsdgv.Columns[2];
-                            column2.Width = 100;
-                            column2.ReadOnly = true;
-
-                            MessageBox.Show("Datos importados!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                        }
-
-
-                        else
-                        {
-
-
-                            if (match2 != null)
-                            {
-
-
-
-
-
-
-                                StreamReader sr = new StreamReader(sfd.FileName);
-                                StringBuilder sb = new StringBuilder();
-
-
-                                string s;
-
-                                contactsdgv.Columns.Clear();
-
-
-                                contactsdgv.Columns.Add("Column", "Numero o Grupo");
-                                contactsdgv.Columns.Add("Column", "Nombre");
-                                contactsdgv.Columns.Add("Column", "Enviado (S/N)");
-
-                                int indexphone, indexname;
-
-
-                                s = sr.ReadLine();
-
-                                string[] strs = s.Split(',');
-
-
-                                indexphone = strs.ToList().IndexOf("Phone 1 - Value");
-                                indexname = strs.ToList().IndexOf("Name");
-
-
-
-                                while (!sr.EndOfStream)
-                                {
-                                    s = sr.ReadLine();
-
-                                    string[] str = s.Split(';');
-
-
-                                    //because the first line is header
-                                    string str1 = str[0].ToString();
-
-                                    if (!str1.Equals("Name"))
-                                    {
-
-                                        contactsdgv.Rows.Add(str[indexphone].ToString(), str[indexname].ToString());
-
-
-
-
-                                    }
-                                }
-                                sr.Close();
-
-                                DataGridViewColumn column = contactsdgv.Columns[0];
-                                column.Width = 200;
-
-
-
-                                DataGridViewColumn column1 = contactsdgv.Columns[1];
-                                column1.Width = 350;
-
-
-
-
-                                DataGridViewColumn column2 = contactsdgv.Columns[2];
-                                column2.Width = 100;
-                                column2.ReadOnly = true;
-
-                                MessageBox.Show("Datos importados!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-
-
-
-
-
-
-
-
-
-                            }
-                            else
-                            {
-
-                                if (match3 != null)
-                                {
-
-
-                                    StreamReader sr = new StreamReader(sfd.FileName);
-                                    StringBuilder sb = new StringBuilder();
-
-
-                                    string s;
-
-
-
-
-                                    contactsdgv.Columns.Clear();
-
-
-                                    contactsdgv.Columns.Add("Column", "Numero o Grupo");
-                                    contactsdgv.Columns.Add("Column", "Nombre");
-                                    contactsdgv.Columns.Add("Column", "Enviado (S/N)");
-
-
-
-                                    int indexphone, indexname;
-
-
-                                    s = sr.ReadLine();
-
-                                    string[] strs = s.Split(',');
-
-
-                                    indexphone = strs.ToList().IndexOf("Phone 1 - Value");
-                                    indexname = strs.ToList().IndexOf("Name");
-
-
-
-                                    while (!sr.EndOfStream)
-                                    {
-
-
-                                        s = sr.ReadLine();
-
-                                        string[] str = s.Split(',');
-
-
-                                        //because the first line is header
-                                        string str1 = str[0].ToString();
-
-
-
-
-                                        if (!str1.Equals("Name"))
-                                        {
-
-
-
-
-
-
-                                            contactsdgv.Rows.Add(str[indexphone].ToString(), str[indexname].ToString());
-
-
-                                        }
-
-                                    }
-                                    sr.Close();
-
-                                    DataGridViewColumn column = contactsdgv.Columns[0];
-                                    column.Width = 200;
-
-
-
-                                    DataGridViewColumn column1 = contactsdgv.Columns[1];
-                                    column1.Width = 350;
-
-
-
-
-                                    DataGridViewColumn column2 = contactsdgv.Columns[2];
-                                    column2.Width = 100;
-                                    column2.ReadOnly = true;
-
-                                    MessageBox.Show("Datos importados!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-
-
-
-                                }
-                                else
-                                {
-                                    Console.WriteLine("entre a leer el csv");
-                                    using (var reader = new StreamReader(sfd.FileName))
-                                    using (var csv = new CsvReader(reader, CultureInfo.CurrentCulture))
-                                    {
-                                        csv.Configuration.Delimiter = ",";
-
-                                        using (var dr = new CsvDataReader(csv))
-                                        {
-
-                                            contactsdgv.Columns.Clear();
-
-                                            DataTable dtbl = new DataTable();
-
-                                            dtbl.Load(dr);
-
-
-                                            contactsdgv.Columns.Add("Column", "Numero o Grupo");
-                                            contactsdgv.Columns.Add("Column", "Nombre");
-                                            contactsdgv.Columns.Add("Column", "Enviado (S/N)");
-
-                                            for (int i = 0; i < dtbl.Rows.Count; i++)
-                                            {
-
-                                                contactsdgv.Rows.Add(Convert.ToString(dtbl.Rows[i]["Primary Phone"]), Convert.ToString(dtbl.Rows[i]["First Name"]));
-
-
-                                            }
-
-
-                                            DataGridViewColumn column = contactsdgv.Columns[0];
-                                            column.Width = 200;
-
-
-
-                                            DataGridViewColumn column1 = contactsdgv.Columns[1];
-                                            column1.Width = 350;
-
-
-
-
-                                            DataGridViewColumn column2 = contactsdgv.Columns[2];
-                                            column2.Width = 100;
-                                            column2.ReadOnly = true;
-
-                                            MessageBox.Show("Datos importados!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                                        }
-                                    }
-                                }
-
-
-
-
-                            }
-
-
-
-
-
-
-
-                        }
-
-
-
-
-
-
-
-
-
-                    }
-                    catch (Exception ex)
-                    {
-
-                        MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        string phone = phoneCol != null ? (csv.GetField(phoneCol) ?? string.Empty) : string.Empty;
+                        string first = nameCol != null ? (csv.GetField(nameCol) ?? string.Empty) : string.Empty;
+
+                        // Si no hay ningún dato útil, saltamos
+                        if (string.IsNullOrWhiteSpace(phone) && string.IsNullOrWhiteSpace(first))
+                            continue;
+
+                        // NO normalizamos números: se agregan tal cual
+                        contactsdgv.Rows.Add(phone, first, string.Empty);
                     }
 
+                    contactsdgv.ResumeLayout();
+                    MessageBox.Show("Datos importados!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
 
+        // ===== Helpers =====
 
+        // Detecta ',' o ';' en el encabezado, ignorando separadores dentro de comillas.
+        private static string DetectDelimiter(string path)
+        {
+            using (var sr = new StreamReader(path, Encoding.UTF8, true))
+            {
+                var header = sr.ReadLine() ?? string.Empty;
+                bool inQuotes = false;
+                int commas = 0, semicolons = 0;
+
+                foreach (char c in header)
+                {
+                    if (c == '"') inQuotes = !inQuotes;
+                    else if (!inQuotes)
+                    {
+                        if (c == ',') commas++;
+                        else if (c == ';') semicolons++;
+                    }
                 }
 
-
+                // Si ambos son 0 (CSV raro), por defecto coma
+                if (commas == 0 && semicolons == 0) return ",";
+                return (semicolons > commas) ? ";" : ",";
             }
+        }
 
+        // Devuelve el primer nombre de columna existente (case-insensitive, trim)
+        private static string FirstExisting(System.Collections.Generic.IList<string> headers, params string[] candidates)
+        {
+            foreach (var c in candidates)
+            {
+                var match = headers.FirstOrDefault(h =>
+                    string.Equals(Norm(h), Norm(c), StringComparison.OrdinalIgnoreCase));
+                if (match != null) return match;
+            }
+            return null;
+        }
+
+        // Normaliza un nombre de encabezado para comparación flexible
+        private static string Norm(string s)
+        {
+            if (s == null) return string.Empty;
+            s = s.Trim();
+            // Quitamos espacios y guiones para tolerar variantes ("Phone 1 - Value")
+            var sb = new StringBuilder(s.Length);
+            foreach (var ch in s)
+            {
+                if (!char.IsWhiteSpace(ch) && ch != '-') sb.Append(ch);
+            }
+            return sb.ToString();
         }
         private void ImportGmailToDgv2()
         {
-
-
-
-
-
-
-
-            OpenFileDialog sfd = new OpenFileDialog();
-            sfd.Filter = "CSV (*.csv)|*.csv";
-            sfd.FileName = sfd.FileName;
-
-
-            if (sfd.ShowDialog() == DialogResult.OK)
+            var ofd = new OpenFileDialog
             {
+                Filter = "CSV (*.csv)|*.csv",
+                FileName = ""
+            };
+            if (ofd.ShowDialog() != DialogResult.OK) return;
+            if (!File.Exists(ofd.FileName)) return;
 
-                if (File.Exists(sfd.FileName))
+            try
+            {
+                // Mostrar la pestaña de la lista 2
+                main2tab.SelectedTab = contactlist2tab;
+
+                // Detectar delimitador del archivo
+                var delimiter = DetectDelimiter(ofd.FileName);
+
+                var cfg = new CsvConfiguration(CultureInfo.InvariantCulture)
                 {
+                    HasHeaderRecord = true,
+                    Delimiter = delimiter,
+                    IgnoreBlankLines = true,
+                    TrimOptions = TrimOptions.Trim,
+                    BadDataFound = null,
+                    MissingFieldFound = null,
+                    HeaderValidated = null
+                };
 
+                using (var sr = new StreamReader(ofd.FileName, Encoding.UTF8, true))
+                using (var csv = new CsvReader(sr, cfg))
+                {
+                    if (!csv.Read() || !csv.ReadHeader())
+                        throw new InvalidOperationException("El archivo CSV no contiene encabezados.");
 
-                    try
+                    var headers = csv.HeaderRecord?.ToList() ?? new List<string>();
+
+                    // Columnas posibles (en/es)
+                    string phoneCol = FirstExisting(headers,
+                        "Phone 1 - Value", "Primary Phone", "Mobile Phone", "Phone", "Teléfono 1 - Valor", "Teléfono principal");
+
+                    string nameCol = FirstExisting(headers,
+                        "First Name", "Given Name", "Name", "Nombre");
+
+                    if (string.IsNullOrEmpty(phoneCol) && string.IsNullOrEmpty(nameCol))
+                        throw new InvalidOperationException("No se encontraron columnas de teléfono ni nombre en el CSV.");
+
+                    // Preparar el DGV destino
+                    contacts2dgv.SuspendLayout();
+                    contacts2dgv.Columns.Clear();
+                    contacts2dgv.Rows.Clear();
+
+                    contacts2dgv.Columns.Add("colPhoneOrGroup", "Numero o Grupo");
+                    contacts2dgv.Columns.Add("colName", "Nombre");
+                    var sentIdx = contacts2dgv.Columns.Add("colSent", "Enviado (S/N)");
+                    contacts2dgv.Columns[sentIdx].ReadOnly = true;
+
+                    contacts2dgv.Columns[0].Width = 200;
+                    contacts2dgv.Columns[1].Width = 350;
+                    contacts2dgv.Columns[2].Width = 100;
+
+                    // Leer filas (sin normalizar teléfonos)
+                    while (csv.Read())
                     {
-                        main2tab.SelectedTab = contactlist2tab;
+                        string phone = phoneCol != null ? (csv.GetField(phoneCol) ?? string.Empty) : string.Empty;
+                        string name = nameCol != null ? (csv.GetField(nameCol) ?? string.Empty) : string.Empty;
 
-                        string keywords = "First Name,";
+                        if (string.IsNullOrWhiteSpace(phone) && string.IsNullOrWhiteSpace(name))
+                            continue;
 
-                        string keywords2 = "Name;";
-
-                        string keywords3 = "Name,";
-
-
-                        String path = sfd.FileName;
-                        List<String> lines = new List<String>();
-
-                        using (StreamReader reader = new StreamReader(path))
-                        {
-                            String line;
-
-                            while ((line = reader.ReadLine()) != null)
-                            {
-                                if (line.Contains(","))
-                                {
-                                    String[] split = line.Split(',');
-
-                                    if (split[1].Contains("34"))
-                                    {
-                                        split[1] = "100";
-                                        line = String.Join(",", split);
-                                    }
-                                }
-
-                                lines.Add(line);
-
-                            }
-
-                        }
-
-
-
-                        var match = lines.FirstOrDefault(stringToCheck => stringToCheck.Contains(keywords));
-
-                        var match2 = lines.FirstOrDefault(stringToCheck => stringToCheck.Contains(keywords2));
-
-                        var match3 = lines.FirstOrDefault(stringToCheck => stringToCheck.Contains(keywords3));
-
-
-
-
-                        if (match != null)
-                        {
-
-
-
-
-                            StreamReader sr = new StreamReader(sfd.FileName);
-                            StringBuilder sb = new StringBuilder();
-
-
-                            string s;
-
-                            contacts2dgv.Columns.Clear();
-
-
-                            contacts2dgv.Columns.Add("Column", "Numero o Grupo");
-                            contacts2dgv.Columns.Add("Column", "Nombre");
-                            contacts2dgv.Columns.Add("Column", "Enviado (S/N)");
-
-
-
-                            int indexphone, indexname;
-
-
-                            s = sr.ReadLine();
-
-                            string[] strs = s.Split(',');
-
-
-                            indexphone = strs.ToList().IndexOf("Mobile Phone");
-                            indexname = strs.ToList().IndexOf("First Name");
-
-
-
-
-                            while (!sr.EndOfStream)
-                            {
-                                s = sr.ReadLine();
-
-                                string[] str = s.Split(',');
-
-
-                                //because the first line is header
-                                string str1 = str[0].ToString();
-                                if (!str1.Equals("First Name"))
-                                {
-
-                                    contacts2dgv.Rows.Add(str[indexphone].ToString(), str[indexname].ToString());
-
-
-
-                                }
-                            }
-                            sr.Close();
-
-                            DataGridViewColumn column = contacts2dgv.Columns[0];
-                            column.Width = 200;
-
-
-
-                            DataGridViewColumn column1 = contacts2dgv.Columns[1];
-                            column1.Width = 350;
-
-
-
-
-                            DataGridViewColumn column2 = contacts2dgv.Columns[2];
-                            column2.Width = 100;
-                            column2.ReadOnly = true;
-
-                            MessageBox.Show("Datos importados!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                        }
-
-
-                        else
-                        {
-
-
-                            if (match2 != null)
-                            {
-
-
-
-
-
-
-                                StreamReader sr = new StreamReader(sfd.FileName);
-                                StringBuilder sb = new StringBuilder();
-
-
-                                string s;
-
-                                contacts2dgv.Columns.Clear();
-
-
-                                contacts2dgv.Columns.Add("Column", "Numero o Grupo");
-                                contacts2dgv.Columns.Add("Column", "Nombre");
-                                contacts2dgv.Columns.Add("Column", "Enviado (S/N)");
-
-                                int indexphone, indexname;
-
-
-                                s = sr.ReadLine();
-
-                                string[] strs = s.Split(',');
-
-
-                                indexphone = strs.ToList().IndexOf("Phone 1 - Value");
-                                indexname = strs.ToList().IndexOf("Name");
-
-
-
-                                while (!sr.EndOfStream)
-                                {
-                                    s = sr.ReadLine();
-
-                                    string[] str = s.Split(';');
-
-
-                                    //because the first line is header
-                                    string str1 = str[0].ToString();
-
-                                    if (!str1.Equals("Name"))
-                                    {
-
-                                        contacts2dgv.Rows.Add(str[indexphone].ToString(), str[indexname].ToString());
-
-
-
-
-                                    }
-                                }
-                                sr.Close();
-
-                                DataGridViewColumn column = contacts2dgv.Columns[0];
-                                column.Width = 200;
-
-
-
-                                DataGridViewColumn column1 = contacts2dgv.Columns[1];
-                                column1.Width = 350;
-
-
-
-
-                                DataGridViewColumn column2 = contacts2dgv.Columns[2];
-                                column2.Width = 100;
-                                column2.ReadOnly = true;
-
-                                MessageBox.Show("Datos importados!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-
-
-
-
-
-
-
-
-
-                            }
-                            else
-                            {
-
-                                if (match3 != null)
-                                {
-
-
-                                    StreamReader sr = new StreamReader(sfd.FileName);
-                                    StringBuilder sb = new StringBuilder();
-
-
-                                    string s;
-
-
-
-
-                                    contactsdgv.Columns.Clear();
-
-
-                                    contacts2dgv.Columns.Add("Column", "Numero o Grupo");
-                                    contacts2dgv.Columns.Add("Column", "Nombre");
-                                    contacts2dgv.Columns.Add("Column", "Enviado (S/N)");
-
-
-
-                                    int indexphone, indexname;
-
-
-                                    s = sr.ReadLine();
-
-                                    string[] strs = s.Split(',');
-
-
-                                    indexphone = strs.ToList().IndexOf("Phone 1 - Value");
-                                    indexname = strs.ToList().IndexOf("Name");
-
-
-
-                                    while (!sr.EndOfStream)
-                                    {
-
-
-                                        s = sr.ReadLine();
-
-                                        string[] str = s.Split(',');
-
-
-                                        //because the first line is header
-                                        string str1 = str[0].ToString();
-
-
-
-
-                                        if (!str1.Equals("Name"))
-                                        {
-
-
-
-
-
-
-                                            contacts2dgv.Rows.Add(str[indexphone].ToString(), str[indexname].ToString());
-
-
-                                        }
-
-                                    }
-                                    sr.Close();
-
-                                    DataGridViewColumn column = contacts2dgv.Columns[0];
-                                    column.Width = 200;
-
-
-
-                                    DataGridViewColumn column1 = contacts2dgv.Columns[1];
-                                    column1.Width = 350;
-
-
-
-
-                                    DataGridViewColumn column2 = contacts2dgv.Columns[2];
-                                    column2.Width = 100;
-                                    column2.ReadOnly = true;
-
-                                    MessageBox.Show("Datos importados!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-
-
-
-                                }
-                                else
-                                {
-                                    Console.WriteLine("entre a leer el csv");
-                                    using (var reader = new StreamReader(sfd.FileName))
-                                    using (var csv = new CsvReader(reader, CultureInfo.CurrentCulture))
-                                    {
-                                        csv.Configuration.Delimiter = ",";
-
-                                        using (var dr = new CsvDataReader(csv))
-                                        {
-
-                                            contacts2dgv.Columns.Clear();
-
-                                            DataTable dtbl = new DataTable();
-
-                                            dtbl.Load(dr);
-
-
-                                            contacts2dgv.Columns.Add("Column", "Numero o Grupo");
-                                            contacts2dgv.Columns.Add("Column", "Nombre");
-                                            contacts2dgv.Columns.Add("Column", "Enviado (S/N)");
-
-                                            for (int i = 0; i < dtbl.Rows.Count; i++)
-                                            {
-
-                                                contacts2dgv.Rows.Add(Convert.ToString(dtbl.Rows[i]["Primary Phone"]), Convert.ToString(dtbl.Rows[i]["First Name"]));
-
-
-                                            }
-
-
-                                            DataGridViewColumn column = contacts2dgv.Columns[0];
-                                            column.Width = 200;
-
-
-
-                                            DataGridViewColumn column1 = contacts2dgv.Columns[1];
-                                            column1.Width = 350;
-
-
-
-
-                                            DataGridViewColumn column2 = contacts2dgv.Columns[2];
-                                            column2.Width = 100;
-                                            column2.ReadOnly = true;
-
-                                            MessageBox.Show("Datos importados!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                                        }
-                                    }
-                                }
-
-
-
-
-                            }
-
-
-
-
-
-
-
-                        }
-
-
-
-
-
-
-
-
-
-                    }
-                    catch (Exception ex)
-                    {
-
-                        MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        contacts2dgv.Rows.Add(phone, name, string.Empty);
                     }
 
-
-
+                    contacts2dgv.ResumeLayout();
+                    MessageBox.Show("Datos importados!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
-
-
             }
-
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
         private async void startbtn_Click(object sender, EventArgs e)
         {
@@ -2291,899 +1547,468 @@ namespace Presentation
 
         }
 
-        private async Task Excecutesendtask()
+      private async Task Excecutesendtask()
+{
+    if (!CheckForInternetConnection())
+    {
+        MessageBox.Show("No cuenta con acceso a internet, no puedes continuar.", "Observación",
+            MessageBoxButtons.OK, MessageBoxIcon.Error);
+        return;
+    }
+
+    ClearEmptyRows(contactsdgv);
+
+    if (contactsdgv.Rows.Count < 2)
+    {
+        MessageBox.Show("No existen contactos a los que enviar!", "Observación",
+            MessageBoxButtons.OK, MessageBoxIcon.Information);
+        return;
+    }
+
+    if (wa.IsBrowserClosed())
+    {
+        MessageBox.Show("El navegador está cerrado, no se puede enviar mensajes!, conecte otra vez presionando <Conectar WhatsApp>",
+            "Observación", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+        return;
+    }
+
+    // Verifica sesión WA
+    if (!wa.IfConnected(By.XPath("//header/div[2]/div[1]/span[1]/div[2]/div[1]/span[1]")))
+    {
+        MessageBox.Show("Debe escanear el código QR para empezar a enviar", "Observación",
+            MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+        return;
+    }
+
+    // ---- Setup UI ----
+    ToggleUiSendingState(isSending: true);
+
+    rowcount = contactsdgv.RowCount - 1;
+    sendpbr.Value = 0;
+    sendpbr.Maximum = rowcount;
+    totalmessageslbl.Text = rowcount.ToString();
+
+    sendedmessage = 0;
+    notsendedmessage = 0;
+    notsendedmessagelbl.Text = sendedmessage.ToString();
+    sendedmessagelbl.Text = notsendedmessage.ToString();
+
+    // Timings
+    wa.preventblocktiming = preventblockcb.Checked ? 4000 : 0;
+    eachmessagetiming = eachmessagetimingcb.Checked
+        ? Math.Max(0, SafeInt(eachmessagetimingtxt.Text)) * 1000
+        : 0;
+
+    // Prepara textos base (se respetan saltos con <br/> y sin normalizar teléfonos)
+    var messages = new List<string>
+    {
+        m1txt.Text.Replace("\n", "<br/>"),
+        m2txt.Text.Replace("\n", "<br/>"),
+        m3txt.Text.Replace("\n", "<br/>"),
+        m4txt.Text.Replace("\n", "<br/>"),
+        m5txt.Text.Replace("\n", "<br/>")
+    };
+
+    int count = 0;
+    string filename = filenametxt.Text?.Trim();
+    bool hasFile = !string.IsNullOrEmpty(filename);
+
+    try
+    {
+        foreach (DataGridViewRow fila in contactsdgv.Rows)
         {
+            if (fila.IsNewRow) continue;
 
-
-            if (CheckForInternetConnection())
+            if (!CheckForInternetConnection())
             {
+                StopForNoInternet();
+                break;
+            }
 
-                //condicionales y token de cancellation
+            // Variables por fila
+            string actualnumber = Convert.ToString(fila.Cells[0].Value);
+            string actualname   = Convert.ToString(fila.Cells[1].Value);
 
-                ClearEmptyRows(contactsdgv);
+            if (string.IsNullOrWhiteSpace(actualnumber))
+            {
+                MarkNotSent(fila);
+                UpdateProgress(++count);
+                continue;
+            }
 
+            // Aplicar pausa manual si corresponde (una sola vez)
+            await MaybeApplyManualPauseAsync(fila.Index);
 
-                string actualnumber = "";
-                string actualname = "";
+            // Pausa de usuario (pausetiming) si está activa
+            await MaybeApplyUserPauseAsync();
 
+            // Componer mensaje (una sola vez)
+            string messageToSend = ComposeMessage(messages, actualname);
 
+            // Abrir chat
+            bool chatOpened = await OpenChatAsync(actualnumber, cancellationToken.Token);
+            if (!chatOpened)
+            {
+                TryCleanEditor();
+                MarkNotSent(fila);
+                UpdateProgress(++count);
+                continue;
+            }
 
-
-                //variables
-
-                string filename = filenametxt.Text;
-                stopbtnclicked = false;
-                rowcount = Convert.ToInt32(contactsdgv.RowCount) - 1;
-                sendpbr.Value = 0;
-                sendpbr.Maximum = rowcount;
-                totalmessageslbl.Text = rowcount.ToString();
-                int count = 0;
-
-                sendedmessage = 0;
-                notsendedmessage = 0;
-
-
-
-
-                notsendedmessagelbl.Text = sendedmessage.ToString();
-                sendedmessagelbl.Text = notsendedmessage.ToString();
-
-
-
-
-
-
-                if (contactsdgv.Rows.Count < 2) { MessageBox.Show("No existen contactos a los que enviar!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information); }
+            // Enviar según tipo
+            bool sentOk = false;
+            try
+            {
+                if (hasFile)
+                {
+                    sentOk = await SendWithFileAsync(filetype, filename, messageToSend, actualnumber, cancellationToken.Token);
+                }
                 else
                 {
-
-
-
-
-
-
-                    if (wa.IsBrowserClosed() == false)
-                    {
-                        if (wa.IfConnected(By.XPath("//header/div[2]/div[1]/span[1]/div[2]/div[1]/span[1]")) == false)
-                        {
-                            DialogResult d;
-                            d = MessageBox.Show("Debe escanear el codigo QR para empezar a enviar", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-
-
-                        }
-
-
-                        else
-                        {
-
-                            startbtn.Enabled = false;
-                            pausebtn.Enabled = true;
-                            stopbtn.Enabled = true;
-                            pausetiming = 0;
-                            logoutbtn.Enabled = false;
-                            uploadbtn.Enabled = false;
-                            clearfilenamebtn.Enabled = false;
-                            connectwabtn.Enabled = false;
-                            loadmessagelbl.Text = "Estado: Conectado . . .";
-                            contactsdgv.AllowUserToAddRows = false;
-                            contactsdgv.AllowUserToDeleteRows = false;
-                            
-                            
-
-
-                            foreach (DataGridViewRow fila in contactsdgv.Rows)
-                            {
-
-
-                                if (fila.IsNewRow) continue;
-
-
-
-
-                                if (CheckForInternetConnection())
-                                {
-
-                                    if (preventblockcb.Checked == true)
-                                    {
-                                        wa.preventblocktiming = 4000;
-                                    }
-                                    else
-                                    {
-                                        wa.preventblocktiming = 0;
-                                    }
-                                    if (eachmessagetimingcb.Checked == true)
-                                    {
-                                        eachmessagetiming = Convert.ToInt32(eachmessagetimingtxt.Text) * 1000;
-                                    }
-                                    else
-                                    {
-                                        eachmessagetiming = 0;
-                                    }
-
-
-
-                                    if (Convert.ToString(fila.Cells[0].Value) != string.Empty)
-                                    { actualnumber = Convert.ToString(fila.Cells[0].Value); Console.WriteLine(actualnumber); }
-                                    else { actualnumber = "numero vacio"; Console.WriteLine(actualnumber); }
-
-                                    if (Convert.ToString(fila.Cells[1].Value) != string.Empty)
-                                    { actualname = Convert.ToString(fila.Cells[1].Value); Console.WriteLine(actualname); }
-                                    else { actualname = "nombre vacio"; Console.WriteLine(actualname); }
-
-
-
-
-                                    //mensajes
-
-                                    string m1 = m1txt.Text.Replace("\n", "<br/>");
-                                    string m2 = m2txt.Text.Replace("\n", "<br/>");
-                                    string m3 = m3txt.Text.Replace("\n", "<br/>");
-                                    string m4 = m4txt.Text.Replace("\n", "<br/>");
-                                    string m5 = m5txt.Text.Replace("\n", "<br/>");
-
-                                    var messages = new List<string>
-                                    {
-                                        m1,
-                                        m2,
-                                        m3,
-                                        m4,
-                                        m5
-                                    };
-
-
-
-
-
-                                    string actualmessagetosend = "";
-
-
-                                    //bucle de mensajes 2, 3, 4 , 5 yremplazo con regards y goodbyes
-
-
-
-                                    if (manymessagescb.Checked)
-                                    {
-
-                                        Random rnd = new Random();
-
-                                        List<int> lst = new List<int>();
-                                        lst = NotEmptyMessages();
-
-                                        int r = rnd.Next(lst.Count);
-
-                                       // Console.WriteLine(lst[r]+"this is the index of the message selected to send on manymessages option enabled");
-
-                                        actualmessagetosend = actualmessagetosend + messages[lst[r]];
-
-                                        if (sendfullnamecb.Checked == true)
-                                        {
-
-                                            if (actualname == "nombre vacio")
-                                            {
-                                                actualmessagetosend = Regex.Replace(actualmessagetosend, "{nombre}", "");
-                                            }
-
-                                            else
-                                            {
-                                                actualmessagetosend = Regex.Replace(actualmessagetosend, "{nombre}", actualname);
-                                            }
-
-                                        }
-                                        if (senddatetimecb.Checked)
-                                        {
-                                            DateTime actualdate = getTimeNow();
-
-                                            actualmessagetosend = Regex.Replace(actualmessagetosend, "{fecha}", Convert.ToString(actualdate.ToString("dddd, dd MMMM yyyy HH:mm")));
-
-                                        }
-                                    }
-                                    else
-                                    {
-
-
-                                        actualmessagetosend = actualmessagetosend + messages[0];
-
-
-                                        if (sendfullnamecb.Checked == true)
-                                        {
-
-                                            if (actualname == "nombre vacio")
-                                            {
-
-                                                actualmessagetosend = Regex.Replace(actualmessagetosend, "{nombre}", "");
-
-                                            }
-
-                                            else
-                                            {
-                                                actualmessagetosend = Regex.Replace(actualmessagetosend, "{nombre}", actualname);
-                                            }
-
-                                        }
-                                        if (senddatetimecb.Checked)
-                                        {
-                                            DateTime actualdate = getTimeNow();
-
-                                            actualmessagetosend = Regex.Replace(actualmessagetosend, "{fecha}", Convert.ToString(actualdate.ToString("dddd, dd MMMM yyyy HH:mm")));
-
-                                        }
-
-
-                                    }
-
-
-
-                                    try
-                                    {
-
-
-
-                                        loadmessagelbl.Text = "";
-                                        loadmessagelbl.Text = "Estado: Conectado . . .";
-
-
-
-
-                                        if (actualnumber != "numero vacio")
-                                        {
-                                            WA.driver.Manage().Window.Size = new Size(850,650); 
-                                            Console.WriteLine("el numero no esta vacio y paso a busca contacto");
-
-
-                                            await Task.Run(() =>
-                                            {
-                                                if (pausetiming != 0)
-                                                {
-                                                    try
-                                                    {
-                                                        pausetimingaction(pausetiming, pauseToken.Token);
-                                                        pausetiming = 0;
-                                                    }
-                                                    catch (Exception ex)
-                                                    {
-
-                                                        Console.WriteLine(ex.Message);
-                                                    }
-
-                                                }
-
-                                                try
-                                                {
-                                                    //Task.Delay(3000).Wait();
-                                                    Actions action = new Actions(WA.driver);
-
-                                                    wa.ClickSearchIcon();
-
-                                                    wa.ContactSearch(actualnumber);
-
-
-                                                    action.SendKeys(Keys.Space).Build().Perform();
-
-
-                                                    //Task.Delay(3000).Wait();
-
-                                                    Console.WriteLine("doy click en el contacto");
-
-
-
-                                                    wa.ContactClick();
-                                                    //action.SendKeys(Keys.Enter).Build().Perform();
-                                                    //wa.driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(30);
-                                                    // wa.driver.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(30);
-                                                    Task.Delay(2000).Wait();
-
-                                                }
-                                                catch (Exception ex)
-                                                {
-                                                    Console.WriteLine(ex.Message.ToString());
-
-                                                }
-
-
-
-                                            }, cancellationToken.Token);
-
-
-
-
-                                            if (wa.clickstate)
-                                            {
-
-                                                Console.WriteLine("entre a escribir");
-
-
-                                                if (!string.IsNullOrEmpty(filenametxt.Text))
-                                                {
-
-
-                                                    if (filetype == "I")
-                                                    {
-
-                                                        await Task.Run(() =>
-                                                        {
-                                                            if (pausetiming != 0)
-                                                            {
-                                                                try
-                                                                {
-                                                                    pausetimingaction(pausetiming, pauseToken.Token);
-                                                                    pausetiming = 0;
-                                                                }
-                                                                catch (Exception ex)
-                                                                {
-
-                                                                    Console.WriteLine(ex.Message);
-                                                                }
-
-                                                            }
-
-
-
-
-
-                                                            try
-                                                            {
-
-
-
-
-                                                                Actions action = new Actions(WA.driver);
-
-
-
-
-
-                                                                if (!CheckAttachMessageStatus())
-                                                                {
-                                                                    wa.ImageMessage(filename);
-                                                                    Task.Delay(1000 + wa.preventblocktiming).Wait();
-
-
-                                                                    wa.ContactSend(By.XPath(WA.SendIADButton));
-                                                                }
-                                                                else
-                                                                {
-                                                                    if (GetImageState(filename))
-                                                                    {
-
-                                                                        wa.ImageTextMessage(filename, actualmessagetosend);
-                                                                        //action.SendKeys(".").Build().Perform();
-                                                                       // action.SendKeys(Keys.Backspace + Keys.Backspace + Keys.Backspace + Keys.Backspace).Build().Perform();
-                                                                        Task.Delay(1000 + wa.preventblocktiming).Wait();
-
-
-                                                                        //wa.ContactSend(By.XPath(WA.SendIADButton));
-                                                                    }
-
-                                                                    else if (GetVideoState(filename))
-                                                                    {
-
-                                                                        wa.VideoTextMessage(filename, actualmessagetosend);
-                                                                        action.SendKeys(".").Build().Perform();
-                                                                        action.SendKeys(Keys.Backspace + Keys.Backspace + Keys.Backspace + Keys.Backspace).Build().Perform();
-                                                                        Task.Delay(1000 + wa.preventblocktiming).Wait();
-
-                                                                        Console.WriteLine("only video attached");
-
-                                                                        wa.ContactSend(By.XPath(WA.SendIADButton));
-                                                                    }
-                                                                    else
-                                                                    {
-                                                                        wa.ImageMessage(filename);
-                                                                        Task.Delay(1000 + wa.preventblocktiming).Wait();
-
-
-                                                                        wa.ContactSend(By.XPath(WA.SendIADButton));
-
-                                                                        Task.Delay(1000 + wa.preventblocktiming).Wait();
-
-
-                                                                        wa.ClickSearchIcon();
-
-                                                                        wa.ContactSearch(actualnumber);
-
-                                                                        action.SendKeys(Keys.Space).Build().Perform();
-
-                                                                        wa.ContactClick();
-
-
-
-                                                                        Task.Delay(1000 + wa.preventblocktiming).Wait();
-
-
-                                                                        wa.ContactMessage(actualmessagetosend);
-
-                                                                        action.SendKeys("A").Build().Perform();
-                                                                        action.SendKeys(Keys.Backspace + Keys.Backspace + Keys.Backspace + Keys.Backspace).Build().Perform();
-
-
-
-                                                                        Console.WriteLine("solo Mensaje escrito");
-
-
-                                                                        wa.ContactActionEnter();
-
-                                                                        Console.WriteLine("presione enter para enviar");
-
-
-                                                                    }
-
-
-                                                                }
-
-
-
-
-
-
-                                                                fila.Cells[2].Value = "S";
-
-
-                                                                Task.Delay(1000 + wa.preventblocktiming).Wait();
-
-
-                                                                Console.WriteLine("Envio imagen o video y texto");
-
-                                                            }
-                                                            catch (Exception ex)
-                                                            {
-
-                                                                Console.WriteLine(ex.Message) ;
-                                                            }
-
-
-
-
-
-                                                        }, cancellationToken.Token);
-
-                                                    }
-                                                    if (filetype == "A")
-                                                    {
-
-                                                        await Task.Run(() =>
-                                                        {
-                                                            if (pausetiming != 0)
-                                                            {
-                                                                try
-                                                                {
-                                                                    pausetimingaction(pausetiming, pauseToken.Token);
-                                                                    pausetiming = 0;
-                                                                }
-                                                                catch (Exception ex)
-                                                                {
-
-                                                                    Console.WriteLine(ex.Message);
-                                                                }
-
-                                                            }
-
-                                                            try
-                                                            {
-
-
-
-                                                                Actions action = new Actions(WA.driver);
-
-
-                                                                wa.ContactFileAudio(filename);
-
-
-
-                                                                wa.ContactSend(By.XPath(WA.SendIADButton));
-
-
-
-
-                                                                Task.Delay(1000 + wa.preventblocktiming).Wait();
-
-
-
-                                                                if (!CheckAttachMessageStatus())
-                                                                {
-                                                                    wa.ClickSearchIcon();
-
-                                                                    wa.ContactSearch(actualnumber);
-
-                                                                    action.SendKeys(Keys.Space).Build().Perform();
-
-                                                                    wa.ContactClick();
-
-
-
-                                                                    Task.Delay(1000 + wa.preventblocktiming).Wait();
-
-
-                                                                    wa.ContactMessage(actualmessagetosend);
-
-                                                                    action.SendKeys("A").Build().Perform();
-                                                                    action.SendKeys(Keys.Backspace + Keys.Backspace + Keys.Backspace + Keys.Backspace).Build().Perform();
-
-
-
-                                                                    Console.WriteLine("solo Mensaje escrito");
-
-
-                                                                    wa.ContactActionEnter();
-
-                                                                    Console.WriteLine("presione enter para enviar");
-                                                                }
-
-
-
-
-
-
-
-
-
-
-
-
-                                                                fila.Cells[2].Value = "S";
-
-
-
-                                                                Task.Delay(1000 + wa.preventblocktiming).Wait();
-
-
-                                                                Console.WriteLine("Envio audio y texto");
-
-
-
-                                                            }
-                                                            catch (Exception)
-                                                            {
-
-
-                                                            }
-
-
-                                                        }, cancellationToken.Token);
-                                                    }
-                                                    if (filetype == "D")
-                                                    {
-
-                                                        await Task.Run(() =>
-                                                        {
-                                                            if (pausetiming != 0)
-                                                            {
-                                                                try
-                                                                {
-                                                                    pausetimingaction(pausetiming, pauseToken.Token);
-                                                                    pausetiming = 0;
-                                                                }
-                                                                catch (Exception ex)
-                                                                {
-
-                                                                    Console.WriteLine(ex.Message);
-                                                                }
-
-                                                            }
-
-                                                            try
-                                                            {
-
-
-                                                                Actions action = new Actions(WA.driver);
-
-
-
-                                                                wa.ContactFile(filename);
-
-                                                                wa.ContactSend(By.XPath(WA.SendIADButton));
-
-
-                                                                Task.Delay(1000 + wa.preventblocktiming).Wait();
-
-
-
-
-
-                                                                if (!CheckAttachMessageStatus())
-                                                                {
-
-
-                                                                    wa.ClickSearchIcon();
-
-                                                                    wa.ContactSearch(actualnumber);
-
-                                                                    action.SendKeys(Keys.Space).Build().Perform();
-
-
-                                                                    wa.ContactClick();
-
-                                                                    Task.Delay(1000 + wa.preventblocktiming).Wait();
-
-
-
-                                                                    wa.ContactMessage(actualmessagetosend);
-
-                                                                    action.SendKeys("A").Build().Perform();
-                                                                    action.SendKeys(Keys.Backspace + Keys.Backspace + Keys.Backspace + Keys.Backspace).Build().Perform();
-
-
-
-                                                                    Console.WriteLine("solo Mensaje escrito");
-
-
-
-
-
-                                                                    Task.Delay(1000 + wa.preventblocktiming).Wait();
-
-                                                                    wa.ContactActionEnter();
-
-                                                                }
-
-
-
-
-                                                                Console.WriteLine("presione enter para enviar");
-
-
-
-                                                                fila.Cells[2].Value = "S";
-
-
-
-                                                                Task.Delay(1000 + wa.preventblocktiming).Wait();
-
-
-
-                                                                Console.WriteLine("Envio file y texto");
-
-
-                                                            }
-                                                            catch (Exception)
-                                                            {
-
-
-                                                            }
-
-
-
-                                                        }, cancellationToken.Token);
-                                                    }
-
-
-
-                                                }
-
-                                                else
-                                                {
-
-                                                    await Task.Run(() =>
-                                                    {
-
-
-                                                        if (pausetiming != 0)
-                                                        {
-                                                            try
-                                                            {
-                                                                pausetimingaction(pausetiming, pauseToken.Token);
-                                                                pausetiming = 0;
-                                                            }
-                                                            catch (Exception ex)
-                                                            {
-
-                                                                Console.WriteLine(ex.Message);
-                                                            }
-
-                                                        }
-
-
-                                                        try
-                                                        {
-
-                                                            Actions action = new Actions(WA.driver);
-
-                                                            //  Console.WriteLine(Ascii);
-                                                            
-                                                            //action.SendKeys("a").Build().Perform();
-                                                           // Task.Delay(2000);
-                                                            wa.ContactMessage(actualmessagetosend);
-                                                            //action.SendKeys(Keys.Backspace + Keys.Backspace + Keys.Backspace + Keys.Backspace).Build().Perform();
-                                                            
-
-
-                                                            Console.WriteLine("solo Mensaje escrito");
-                                                            Task.Delay(1000 + wa.preventblocktiming).Wait();
-
-                                                            wa.ContactActionEnter();
-                                                            Console.WriteLine("presione enter para enviar");
-                                                            fila.Cells[2].Value = "S";
-
-
-
-
-
-
-                                                        }
-                                                        catch (Exception ex)
-                                                        {
-                                                            Console.WriteLine(ex.Message);
-
-
-
-                                                        }
-
-
-                                                    }, cancellationToken.Token);
-
-
-                                                }
-
-                                                sendedmessage++;
-                                                sendedmessagelbl.Text = Convert.ToString(sendedmessage);
-                                                Console.WriteLine(sendedmessage);
-
-                                            }
-                                            else
-                                            {
-                                                Actions action = new Actions(WA.driver);
-                                                action.SendKeys(Keys.Backspace + Keys.Backspace + Keys.Backspace + Keys.Backspace).Build().Perform();
-
-                                                fila.Cells[2].Value = "N";
-                                                notsendedmessage++;
-                                                notsendedmessagelbl.Text = Convert.ToString(notsendedmessage);
-                                                Console.WriteLine(notsendedmessage);
-
-
-
-                                            }
-
-
-
-                                        }
-                                        else
-                                        {
-                                            fila.Cells[2].Value = "N";
-                                            notsendedmessage++;
-                                            notsendedmessagelbl.Text = Convert.ToString(notsendedmessage);
-                                            Console.WriteLine(notsendedmessage);
-                                        }
-
-
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        Console.WriteLine(ex.Message.ToString());
-
-
-                                    }
-                                }
-
-                                else
-                                {
-
-
-                                    stopbtn.Enabled = false;
-                                    pausebtn.Enabled = false;
-                                    startbtn.Enabled = true;
-                                    MessageBox.Show("Se detuvieron los envios de WA debido a que no cuenta con acceso a internet.", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Error);
-
-                                    break;
-                                }
-
-                                count++;
-                                if (count <= rowcount)
-                                {
-                                    sendpbr.Value = count;
-                                }
-
-
-
-                                if (severalpausetxt.Text != "")
-                                {
-
-
-                                    if (fila.Index == Convert.ToInt32(severalpausetxt.Text) && !severalpausetoken.IsCancellationRequested)
-                                    {
-
-                                        Console.WriteLine("<<<<<<<<<<<<<<<<<<<este es la cuenta ctual de la fila  " + fila.Index);
-                                        MessageBox.Show("El envio se pausó debido al <# mensajes para Pausar> designado en esta sección.\nRecomendamos esta pausa para no ser bloqueado en WhatsApp.\nLa pausa suele durar 15 minutos y se empezo el <" + getTimeNow() + ">, actualmente se pausa cada " + severalpausetxt.Text + " mensajes", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                                        await Task.Run(() =>
-                                            {
-                                                try
-                                                {
-                                                    Task.Delay(TimeSpan.FromSeconds(900), severalpausetoken.Token).Wait();
-
-                                                }
-                                                catch (Exception ex)
-                                                {
-
-                                                    Console.WriteLine(ex.Message);
-                                                }
-
-
-                                            });
-
-
-
-                                    }
-
-
-
-                                }
-                                if (wa.clickstate)
-                                {
-                                    await Task.Run(() =>
-                                    {
-                                        try
-                                        {
-                                            Task.Delay(eachmessagetiming, eachmessagetoken.Token).Wait();
-
-
-                                        }
-                                        catch (Exception ex)
-                                        {
-
-                                            Console.WriteLine(ex.Message.ToString());
-                                        }
-
-
-
-
-                                    });
-                                }
-
-
-
-                            }
-
-
-
-                            if (stopbtnclicked != true)
-                            {
-                                MessageBox.Show("Mensajes enviados correctamente! ", "Éxito", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                                uploadbtn.Enabled = true;
-                                clearfilenamebtn.Enabled = true;
-                                stopbtn.Enabled = false;
-                                pausebtn.Enabled = false;
-                                startbtn.Enabled = true;
-                                logoutbtn.Enabled = true;
-                                connectwabtn.Enabled = true;
-
-                            }
-                            else
-                            {
-                                startbtn.Enabled = true;
-                            }
-
-                            notsendedmessagelbl.Text = Convert.ToString(rowcount - sendedmessage);
-
-                            contactsdgv.AllowUserToAddRows = true;
-                            contactsdgv.AllowUserToDeleteRows = true;
-                        }
-                    }
-
-                    else
-                    {
-                        DialogResult d;
-                        d = MessageBox.Show("El navegador está cerrado, no se puede enviar mensajes!, conecte otra vez presionando <Conectar WhatsApp>", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-
-
-
-                    }
-
+                    sentOk = await SendTextOnlyAsync(messageToSend, cancellationToken.Token);
                 }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+                sentOk = false;
+            }
 
-
-
-
+            if (sentOk)
+            {
+                fila.Cells[2].Value = "S";
+                sendedmessage++;
+                sendedmessagelbl.Text = sendedmessage.ToString();
             }
             else
             {
-                MessageBox.Show("No cuenta con acceso a internet, no puedes continuar.", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                TryCleanEditor();
+                MarkNotSent(fila);
             }
 
+            // Retraso anti-bloqueo / entre mensajes
+            await Task.Delay(1000 + wa.preventblocktiming, cancellationToken.Token);
 
+            // Pausa configurable entre mensajes
+            if (eachmessagetiming > 0 && wa.clickstate)
+                await Task.Delay(eachmessagetiming, eachmessagetoken.Token);
 
-
-
+            UpdateProgress(++count);
         }
+
+        if (!stopbtnclicked)
+        {
+            MessageBox.Show("Mensajes enviados correctamente! ", "Éxito",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        notsendedmessagelbl.Text = Convert.ToString(rowcount - sendedmessage);
+    }
+    catch (OperationCanceledException)
+    {
+        // Cancelado por tokens: no hacemos nada extra.
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine(ex.Message);
+    }
+    finally
+    {
+        ToggleUiSendingState(isSending: false);
+        contactsdgv.AllowUserToAddRows = true;
+        contactsdgv.AllowUserToDeleteRows = true;
+    }
+}
+
+/* ==================== Helpers ==================== */
+
+// Evita cast/format exceptions
+private int SafeInt(string s) => int.TryParse(s, out var v) ? v : 0;
+
+// Habilita/deshabilita controles durante el envío
+private void ToggleUiSendingState(bool isSending)
+{
+    startbtn.Enabled = !isSending;
+    pausebtn.Enabled = isSending;
+    stopbtn.Enabled = isSending;
+    logoutbtn.Enabled = !isSending;
+    uploadbtn.Enabled = !isSending;
+    clearfilenamebtn.Enabled = !isSending;
+    connectwabtn.Enabled = !isSending;
+
+    contactsdgv.AllowUserToAddRows = !isSending;
+    contactsdgv.AllowUserToDeleteRows = !isSending;
+    loadmessagelbl.Text = isSending ? "Estado: Conectado . . ." : "Estado: Inactivo";
+}
+
+// Pausa manual cada N mensajes (severalpausetxt)
+private async Task MaybeApplyManualPauseAsync(int rowIndex)
+{
+    if (string.IsNullOrWhiteSpace(severalpausetxt.Text)) return;
+
+    int threshold = SafeInt(severalpausetxt.Text);
+    if (threshold <= 0) return;
+
+    if (rowIndex == threshold && !severalpausetoken.IsCancellationRequested)
+    {
+        MessageBox.Show(
+            "El envio se pausó debido al <# mensajes para Pausar> designado en esta sección.\n" +
+            "Recomendamos esta pausa para no ser bloqueado en WhatsApp.\n" +
+            $"La pausa suele durar 15 minutos y se empezó el <{getTimeNow()}>, actualmente se pausa cada {severalpausetxt.Text} mensajes",
+            "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+        await Task.Delay(TimeSpan.FromSeconds(900), severalpausetoken.Token);
+    }
+}
+
+// Pausa de usuario (pausetiming) si aplica
+private async Task MaybeApplyUserPauseAsync()
+{
+    if (pausetiming != 0)
+    {
+        try
+        {
+            // Si ya tienes pausetimingaction que bloquea, puedes llamarla con Task.Run
+            await Task.Run(() => pausetimingaction(pausetiming, pauseToken.Token), pauseToken.Token);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+        }
+        finally
+        {
+            pausetiming = 0;
+        }
+    }
+}
+
+// Arma el mensaje final (elige aleatorio si corresponde, reemplaza {nombre} y {fecha})
+private string ComposeMessage(IList<string> messages, string actualname)
+{
+    string msg = string.Empty;
+
+    if (manymessagescb.Checked)
+    {
+        var indices = NotEmptyMessages();       // Asumo que devuelve índices válidos
+        if (indices.Count > 0)
+        {
+            var rnd = new Random();
+            msg = messages[indices[rnd.Next(indices.Count)]];
+        }
+    }
+    else
+    {
+        msg = messages[0];
+    }
+
+    if (sendfullnamecb.Checked)
+    {
+        msg = Regex.Replace(msg, "{nombre}",
+            string.IsNullOrWhiteSpace(actualname) ? "" : actualname);
+    }
+
+    if (senddatetimecb.Checked)
+    {
+        DateTime actualdate = getTimeNow();
+        msg = Regex.Replace(msg, "{fecha}", actualdate.ToString("dddd, dd MMMM yyyy HH:mm"));
+    }
+
+    return msg;
+}
+
+// Abrir chat del contacto
+private async Task<bool> OpenChatAsync(string actualnumber, CancellationToken ct)
+{
+    return await Task.Run(() =>
+    {
+        try
+        {
+            var action = new Actions(WA.driver);
+            wa.ClickSearchIcon();
+            wa.ContactSearch(actualnumber);
+            action.SendKeys(Keys.Space).Build().Perform();
+
+            wa.ContactClick();
+            Task.Delay(2000).Wait();
+            return wa.clickstate;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            return false;
+        }
+    }, ct);
+}
+
+// Enviar solo texto
+private async Task<bool> SendTextOnlyAsync(string message, CancellationToken ct)
+{
+    return await Task.Run(() =>
+    {
+        try
+        {
+            var action = new Actions(WA.driver);
+            wa.ContactMessage(message);
+            Task.Delay(1000 + wa.preventblocktiming).Wait();
+            wa.ContactActionEnter();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            return false;
+        }
+    }, ct);
+}
+
+// Enviar con archivo (I=imagen/video, A=audio, D=documento)
+// Mantiene tu lógica de adjunto + texto cuando aplica
+private async Task<bool> SendWithFileAsync(string filetype, string filename, string message, string number, CancellationToken ct)
+{
+    return await Task.Run(() =>
+    {
+        try
+        {
+            var action = new Actions(WA.driver);
+
+            if (filetype == "I")
+            {
+                if (!CheckAttachMessageStatus())
+                {
+                    wa.ImageMessage(filename);
+                    Task.Delay(1000 + wa.preventblocktiming).Wait();
+                    wa.ContactSend(By.XPath(WA.SendIADButton));
+                }
+                else
+                {
+                    if (GetImageState(filename))
+                    {
+                        wa.ImageTextMessage(filename, message);
+                        Task.Delay(1000 + wa.preventblocktiming).Wait();
+                    }
+                    else if (GetVideoState(filename))
+                    {
+                        wa.VideoTextMessage(filename, message);
+                        action.SendKeys(".").Build().Perform();
+                        action.SendKeys(Keys.Backspace + Keys.Backspace + Keys.Backspace + Keys.Backspace).Build().Perform();
+                        Task.Delay(1000 + wa.preventblocktiming).Wait();
+                        wa.ContactSend(By.XPath(WA.SendIADButton));
+                    }
+                    else
+                    {
+                        // Fallback: envia imagen y luego texto aparte
+                        wa.ImageMessage(filename);
+                        Task.Delay(1000 + wa.preventblocktiming).Wait();
+                        wa.ContactSend(By.XPath(WA.SendIADButton));
+
+                        Task.Delay(1000 + wa.preventblocktiming).Wait();
+                        wa.ClickSearchIcon();
+                        wa.ContactSearch(number);
+                        action.SendKeys(Keys.Space).Build().Perform();
+                        wa.ContactClick();
+                        Task.Delay(1000 + wa.preventblocktiming).Wait();
+
+                        wa.ContactMessage(message);
+                        action.SendKeys("A").Build().Perform();
+                        action.SendKeys(Keys.Backspace + Keys.Backspace + Keys.Backspace + Keys.Backspace).Build().Perform();
+                        wa.ContactActionEnter();
+                    }
+                }
+
+                return true;
+            }
+            else if (filetype == "A")
+            {
+                wa.ContactFileAudio(filename);
+                wa.ContactSend(By.XPath(WA.SendIADButton));
+                Task.Delay(1000 + wa.preventblocktiming).Wait();
+
+                // Si no hay campo de texto adjunto, enviar texto por separado
+                if (!CheckAttachMessageStatus())
+                {
+                    wa.ClickSearchIcon();
+                    wa.ContactSearch(number);
+                    action.SendKeys(Keys.Space).Build().Perform();
+                    wa.ContactClick();
+                    Task.Delay(1000 + wa.preventblocktiming).Wait();
+
+                    wa.ContactMessage(message);
+                    action.SendKeys("A").Build().Perform();
+                    action.SendKeys(Keys.Backspace + Keys.Backspace + Keys.Backspace + Keys.Backspace).Build().Perform();
+                    wa.ContactActionEnter();
+                }
+
+                return true;
+            }
+            else if (filetype == "D")
+            {
+                wa.ContactFile(filename);
+                wa.ContactSend(By.XPath(WA.SendIADButton));
+                Task.Delay(1000 + wa.preventblocktiming).Wait();
+
+                if (!CheckAttachMessageStatus())
+                {
+                    wa.ClickSearchIcon();
+                    wa.ContactSearch(number);
+                    action.SendKeys(Keys.Space).Build().Perform();
+                    wa.ContactClick();
+                    Task.Delay(1000 + wa.preventblocktiming).Wait();
+
+                    wa.ContactMessage(message);
+                    action.SendKeys("A").Build().Perform();
+                    action.SendKeys(Keys.Backspace + Keys.Backspace + Keys.Backspace + Keys.Backspace).Build().Perform();
+                    Task.Delay(1000 + wa.preventblocktiming).Wait();
+                    wa.ContactActionEnter();
+                }
+
+                return true;
+            }
+
+            // Tipo desconocido => solo texto
+            wa.ContactMessage(message);
+            wa.ContactActionEnter();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.Message);
+            return false;
+        }
+    }, ct);
+}
+
+// Limpieza rápida del editor cuando falla la apertura o envío
+private void TryCleanEditor()
+{
+    try
+    {
+        var action = new Actions(WA.driver);
+        action.SendKeys(Keys.Backspace + Keys.Backspace + Keys.Backspace + Keys.Backspace).Build().Perform();
+    }
+    catch { /* no-op */ }
+}
+
+private void MarkNotSent(DataGridViewRow fila)
+{
+    fila.Cells[2].Value = "N";
+    notsendedmessage++;
+    notsendedmessagelbl.Text = notsendedmessage.ToString();
+}
+
+private void UpdateProgress(int count)
+{
+    if (count <= rowcount)
+        sendpbr.Value = count;
+}
+
+private void StopForNoInternet()
+{
+    stopbtn.Enabled = false;
+    pausebtn.Enabled = false;
+    startbtn.Enabled = true;
+    MessageBox.Show("Se detuvieron los envíos de WA debido a que no cuenta con acceso a internet.",
+        "Observación", MessageBoxButtons.OK, MessageBoxIcon.Error);
+}
 
         private async Task Excecutesendtask2()
         {
@@ -5550,6 +4375,16 @@ namespace Presentation
         {
             contacts2dgv.Rows.Clear();
             contacts2dgv.Refresh();
+        }
+
+        private void exportdatatlp_Popup(object sender, PopupEventArgs e)
+        {
+
+        }
+
+        private void cmsgmail_Opening(object sender, CancelEventArgs e)
+        {
+
         }
     }
     

@@ -43,14 +43,14 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="AutoUpdater.NET.dll" size="441856">
-      <assemblyIdentity name="AutoUpdater.NET" version="1.7.3.0" publicKeyToken="501435C91B35F4BC" language="neutral" processorArchitecture="msil" />
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="AutoUpdater.NET.dll" size="419840">
+      <assemblyIdentity name="AutoUpdater.NET" version="1.6.3.0" publicKeyToken="501435C91B35F4BC" language="neutral" processorArchitecture="msil" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>TNqeKuR3tkiux8xoORtekh6g9dmImH+WzuUfML0fJ0k=</dsig:DigestValue>
+        <dsig:DigestValue>3m50cQIy3HW36pro7mysGbBEs9/uq84bb98G6Y4vSm4=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
@@ -79,14 +79,14 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="CsvHelper.dll" size="156672">
-      <assemblyIdentity name="CsvHelper" version="17.0.0.0" publicKeyToken="8C4959082BE5C823" language="neutral" processorArchitecture="msil" />
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="CsvHelper.dll" size="225792">
+      <assemblyIdentity name="CsvHelper" version="33.0.0.0" publicKeyToken="8C4959082BE5C823" language="neutral" processorArchitecture="msil" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>pCfeE/Q/1qs7cn2Q+oJ2R2+c0ay1v535G4eeRyHwy2E=</dsig:DigestValue>
+        <dsig:DigestValue>nz3nw51WGxDfK16ofBcQ1ifQN5lGkBvFT4PM2yUBteo=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
@@ -98,7 +98,7 @@
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>AKyt/CzSA2bjmlHdyU3zUR7exiIQgeSPAcxQK22z+Z8=</dsig:DigestValue>
+        <dsig:DigestValue>5XIvFHLtIaN9Ehq7BQ9cR2lh9KOZSruYVq9a5LsMT1w=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
@@ -110,7 +110,7 @@
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>GoH8jbzOHD5Kc1P8CGc80PUPQ7awVEQugqY7wMCUvwA=</dsig:DigestValue>
+        <dsig:DigestValue>226jW0K7UU7btJcZnTAJKcwRchy8ztteWUPLNUQqjAA=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
@@ -187,38 +187,14 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="Microsoft.Web.WebView2.Core.dll" size="355768">
-      <assemblyIdentity name="Microsoft.Web.WebView2.Core" version="1.0.1210.39" publicKeyToken="2A8AB48044D2601E" language="neutral" processorArchitecture="msil" />
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="Microsoft.Bcl.HashCode.dll" size="23424">
+      <assemblyIdentity name="Microsoft.Bcl.HashCode" version="1.0.0.0" publicKeyToken="CC7B13FFCD2DDD51" language="neutral" processorArchitecture="msil" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>XVA927353tlWSdOQ5+VeDEq9rUYwaTAQoWUVQUKpM9M=</dsig:DigestValue>
-      </hash>
-    </dependentAssembly>
-  </dependency>
-  <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="Microsoft.Web.WebView2.WinForms.dll" size="35256">
-      <assemblyIdentity name="Microsoft.Web.WebView2.WinForms" version="1.0.1210.39" publicKeyToken="2A8AB48044D2601E" language="neutral" processorArchitecture="msil" />
-      <hash>
-        <dsig:Transforms>
-          <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
-        </dsig:Transforms>
-        <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>kkFyMsrDGxVeXuo5SvBNzoWvVCYgcxtGHJR/t5vcNMo=</dsig:DigestValue>
-      </hash>
-    </dependentAssembly>
-  </dependency>
-  <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="Microsoft.Web.WebView2.Wpf.dll" size="41400">
-      <assemblyIdentity name="Microsoft.Web.WebView2.Wpf" version="1.0.1210.39" publicKeyToken="2A8AB48044D2601E" language="neutral" processorArchitecture="msil" />
-      <hash>
-        <dsig:Transforms>
-          <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
-        </dsig:Transforms>
-        <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>JKvtqmymxnC9O3LMAVcTFpbYT4v8Uuhn5+JvzVFP5/g=</dsig:DigestValue>
+        <dsig:DigestValue>drEmDOdHoxfptRRDO4moGwOEEfyr3cb5x9ursHQti4E=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
@@ -267,18 +243,6 @@
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
         <dsig:DigestValue>f5ErKKB8Im4L46z7L1fwUFOKugEA+h8L8sOfGh8dqBQ=</dsig:DigestValue>
-      </hash>
-    </dependentAssembly>
-  </dependency>
-  <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="Renci.SshNet.dll" size="422912">
-      <assemblyIdentity name="Renci.SshNet" version="2016.1.0.0" publicKeyToken="1CEE9F8BDE3DB106" language="neutral" processorArchitecture="msil" />
-      <hash>
-        <dsig:Transforms>
-          <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
-        </dsig:Transforms>
-        <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>9jFe0UZDj3cCAzaBBD+P6WkO05oqvJoZIkZCSUSjono=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
@@ -1531,14 +1495,14 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="WAButt.exe" size="1065984">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="WAButt.exe" size="1062912">
       <assemblyIdentity name="WAButt" version="1.0.0.0" language="neutral" processorArchitecture="amd64" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>9Zp70gAzCaoIb8k+Fq/ab4xxApoIRdj+EECkdwpLNs0=</dsig:DigestValue>
+        <dsig:DigestValue>Tb4ifRE7x6cIBVQnU702r7PrVS+qGo0uGRlLl3AlhjU=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>

@@ -2,40 +2,19 @@
   "version": 3,
   "targets": {
     ".NETFramework,Version=v4.6.1": {
-      "Autoupdater.NET.Official/1.7.3": {
+      "CsvHelper/33.1.0": {
         "type": "package",
         "dependencies": {
-          "Microsoft.Web.WebView2": "1.0.1210.39"
-        },
-        "frameworkAssemblies": [
-          "PresentationFramework",
-          "System",
-          "System.Data",
-          "System.Drawing",
-          "System.Runtime.Serialization",
-          "System.Windows.Forms",
-          "System.Xaml",
-          "System.Xml",
-          "WindowsBase"
-        ],
-        "compile": {
-          "lib/net45/AutoUpdater.NET.dll": {}
-        },
-        "runtime": {
-          "lib/net45/AutoUpdater.NET.dll": {}
-        }
-      },
-      "CsvHelper/17.0.1": {
-        "type": "package",
-        "dependencies": {
-          "Microsoft.CSharp": "4.5.0",
-          "System.ValueTuple": "4.4.0"
+          "Microsoft.Bcl.AsyncInterfaces": "8.0.0",
+          "Microsoft.Bcl.HashCode": "1.1.1",
+          "Microsoft.CSharp": "4.7.0",
+          "System.Memory": "4.5.0"
         },
         "compile": {
-          "lib/net45/CsvHelper.dll": {}
+          "lib/netstandard2.0/CsvHelper.dll": {}
         },
         "runtime": {
-          "lib/net45/CsvHelper.dll": {}
+          "lib/netstandard2.0/CsvHelper.dll": {}
         }
       },
       "DotNetSeleniumExtras.WaitHelpers/3.11.0": {
@@ -71,7 +50,20 @@
           "buildTransitive/net461/Microsoft.Bcl.AsyncInterfaces.targets": {}
         }
       },
-      "Microsoft.CSharp/4.5.0": {
+      "Microsoft.Bcl.HashCode/1.1.1": {
+        "type": "package",
+        "frameworkAssemblies": [
+          "System",
+          "mscorlib"
+        ],
+        "compile": {
+          "ref/net461/Microsoft.Bcl.HashCode.dll": {}
+        },
+        "runtime": {
+          "lib/net461/Microsoft.Bcl.HashCode.dll": {}
+        }
+      },
+      "Microsoft.CSharp/4.7.0": {
         "type": "package",
         "frameworkAssemblies": [
           "Microsoft.CSharp"
@@ -81,36 +73,6 @@
         },
         "runtime": {
           "lib/net45/_._": {}
-        }
-      },
-      "Microsoft.Web.WebView2/1.0.1210.39": {
-        "type": "package",
-        "compile": {
-          "lib/net45/Microsoft.Web.WebView2.Core.dll": {},
-          "lib/net45/Microsoft.Web.WebView2.WinForms.dll": {},
-          "lib/net45/Microsoft.Web.WebView2.Wpf.dll": {}
-        },
-        "runtime": {
-          "lib/net45/Microsoft.Web.WebView2.Core.dll": {},
-          "lib/net45/Microsoft.Web.WebView2.WinForms.dll": {},
-          "lib/net45/Microsoft.Web.WebView2.Wpf.dll": {}
-        },
-        "build": {
-          "build/_._": {}
-        },
-        "runtimeTargets": {
-          "runtimes/win-arm64/native/WebView2Loader.dll": {
-            "assetType": "native",
-            "rid": "win-arm64"
-          },
-          "runtimes/win-x64/native/WebView2Loader.dll": {
-            "assetType": "native",
-            "rid": "win-x64"
-          },
-          "runtimes/win-x86/native/WebView2Loader.dll": {
-            "assetType": "native",
-            "rid": "win-x86"
-          }
         }
       },
       "Newtonsoft.Json/12.0.3": {
@@ -286,19 +248,6 @@
           "lib/net461/System.Threading.Tasks.Extensions.dll": {}
         }
       },
-      "System.ValueTuple/4.4.0": {
-        "type": "package",
-        "frameworkAssemblies": [
-          "System",
-          "mscorlib"
-        ],
-        "compile": {
-          "ref/net461/System.ValueTuple.dll": {}
-        },
-        "runtime": {
-          "lib/net461/System.ValueTuple.dll": {}
-        }
-      },
       "DataAccess/1.0.0": {
         "type": "project",
         "compile": {
@@ -322,40 +271,19 @@
       }
     },
     ".NETFramework,Version=v4.6.1/win": {
-      "Autoupdater.NET.Official/1.7.3": {
+      "CsvHelper/33.1.0": {
         "type": "package",
         "dependencies": {
-          "Microsoft.Web.WebView2": "1.0.1210.39"
-        },
-        "frameworkAssemblies": [
-          "PresentationFramework",
-          "System",
-          "System.Data",
-          "System.Drawing",
-          "System.Runtime.Serialization",
-          "System.Windows.Forms",
-          "System.Xaml",
-          "System.Xml",
-          "WindowsBase"
-        ],
-        "compile": {
-          "lib/net45/AutoUpdater.NET.dll": {}
-        },
-        "runtime": {
-          "lib/net45/AutoUpdater.NET.dll": {}
-        }
-      },
-      "CsvHelper/17.0.1": {
-        "type": "package",
-        "dependencies": {
-          "Microsoft.CSharp": "4.5.0",
-          "System.ValueTuple": "4.4.0"
+          "Microsoft.Bcl.AsyncInterfaces": "8.0.0",
+          "Microsoft.Bcl.HashCode": "1.1.1",
+          "Microsoft.CSharp": "4.7.0",
+          "System.Memory": "4.5.0"
         },
         "compile": {
-          "lib/net45/CsvHelper.dll": {}
+          "lib/netstandard2.0/CsvHelper.dll": {}
         },
         "runtime": {
-          "lib/net45/CsvHelper.dll": {}
+          "lib/netstandard2.0/CsvHelper.dll": {}
         }
       },
       "DotNetSeleniumExtras.WaitHelpers/3.11.0": {
@@ -391,7 +319,20 @@
           "buildTransitive/net461/Microsoft.Bcl.AsyncInterfaces.targets": {}
         }
       },
-      "Microsoft.CSharp/4.5.0": {
+      "Microsoft.Bcl.HashCode/1.1.1": {
+        "type": "package",
+        "frameworkAssemblies": [
+          "System",
+          "mscorlib"
+        ],
+        "compile": {
+          "ref/net461/Microsoft.Bcl.HashCode.dll": {}
+        },
+        "runtime": {
+          "lib/net461/Microsoft.Bcl.HashCode.dll": {}
+        }
+      },
+      "Microsoft.CSharp/4.7.0": {
         "type": "package",
         "frameworkAssemblies": [
           "Microsoft.CSharp"
@@ -401,22 +342,6 @@
         },
         "runtime": {
           "lib/net45/_._": {}
-        }
-      },
-      "Microsoft.Web.WebView2/1.0.1210.39": {
-        "type": "package",
-        "compile": {
-          "lib/net45/Microsoft.Web.WebView2.Core.dll": {},
-          "lib/net45/Microsoft.Web.WebView2.WinForms.dll": {},
-          "lib/net45/Microsoft.Web.WebView2.Wpf.dll": {}
-        },
-        "runtime": {
-          "lib/net45/Microsoft.Web.WebView2.Core.dll": {},
-          "lib/net45/Microsoft.Web.WebView2.WinForms.dll": {},
-          "lib/net45/Microsoft.Web.WebView2.Wpf.dll": {}
-        },
-        "build": {
-          "build/_._": {}
         }
       },
       "Newtonsoft.Json/12.0.3": {
@@ -581,19 +506,6 @@
           "lib/net461/System.Threading.Tasks.Extensions.dll": {}
         }
       },
-      "System.ValueTuple/4.4.0": {
-        "type": "package",
-        "frameworkAssemblies": [
-          "System",
-          "mscorlib"
-        ],
-        "compile": {
-          "ref/net461/System.ValueTuple.dll": {}
-        },
-        "runtime": {
-          "lib/net461/System.ValueTuple.dll": {}
-        }
-      },
       "DataAccess/1.0.0": {
         "type": "project",
         "compile": {
@@ -617,40 +529,19 @@
       }
     },
     ".NETFramework,Version=v4.6.1/win-x64": {
-      "Autoupdater.NET.Official/1.7.3": {
+      "CsvHelper/33.1.0": {
         "type": "package",
         "dependencies": {
-          "Microsoft.Web.WebView2": "1.0.1210.39"
-        },
-        "frameworkAssemblies": [
-          "PresentationFramework",
-          "System",
-          "System.Data",
-          "System.Drawing",
-          "System.Runtime.Serialization",
-          "System.Windows.Forms",
-          "System.Xaml",
-          "System.Xml",
-          "WindowsBase"
-        ],
-        "compile": {
-          "lib/net45/AutoUpdater.NET.dll": {}
-        },
-        "runtime": {
-          "lib/net45/AutoUpdater.NET.dll": {}
-        }
-      },
-      "CsvHelper/17.0.1": {
-        "type": "package",
-        "dependencies": {
-          "Microsoft.CSharp": "4.5.0",
-          "System.ValueTuple": "4.4.0"
+          "Microsoft.Bcl.AsyncInterfaces": "8.0.0",
+          "Microsoft.Bcl.HashCode": "1.1.1",
+          "Microsoft.CSharp": "4.7.0",
+          "System.Memory": "4.5.0"
         },
         "compile": {
-          "lib/net45/CsvHelper.dll": {}
+          "lib/netstandard2.0/CsvHelper.dll": {}
         },
         "runtime": {
-          "lib/net45/CsvHelper.dll": {}
+          "lib/netstandard2.0/CsvHelper.dll": {}
         }
       },
       "DotNetSeleniumExtras.WaitHelpers/3.11.0": {
@@ -686,7 +577,20 @@
           "buildTransitive/net461/Microsoft.Bcl.AsyncInterfaces.targets": {}
         }
       },
-      "Microsoft.CSharp/4.5.0": {
+      "Microsoft.Bcl.HashCode/1.1.1": {
+        "type": "package",
+        "frameworkAssemblies": [
+          "System",
+          "mscorlib"
+        ],
+        "compile": {
+          "ref/net461/Microsoft.Bcl.HashCode.dll": {}
+        },
+        "runtime": {
+          "lib/net461/Microsoft.Bcl.HashCode.dll": {}
+        }
+      },
+      "Microsoft.CSharp/4.7.0": {
         "type": "package",
         "frameworkAssemblies": [
           "Microsoft.CSharp"
@@ -696,25 +600,6 @@
         },
         "runtime": {
           "lib/net45/_._": {}
-        }
-      },
-      "Microsoft.Web.WebView2/1.0.1210.39": {
-        "type": "package",
-        "compile": {
-          "lib/net45/Microsoft.Web.WebView2.Core.dll": {},
-          "lib/net45/Microsoft.Web.WebView2.WinForms.dll": {},
-          "lib/net45/Microsoft.Web.WebView2.Wpf.dll": {}
-        },
-        "runtime": {
-          "lib/net45/Microsoft.Web.WebView2.Core.dll": {},
-          "lib/net45/Microsoft.Web.WebView2.WinForms.dll": {},
-          "lib/net45/Microsoft.Web.WebView2.Wpf.dll": {}
-        },
-        "native": {
-          "runtimes/win-x64/native/WebView2Loader.dll": {}
-        },
-        "build": {
-          "build/_._": {}
         }
       },
       "Newtonsoft.Json/12.0.3": {
@@ -874,19 +759,6 @@
         },
         "runtime": {
           "lib/net461/System.Threading.Tasks.Extensions.dll": {}
-        }
-      },
-      "System.ValueTuple/4.4.0": {
-        "type": "package",
-        "frameworkAssemblies": [
-          "System",
-          "mscorlib"
-        ],
-        "compile": {
-          "ref/net461/System.ValueTuple.dll": {}
-        },
-        "runtime": {
-          "lib/net461/System.ValueTuple.dll": {}
         }
       },
       "DataAccess/1.0.0": {
@@ -912,40 +784,19 @@
       }
     },
     ".NETFramework,Version=v4.6.1/win-x86": {
-      "Autoupdater.NET.Official/1.7.3": {
+      "CsvHelper/33.1.0": {
         "type": "package",
         "dependencies": {
-          "Microsoft.Web.WebView2": "1.0.1210.39"
-        },
-        "frameworkAssemblies": [
-          "PresentationFramework",
-          "System",
-          "System.Data",
-          "System.Drawing",
-          "System.Runtime.Serialization",
-          "System.Windows.Forms",
-          "System.Xaml",
-          "System.Xml",
-          "WindowsBase"
-        ],
-        "compile": {
-          "lib/net45/AutoUpdater.NET.dll": {}
-        },
-        "runtime": {
-          "lib/net45/AutoUpdater.NET.dll": {}
-        }
-      },
-      "CsvHelper/17.0.1": {
-        "type": "package",
-        "dependencies": {
-          "Microsoft.CSharp": "4.5.0",
-          "System.ValueTuple": "4.4.0"
+          "Microsoft.Bcl.AsyncInterfaces": "8.0.0",
+          "Microsoft.Bcl.HashCode": "1.1.1",
+          "Microsoft.CSharp": "4.7.0",
+          "System.Memory": "4.5.0"
         },
         "compile": {
-          "lib/net45/CsvHelper.dll": {}
+          "lib/netstandard2.0/CsvHelper.dll": {}
         },
         "runtime": {
-          "lib/net45/CsvHelper.dll": {}
+          "lib/netstandard2.0/CsvHelper.dll": {}
         }
       },
       "DotNetSeleniumExtras.WaitHelpers/3.11.0": {
@@ -981,7 +832,20 @@
           "buildTransitive/net461/Microsoft.Bcl.AsyncInterfaces.targets": {}
         }
       },
-      "Microsoft.CSharp/4.5.0": {
+      "Microsoft.Bcl.HashCode/1.1.1": {
+        "type": "package",
+        "frameworkAssemblies": [
+          "System",
+          "mscorlib"
+        ],
+        "compile": {
+          "ref/net461/Microsoft.Bcl.HashCode.dll": {}
+        },
+        "runtime": {
+          "lib/net461/Microsoft.Bcl.HashCode.dll": {}
+        }
+      },
+      "Microsoft.CSharp/4.7.0": {
         "type": "package",
         "frameworkAssemblies": [
           "Microsoft.CSharp"
@@ -991,25 +855,6 @@
         },
         "runtime": {
           "lib/net45/_._": {}
-        }
-      },
-      "Microsoft.Web.WebView2/1.0.1210.39": {
-        "type": "package",
-        "compile": {
-          "lib/net45/Microsoft.Web.WebView2.Core.dll": {},
-          "lib/net45/Microsoft.Web.WebView2.WinForms.dll": {},
-          "lib/net45/Microsoft.Web.WebView2.Wpf.dll": {}
-        },
-        "runtime": {
-          "lib/net45/Microsoft.Web.WebView2.Core.dll": {},
-          "lib/net45/Microsoft.Web.WebView2.WinForms.dll": {},
-          "lib/net45/Microsoft.Web.WebView2.Wpf.dll": {}
-        },
-        "native": {
-          "runtimes/win-x86/native/WebView2Loader.dll": {}
-        },
-        "build": {
-          "build/_._": {}
         }
       },
       "Newtonsoft.Json/12.0.3": {
@@ -1169,19 +1014,6 @@
         },
         "runtime": {
           "lib/net461/System.Threading.Tasks.Extensions.dll": {}
-        }
-      },
-      "System.ValueTuple/4.4.0": {
-        "type": "package",
-        "frameworkAssemblies": [
-          "System",
-          "mscorlib"
-        ],
-        "compile": {
-          "ref/net461/System.ValueTuple.dll": {}
-        },
-        "runtime": {
-          "lib/net461/System.ValueTuple.dll": {}
         }
       },
       "DataAccess/1.0.0": {
@@ -1208,82 +1040,26 @@
     }
   },
   "libraries": {
-    "Autoupdater.NET.Official/1.7.3": {
-      "sha512": "231QXHE/vvfzzE+xENBfqpCJkHig7TMkW8GklYyHvUzzDviUfviMwJi3/ImNM+dxJmrHh+NHHYnFL+ik8qpmwg==",
+    "CsvHelper/33.1.0": {
+      "sha512": "kqfTOZGrn7NarNeXgjh86JcpTHUoeQDMB8t9NVa/ZtlSYiV1rxfRnQ49WaJsob4AiGrbK0XDzpyKkBwai4F8eg==",
       "type": "package",
-      "path": "autoupdater.net.official/1.7.3",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "autoupdater.net.official.1.7.3.nupkg.sha512",
-        "autoupdater.net.official.nuspec",
-        "lib/net45/AutoUpdater.NET.dll",
-        "lib/net45/AutoUpdater.NET.pdb",
-        "lib/net45/AutoUpdater.NET.xml",
-        "lib/net5.0-windows7.0/AutoUpdater.NET.dll",
-        "lib/net5.0-windows7.0/AutoUpdater.NET.pdb",
-        "lib/net5.0-windows7.0/AutoUpdater.NET.xml",
-        "lib/net5.0-windows7.0/ar/AutoUpdater.NET.resources.dll",
-        "lib/net5.0-windows7.0/cs/AutoUpdater.NET.resources.dll",
-        "lib/net5.0-windows7.0/da/AutoUpdater.NET.resources.dll",
-        "lib/net5.0-windows7.0/de/AutoUpdater.NET.resources.dll",
-        "lib/net5.0-windows7.0/es/AutoUpdater.NET.resources.dll",
-        "lib/net5.0-windows7.0/fr/AutoUpdater.NET.resources.dll",
-        "lib/net5.0-windows7.0/it/AutoUpdater.NET.resources.dll",
-        "lib/net5.0-windows7.0/ja-JP/AutoUpdater.NET.resources.dll",
-        "lib/net5.0-windows7.0/ko/AutoUpdater.NET.resources.dll",
-        "lib/net5.0-windows7.0/lv/AutoUpdater.NET.resources.dll",
-        "lib/net5.0-windows7.0/nl/AutoUpdater.NET.resources.dll",
-        "lib/net5.0-windows7.0/pl/AutoUpdater.NET.resources.dll",
-        "lib/net5.0-windows7.0/pt-BR/AutoUpdater.NET.resources.dll",
-        "lib/net5.0-windows7.0/pt/AutoUpdater.NET.resources.dll",
-        "lib/net5.0-windows7.0/ru/AutoUpdater.NET.resources.dll",
-        "lib/net5.0-windows7.0/sk/AutoUpdater.NET.resources.dll",
-        "lib/net5.0-windows7.0/sv/AutoUpdater.NET.resources.dll",
-        "lib/net5.0-windows7.0/th/AutoUpdater.NET.resources.dll",
-        "lib/net5.0-windows7.0/tr/AutoUpdater.NET.resources.dll",
-        "lib/net5.0-windows7.0/zh-tw/AutoUpdater.NET.resources.dll",
-        "lib/net5.0-windows7.0/zh/AutoUpdater.NET.resources.dll",
-        "lib/netcoreapp3.1/AutoUpdater.NET.dll",
-        "lib/netcoreapp3.1/AutoUpdater.NET.pdb",
-        "lib/netcoreapp3.1/AutoUpdater.NET.xml",
-        "lib/netcoreapp3.1/ar/AutoUpdater.NET.resources.dll",
-        "lib/netcoreapp3.1/cs/AutoUpdater.NET.resources.dll",
-        "lib/netcoreapp3.1/da/AutoUpdater.NET.resources.dll",
-        "lib/netcoreapp3.1/de/AutoUpdater.NET.resources.dll",
-        "lib/netcoreapp3.1/es/AutoUpdater.NET.resources.dll",
-        "lib/netcoreapp3.1/fr/AutoUpdater.NET.resources.dll",
-        "lib/netcoreapp3.1/it/AutoUpdater.NET.resources.dll",
-        "lib/netcoreapp3.1/ja-JP/AutoUpdater.NET.resources.dll",
-        "lib/netcoreapp3.1/ko/AutoUpdater.NET.resources.dll",
-        "lib/netcoreapp3.1/lv/AutoUpdater.NET.resources.dll",
-        "lib/netcoreapp3.1/nl/AutoUpdater.NET.resources.dll",
-        "lib/netcoreapp3.1/pl/AutoUpdater.NET.resources.dll",
-        "lib/netcoreapp3.1/pt-BR/AutoUpdater.NET.resources.dll",
-        "lib/netcoreapp3.1/pt/AutoUpdater.NET.resources.dll",
-        "lib/netcoreapp3.1/ru/AutoUpdater.NET.resources.dll",
-        "lib/netcoreapp3.1/sk/AutoUpdater.NET.resources.dll",
-        "lib/netcoreapp3.1/sv/AutoUpdater.NET.resources.dll",
-        "lib/netcoreapp3.1/th/AutoUpdater.NET.resources.dll",
-        "lib/netcoreapp3.1/tr/AutoUpdater.NET.resources.dll",
-        "lib/netcoreapp3.1/zh-tw/AutoUpdater.NET.resources.dll",
-        "lib/netcoreapp3.1/zh/AutoUpdater.NET.resources.dll"
-      ]
-    },
-    "CsvHelper/17.0.1": {
-      "sha512": "ch+ir0GHSWOH0KVLC9f+iTIIwapqtId8f/X2hXT6F89QN0tkEGd6U6zbOmh+oemnMZjmfHoZQXcf5AJafQkW9g==",
-      "type": "package",
-      "path": "csvhelper/17.0.1",
+      "path": "csvhelper/33.1.0",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
         "Icon.png",
-        "csvhelper.17.0.1.nupkg.sha512",
+        "csvhelper.33.1.0.nupkg.sha512",
         "csvhelper.nuspec",
-        "lib/net45/CsvHelper.dll",
-        "lib/net45/CsvHelper.xml",
+        "lib/net462/CsvHelper.dll",
+        "lib/net462/CsvHelper.xml",
         "lib/net47/CsvHelper.dll",
         "lib/net47/CsvHelper.xml",
+        "lib/net48/CsvHelper.dll",
+        "lib/net48/CsvHelper.xml",
+        "lib/net8.0/CsvHelper.dll",
+        "lib/net8.0/CsvHelper.xml",
+        "lib/net9.0/CsvHelper.dll",
+        "lib/net9.0/CsvHelper.xml",
         "lib/netstandard2.0/CsvHelper.dll",
         "lib/netstandard2.0/CsvHelper.xml",
         "lib/netstandard2.1/CsvHelper.dll",
@@ -1345,10 +1121,38 @@
         "useSharedDesignerContext.txt"
       ]
     },
-    "Microsoft.CSharp/4.5.0": {
-      "sha512": "kaj6Wb4qoMuH3HySFJhxwQfe8R/sJsNJnANrvv8WdFPMoNbKY5htfNscv+LHCu5ipz+49m2e+WQXpLXr9XYemQ==",
+    "Microsoft.Bcl.HashCode/1.1.1": {
+      "sha512": "MalY0Y/uM/LjXtHfX/26l2VtN4LDNZ2OE3aumNOHDLsT4fNYy2hiHXI4CXCqKpNUNm7iJ2brrc4J89UdaL56FA==",
       "type": "package",
-      "path": "microsoft.csharp/4.5.0",
+      "path": "microsoft.bcl.hashcode/1.1.1",
+      "files": [
+        ".nupkg.metadata",
+        ".signature.p7s",
+        "Icon.png",
+        "LICENSE.TXT",
+        "THIRD-PARTY-NOTICES.TXT",
+        "lib/net461/Microsoft.Bcl.HashCode.dll",
+        "lib/net461/Microsoft.Bcl.HashCode.xml",
+        "lib/netcoreapp2.1/Microsoft.Bcl.HashCode.dll",
+        "lib/netcoreapp2.1/Microsoft.Bcl.HashCode.xml",
+        "lib/netstandard2.0/Microsoft.Bcl.HashCode.dll",
+        "lib/netstandard2.0/Microsoft.Bcl.HashCode.xml",
+        "lib/netstandard2.1/Microsoft.Bcl.HashCode.dll",
+        "lib/netstandard2.1/Microsoft.Bcl.HashCode.xml",
+        "microsoft.bcl.hashcode.1.1.1.nupkg.sha512",
+        "microsoft.bcl.hashcode.nuspec",
+        "ref/net461/Microsoft.Bcl.HashCode.dll",
+        "ref/netcoreapp2.1/Microsoft.Bcl.HashCode.dll",
+        "ref/netstandard2.0/Microsoft.Bcl.HashCode.dll",
+        "ref/netstandard2.1/Microsoft.Bcl.HashCode.dll",
+        "useSharedDesignerContext.txt",
+        "version.txt"
+      ]
+    },
+    "Microsoft.CSharp/4.7.0": {
+      "sha512": "pTj+D3uJWyN3My70i2Hqo+OXixq3Os2D1nJ2x92FFo6sk8fYS1m1WLNTs0Dc1uPaViH0YvEEwvzddQ7y4rhXmA==",
+      "type": "package",
+      "path": "microsoft.csharp/4.7.0",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
@@ -1361,6 +1165,7 @@
         "lib/netcoreapp2.0/_._",
         "lib/netstandard1.3/Microsoft.CSharp.dll",
         "lib/netstandard2.0/Microsoft.CSharp.dll",
+        "lib/netstandard2.0/Microsoft.CSharp.xml",
         "lib/portable-net45+win8+wp8+wpa81/_._",
         "lib/uap10.0.16299/_._",
         "lib/win8/_._",
@@ -1370,7 +1175,7 @@
         "lib/xamarinmac20/_._",
         "lib/xamarintvos10/_._",
         "lib/xamarinwatchos10/_._",
-        "microsoft.csharp.4.5.0.nupkg.sha512",
+        "microsoft.csharp.4.7.0.nupkg.sha512",
         "microsoft.csharp.nuspec",
         "ref/MonoAndroid10/_._",
         "ref/MonoTouch10/_._",
@@ -1411,58 +1216,6 @@
         "ref/xamarinwatchos10/_._",
         "useSharedDesignerContext.txt",
         "version.txt"
-      ]
-    },
-    "Microsoft.Web.WebView2/1.0.1210.39": {
-      "sha512": "BjNSaIg/Dvct5o5fhiN8dWf3SZYzU8QZlqyd3Gtj24x3Of5AWH9aUcji4Esj1NJPfnVOgvJDTCeG7JsuhjL0Ew==",
-      "type": "package",
-      "path": "microsoft.web.webview2/1.0.1210.39",
-      "hasTools": true,
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "LICENSE.txt",
-        "WebView2.idl",
-        "WebView2.tlb",
-        "build/Common.targets",
-        "build/Microsoft.Web.WebView2.targets",
-        "build/native/Microsoft.Web.WebView2.targets",
-        "build/native/arm64/WebView2Loader.dll",
-        "build/native/arm64/WebView2Loader.dll.lib",
-        "build/native/arm64/WebView2LoaderStatic.lib",
-        "build/native/include-winrt/WebView2Interop.h",
-        "build/native/include-winrt/WebView2Interop.idl",
-        "build/native/include-winrt/WebView2Interop.tlb",
-        "build/native/include/WebView2.h",
-        "build/native/include/WebView2EnvironmentOptions.h",
-        "build/native/x64/WebView2Loader.dll",
-        "build/native/x64/WebView2Loader.dll.lib",
-        "build/native/x64/WebView2LoaderStatic.lib",
-        "build/native/x86/WebView2Loader.dll",
-        "build/native/x86/WebView2Loader.dll.lib",
-        "build/native/x86/WebView2LoaderStatic.lib",
-        "lib/Microsoft.Web.WebView2.Core.winmd",
-        "lib/net45/Microsoft.Web.WebView2.Core.dll",
-        "lib/net45/Microsoft.Web.WebView2.Core.xml",
-        "lib/net45/Microsoft.Web.WebView2.WinForms.dll",
-        "lib/net45/Microsoft.Web.WebView2.WinForms.xml",
-        "lib/net45/Microsoft.Web.WebView2.Wpf.dll",
-        "lib/net45/Microsoft.Web.WebView2.Wpf.xml",
-        "lib/netcoreapp3.0/Microsoft.Web.WebView2.Core.dll",
-        "lib/netcoreapp3.0/Microsoft.Web.WebView2.Core.xml",
-        "lib/netcoreapp3.0/Microsoft.Web.WebView2.WinForms.dll",
-        "lib/netcoreapp3.0/Microsoft.Web.WebView2.WinForms.xml",
-        "lib/netcoreapp3.0/Microsoft.Web.WebView2.Wpf.dll",
-        "lib/netcoreapp3.0/Microsoft.Web.WebView2.Wpf.xml",
-        "microsoft.web.webview2.1.0.1210.39.nupkg.sha512",
-        "microsoft.web.webview2.nuspec",
-        "runtimes/win-arm64/native/WebView2Loader.dll",
-        "runtimes/win-arm64/native_uap/Microsoft.Web.WebView2.Core.dll",
-        "runtimes/win-x64/native/WebView2Loader.dll",
-        "runtimes/win-x64/native_uap/Microsoft.Web.WebView2.Core.dll",
-        "runtimes/win-x86/native/WebView2Loader.dll",
-        "runtimes/win-x86/native_uap/Microsoft.Web.WebView2.Core.dll",
-        "tools/VisualStudioToolsManifest.xml"
       ]
     },
     "Newtonsoft.Json/12.0.3": {
@@ -1826,51 +1579,6 @@
         "version.txt"
       ]
     },
-    "System.ValueTuple/4.4.0": {
-      "sha512": "BahUww/+mdP4ARCAh2RQhQTg13wYLVrBb9SYVgW8ZlrwjraGCXHGjo0oIiUfZ34LUZkMMR+RAzR7dEY4S1HeQQ==",
-      "type": "package",
-      "path": "system.valuetuple/4.4.0",
-      "files": [
-        ".nupkg.metadata",
-        ".signature.p7s",
-        "LICENSE.TXT",
-        "THIRD-PARTY-NOTICES.TXT",
-        "lib/MonoAndroid10/_._",
-        "lib/MonoTouch10/_._",
-        "lib/net461/System.ValueTuple.dll",
-        "lib/net461/System.ValueTuple.xml",
-        "lib/net47/System.ValueTuple.dll",
-        "lib/net47/System.ValueTuple.xml",
-        "lib/netcoreapp2.0/_._",
-        "lib/netstandard1.0/System.ValueTuple.dll",
-        "lib/netstandard1.0/System.ValueTuple.xml",
-        "lib/netstandard2.0/_._",
-        "lib/portable-net40+sl4+win8+wp8/System.ValueTuple.dll",
-        "lib/portable-net40+sl4+win8+wp8/System.ValueTuple.xml",
-        "lib/xamarinios10/_._",
-        "lib/xamarinmac20/_._",
-        "lib/xamarintvos10/_._",
-        "lib/xamarinwatchos10/_._",
-        "ref/MonoAndroid10/_._",
-        "ref/MonoTouch10/_._",
-        "ref/net461/System.ValueTuple.dll",
-        "ref/net461/System.ValueTuple.xml",
-        "ref/net47/System.ValueTuple.dll",
-        "ref/net47/System.ValueTuple.xml",
-        "ref/netcoreapp2.0/_._",
-        "ref/netstandard2.0/_._",
-        "ref/portable-net40+sl4+win8+wp8/System.ValueTuple.dll",
-        "ref/portable-net40+sl4+win8+wp8/System.ValueTuple.xml",
-        "ref/xamarinios10/_._",
-        "ref/xamarinmac20/_._",
-        "ref/xamarintvos10/_._",
-        "ref/xamarinwatchos10/_._",
-        "system.valuetuple.4.4.0.nupkg.sha512",
-        "system.valuetuple.nuspec",
-        "useSharedDesignerContext.txt",
-        "version.txt"
-      ]
-    },
     "DataAccess/1.0.0": {
       "type": "project",
       "path": "../DataAccess/DataAccess.csproj",
@@ -1884,8 +1592,7 @@
   },
   "projectFileDependencyGroups": {
     ".NETFramework,Version=v4.6.1": [
-      "Autoupdater.NET.Official >= 1.7.3",
-      "CsvHelper >= 17.0.1",
+      "CsvHelper >= 33.1.0",
       "Domain >= 1.0.0",
       "DotNetSeleniumExtras.WaitHelpers >= 3.11.0",
       "ILMerge >= 3.0.41",
@@ -1895,20 +1602,25 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\biskit\\.nuget\\packages\\": {}
+    "C:\\Users\\Operaciones1\\.nuget\\packages\\": {},
+    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Mac\\Home\\Documents\\GitHub\\WACBSM\\Presentation\\Presentation.csproj",
+      "projectUniqueName": "C:\\Users\\Operaciones1\\Downloads\\WACBSM\\Presentation\\Presentation.csproj",
       "projectName": "Presentation",
-      "projectPath": "C:\\Mac\\Home\\Documents\\GitHub\\WACBSM\\Presentation\\Presentation.csproj",
-      "packagesPath": "C:\\Users\\biskit\\.nuget\\packages\\",
-      "outputPath": "C:\\Mac\\Home\\Documents\\GitHub\\WACBSM\\Presentation\\obj\\",
+      "projectPath": "C:\\Users\\Operaciones1\\Downloads\\WACBSM\\Presentation\\Presentation.csproj",
+      "packagesPath": "C:\\Users\\Operaciones1\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\Operaciones1\\Downloads\\WACBSM\\Presentation\\obj\\",
       "projectStyle": "PackageReference",
       "skipContentFileWrite": true,
+      "fallbackFolders": [
+        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+      ],
       "configFilePaths": [
-        "C:\\Users\\biskit\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Users\\Operaciones1\\AppData\\Roaming\\NuGet\\NuGet.Config",
+        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
@@ -1921,8 +1633,8 @@
       "frameworks": {
         "net461": {
           "projectReferences": {
-            "C:\\Mac\\Home\\Documents\\GitHub\\WACBSM\\Domain\\Domain.csproj": {
-              "projectPath": "C:\\Mac\\Home\\Documents\\GitHub\\WACBSM\\Domain\\Domain.csproj"
+            "C:\\Users\\Operaciones1\\Downloads\\WACBSM\\Domain\\Domain.csproj": {
+              "projectPath": "C:\\Users\\Operaciones1\\Downloads\\WACBSM\\Domain\\Domain.csproj"
             }
           }
         }
@@ -1931,13 +1643,9 @@
     "frameworks": {
       "net461": {
         "dependencies": {
-          "Autoupdater.NET.Official": {
-            "target": "Package",
-            "version": "[1.7.3, )"
-          },
           "CsvHelper": {
             "target": "Package",
-            "version": "[17.0.1, )"
+            "version": "[33.1.0, )"
           },
           "DotNetSeleniumExtras.WaitHelpers": {
             "target": "Package",
