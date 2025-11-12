@@ -234,7 +234,7 @@ namespace Presentation
         {
             try
             {
-                var wait = new OpenQA.Selenium.Support.UI.WebDriverWait(driver, TimeSpan.FromSeconds(timeoutSec));
+                var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(timeoutSec));
                 return wait.Until(drv =>
                 {
                     var els = drv.FindElements(WASelectors.MessageInput);
