@@ -1251,11 +1251,16 @@ namespace Presentation
             contactsdgv.AllowUserToDeleteRows = false;
 
             // Configure timings
-            wa.preventblocktiming = preventblockcb.Checked ? 4000 : 0;
+            wa._preventBlockBaseMs = preventblockcb.Checked ? 4000 : 0;
+
+
+
+
             eachmessagetiming = eachmessagetimingcb.Checked
                 ? Convert.ToInt32(eachmessagetimingtxt.Text) * 1000
                 : 0;
         }
+
         private async Task<bool> ValidatePreSendConditions()
         {
             if (!CheckForInternetConnection())

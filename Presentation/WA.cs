@@ -17,27 +17,148 @@ using SeleniumKeys = OpenQA.Selenium.Keys;
 
 namespace Presentation
 {
-    /// <summary>
-    /// Clase principal para automatización de WhatsApp Web y Google Messages
-    /// </summary>
     public class WA
     {
-        #region Fields
-
+        // --- Campos de instancia ---
         public static IWebDriver driver;
         public static IWebDriver driver2;
 
         public bool driverstate;
         public bool driverstate2;
         public bool clickstate = false;
-        public int preventblocktiming = 0;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        // === Base & RNG (ya los tienes si seguiste lo anterior) ======================
+        private volatile int _preventBlockBaseMs = 0;
+        private static readonly ThreadLocal<Random> _rng =
+            new ThreadLocal<Random>(() => new Random());
+
+        // Jitter natural 80–120% con pico al centro (triangular)
+        private static int JitterHumanPct(int baseMs, int lowPct = 80, int highPct = 120)
+        {
+            if (baseMs <= 0) return 0;
+            if (highPct < lowPct) { var t = lowPct; lowPct = highPct; highPct = t; }
+
+            var rnd = _rng.Value ?? new Random();
+            var u = (rnd.NextDouble() + rnd.NextDouble()) / 2.0;
+
+            var min = baseMs * lowPct / 100;
+            var max = baseMs * highPct / 100;
+            return min + (int)Math.Round(u * (max - min));
+        }
+
+        public int PreventBlockBaseMs
+        {
+            get { return _preventBlockBaseMs; }
+            set { _preventBlockBaseMs = Math.Max(0, value); }
+        }
+
+        public int preventblocktiming   // puedes seguir usándolo donde no quieras distracción
+        {
+            get { return JitterHumanPct(_preventBlockBaseMs, 80, 120); }
+            set { _preventBlockBaseMs = Math.Max(0, value); }
+        }
+
+        private int MicroJitter()
+        {
+            var rnd = _rng.Value ?? new Random();
+            return rnd.Next(80, 251);
+        }
+
+        // === Distracciones cada K mensajes ==========================================
+        // Contador de mensajes enviados desde la última distracción
+        private int _processedSinceDistr = 0;
+
+        // Siguiente umbral ("cada K") en el que disparar distracción
+        private int _nextThresholdK = 2; // se recalcula según config
+
+        // Config: modo fijo o rango aleatorio
+        public bool UseDistractions { get; set; } = true;
+        public bool DistractionEveryFixed { get; set; } = false; // true: fijo; false: rango
+        public int DistractionEveryN { get; set; } = 3;          // p.ej. cada 3
+        public int DistractionEveryMin { get; set; } = 2;        // rango: min
+        public int DistractionEveryMax { get; set; } = 3;        // rango: max (incl.)
+
+        // Intensidad de distracción (factor 2x..3x)
+        public int DistractionFactorMin { get; set; } = 2;
+        public int DistractionFactorMax { get; set; } = 3;
+
+        // Inicializa el primer umbral
+        public void ResetDistractionSchedule()
+        {
+            var rnd = _rng.Value ?? new Random();
+            if (DistractionEveryFixed)
+                _nextThresholdK = Math.Max(1, DistractionEveryN);
+            else
+                _nextThresholdK = Math.Max(1, rnd.Next(DistractionEveryMin, DistractionEveryMax + 1));
+
+            _processedSinceDistr = 0;
+        }
+
+        // Llama UNA VEZ tras cada envío para obtener la pausa correcta
+        public int NextPreventDelayMs()
+        {
+            var rnd = _rng.Value ?? new Random();
+
+            _processedSinceDistr++;
+
+            // ¿toca distracción?
+            if (UseDistractions && _processedSinceDistr >= _nextThresholdK)
+            {
+                // próximo umbral
+                if (DistractionEveryFixed)
+                    _nextThresholdK = Math.Max(1, DistractionEveryN);
+                else
+                    _nextThresholdK = Math.Max(1, rnd.Next(DistractionEveryMin, DistractionEveryMax + 1));
+
+                _processedSinceDistr = 0;
+
+                // factor 2x..3x (configurable)
+                var factor = rnd.Next(DistractionFactorMin, DistractionFactorMax + 1);
+
+                var longBase = preventblocktiming; // jitter natural actual
+                return longBase * factor + MicroJitter();
+            }
+
+            // pausa normal (jitter natural + micro)
+            return preventblocktiming + MicroJitter();
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
         public int preventblocktiming2 = 0;
 
         private WebDriverWait _wait;
         private WebDriverWait _wait2;
 
-        #endregion
-
+    
         #region Selectors - WhatsApp Web
 
         /// <summary>
