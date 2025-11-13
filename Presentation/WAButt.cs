@@ -1251,10 +1251,12 @@ namespace Presentation
             contactsdgv.AllowUserToDeleteRows = false;
 
             // Configure timings
-            wa._preventBlockBaseMs = preventblockcb.Checked ? 4000 : 0;
+            wa.UseHumanTiming = preventblockcb.Checked;   // ON/OFF humano
+            wa.UseProfileCycling = true;                 // usar perfiles aleatorios
+            wa.ProfileChangeMinMessages = 10;            // cambia entre 40 y 90 mensajes
+            wa.ProfileChangeMaxMessages = 50;
 
-
-
+            wa.ResetDistractionSchedule();
 
             eachmessagetiming = eachmessagetimingcb.Checked
                 ? Convert.ToInt32(eachmessagetimingtxt.Text) * 1000
@@ -1584,22 +1586,31 @@ namespace Presentation
 
                     if (sentOk)
                     {
+                       
                         fila.Cells[2].Value = "S";
                         sendedmessage++;
                         sendedmessagelbl.Text = sendedmessage.ToString();
+
+
+
+
+                        //TIMING SOFT ALGO TO PREVENT BLOCKING
+                        await Task.Delay(wa.NextPreventDelayMs(), eachmessagetoken.Token);
+
+
+
+
+
+                        // Pausa configurable entre mensajes
+                        //EACHMESSAGE TIMING FROM TEXTBOX
+                        if (eachmessagetiming > 0 && wa.clickstate)
+                            await Task.Delay(eachmessagetiming, eachmessagetoken.Token);
                     }
                     else
                     {
                         TryCleanEditor();
                         MarkNotSent(fila);
                     }
-
-                    // Retraso anti-bloqueo / entre mensajes
-                    await Task.Delay(1000 + wa.preventblocktiming, cancellationToken.Token);
-
-                    // Pausa configurable entre mensajes
-                    if (eachmessagetiming > 0 && wa.clickstate)
-                        await Task.Delay(eachmessagetiming, eachmessagetoken.Token);
 
                     UpdateProgress(++count);
                 }
@@ -1918,6 +1929,7 @@ namespace Presentation
                 "Observación", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
 
+        #region  TASK 2 SMS
         private async Task Excecutesendtask2()
         {
 
@@ -2476,7 +2488,7 @@ namespace Presentation
 
 
         }
-
+        #endregion
         private void pastedatabtn_Click(object sender, EventArgs e)
         {
 

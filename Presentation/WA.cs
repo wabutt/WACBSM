@@ -33,19 +33,86 @@ namespace Presentation
 
 
 
-
-
-
-
-
-
-
-
-
         // === Base & RNG (ya los tienes si seguiste lo anterior) ======================
         private volatile int _preventBlockBaseMs = 0;
         private static readonly ThreadLocal<Random> _rng =
             new ThreadLocal<Random>(() => new Random());
+
+        // --- Perfiles humanos -------------------------------------------------------
+        private enum HumanProfile
+        {
+            Fast,
+            Normal,
+            Slow
+        }
+
+        private HumanProfile _currentProfile = HumanProfile.Normal;
+
+        // cambio de perfil cada cierto número de mensajes
+        private int _msgsSinceProfileChange = 0;
+        private int _nextProfileChangeAt = 0;
+
+        // config para cambio aleatorio de perfil
+        public bool UseProfileCycling { get; set; } = true;
+        public int ProfileChangeMinMessages { get; set; } = 40;  // mínimo mensajes por perfil
+        public int ProfileChangeMaxMessages { get; set; } = 90;  // máximo mensajes por perfil
+
+        // 🔹 NUEVO: prende/apaga todo el comportamiento humano
+        public bool UseHumanTiming { get; set; } = true;
+
+        // Aplica valores según perfil
+        private void ApplyProfile(HumanProfile profile)
+        {
+            _currentProfile = profile;
+
+            switch (profile)
+            {
+                case HumanProfile.Fast:
+                    // Perfil rápido pero humano
+                    PreventBlockBaseMs = 2000;      // base ~1.6s
+                    UseDistractions = true;
+                    DistractionEveryFixed = false;
+                    DistractionEveryMin = 4;        // distracción cada 4–8 mensajes
+                    DistractionEveryMax = 8;
+                    DistractionFactorMin = 2;       // x2
+                    DistractionFactorMax = 2;       // fijo x2
+                    break;
+
+                case HumanProfile.Normal:
+                    // Perfil normal humano
+                    PreventBlockBaseMs = 3200;      // base ~2.8s
+                    UseDistractions = true;
+                    DistractionEveryFixed = false;
+                    DistractionEveryMin = 3;        // cada 3–6 mensajes
+                    DistractionEveryMax = 6;
+                    DistractionFactorMin = 2;       // x2–x3
+                    DistractionFactorMax = 3;
+                    break;
+
+                case HumanProfile.Slow:
+                    // Perfil lento/distraído
+                    PreventBlockBaseMs = 5000;      // base ~4.2s
+                    UseDistractions = true;
+                    DistractionEveryFixed = false;
+                    DistractionEveryMin = 2;        // cada 2–4 mensajes
+                    DistractionEveryMax = 4;
+                    DistractionFactorMin = 2;       // x2–x3
+                    DistractionFactorMax = 3;
+                    break;
+            }
+
+            ResetDistractionSchedule();
+        }
+
+        // programa cuándo tocará cambiar de perfil de nuevo
+        private void ScheduleNextProfileChange()
+        {
+            var rnd = _rng.Value ?? new Random();
+            int min = Math.Max(10, ProfileChangeMinMessages);
+            int max = Math.Max(min, ProfileChangeMaxMessages);
+            _nextProfileChangeAt = rnd.Next(min, max + 1);
+            _msgsSinceProfileChange = 0;
+        }
 
         // Jitter natural 80–120% con pico al centro (triangular)
         private static int JitterHumanPct(int baseMs, int lowPct = 80, int highPct = 120)
@@ -107,12 +174,48 @@ namespace Presentation
                 _nextThresholdK = Math.Max(1, rnd.Next(DistractionEveryMin, DistractionEveryMax + 1));
 
             _processedSinceDistr = 0;
+
+            // solo tiene sentido inicializar perfiles si el modo humano está activo
+            if (UseHumanTiming && _nextProfileChangeAt <= 0)
+            {
+                // primera vez: aplicamos un perfil inicial y agendamos cambio
+                ApplyProfile(_currentProfile);
+                ScheduleNextProfileChange();
+            }
         }
 
         // Llama UNA VEZ tras cada envío para obtener la pausa correcta
         public int NextPreventDelayMs()
         {
             var rnd = _rng.Value ?? new Random();
+
+            // 🔹 Si no queremos comportamiento humano, devolvemos 0 (sin delay)
+            if (!UseHumanTiming)
+                return 0;
+
+            // --- manejo de cambio de perfil aleatorio -------------------------------
+            if (UseProfileCycling)
+            {
+                _msgsSinceProfileChange++;
+
+                if (_nextProfileChangeAt <= 0)
+                {
+                    ScheduleNextProfileChange();
+                }
+                else if (_msgsSinceProfileChange >= _nextProfileChangeAt)
+                {
+                    // elegimos un perfil distinto al actual
+                    HumanProfile newProfile = _currentProfile;
+                    while (newProfile == _currentProfile)
+                    {
+                        int v = rnd.Next(0, 3); // 0,1,2 -> Fast, Normal, Slow
+                        newProfile = (HumanProfile)v;
+                    }
+
+                    ApplyProfile(newProfile);
+                    ScheduleNextProfileChange();
+                }
+            }
 
             _processedSinceDistr++;
 
@@ -137,11 +240,6 @@ namespace Presentation
             // pausa normal (jitter natural + micro)
             return preventblocktiming + MicroJitter();
         }
-
-
-
-
-
 
 
 
