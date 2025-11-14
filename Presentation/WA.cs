@@ -29,14 +29,29 @@ namespace Presentation
 
 
 
-
-
-
-
-        // === Base & RNG (ya los tienes si seguiste lo anterior) ======================
+        // === Base & RNG ======================
         private volatile int _preventBlockBaseMs = 0;
-        private static readonly ThreadLocal<Random> _rng =
-            new ThreadLocal<Random>(() => new Random());
+
+        // 🔹 FIX: Instancia única de Random con lock para thread-safety
+        private static readonly Random _rng = new Random();
+        private static readonly object _rngLock = new object();
+
+        // Método helper para obtener valores random de forma thread-safe
+        private static int GetRandomNext(int minValue, int maxValue)
+        {
+            lock (_rngLock)
+            {
+                return _rng.Next(minValue, maxValue);
+            }
+        }
+
+        private static double GetRandomDouble()
+        {
+            lock (_rngLock)
+            {
+                return _rng.NextDouble();
+            }
+        }
 
         // --- Perfiles humanos -------------------------------------------------------
         private enum HumanProfile
@@ -54,13 +69,13 @@ namespace Presentation
 
         // config para cambio aleatorio de perfil
         public bool UseProfileCycling { get; set; } = true;
-        public int ProfileChangeMinMessages { get; set; } = 40;  // mínimo mensajes por perfil
-        public int ProfileChangeMaxMessages { get; set; } = 90;  // máximo mensajes por perfil
+        public int ProfileChangeMinMessages { get; set; } = 40;
+        public int ProfileChangeMaxMessages { get; set; } = 90;
 
         // 🔹 NUEVO: prende/apaga todo el comportamiento humano
         public bool UseHumanTiming { get; set; } = true;
 
-        // Aplica valores según perfil
+        // 🔹 FIX: Aplica valores según perfil SIN llamar a ResetDistractionSchedule
         private void ApplyProfile(HumanProfile profile)
         {
             _currentProfile = profile;
@@ -68,49 +83,45 @@ namespace Presentation
             switch (profile)
             {
                 case HumanProfile.Fast:
-                    // Perfil rápido pero humano
-                    PreventBlockBaseMs = 2000;      // base ~1.6s
+                    PreventBlockBaseMs = 2000;
                     UseDistractions = true;
                     DistractionEveryFixed = false;
-                    DistractionEveryMin = 4;        // distracción cada 4–8 mensajes
+                    DistractionEveryMin = 4;
                     DistractionEveryMax = 8;
-                    DistractionFactorMin = 2;       // x2
-                    DistractionFactorMax = 2;       // fijo x2
+                    DistractionFactorMin = 2;
+                    DistractionFactorMax = 2;
                     break;
 
                 case HumanProfile.Normal:
-                    // Perfil normal humano
-                    PreventBlockBaseMs = 3200;      // base ~2.8s
+                    PreventBlockBaseMs = 3200;
                     UseDistractions = true;
                     DistractionEveryFixed = false;
-                    DistractionEveryMin = 3;        // cada 3–6 mensajes
+                    DistractionEveryMin = 3;
                     DistractionEveryMax = 6;
-                    DistractionFactorMin = 2;       // x2–x3
+                    DistractionFactorMin = 2;
                     DistractionFactorMax = 3;
                     break;
 
                 case HumanProfile.Slow:
-                    // Perfil lento/distraído
-                    PreventBlockBaseMs = 5000;      // base ~4.2s
+                    PreventBlockBaseMs = 5000;
                     UseDistractions = true;
                     DistractionEveryFixed = false;
-                    DistractionEveryMin = 2;        // cada 2–4 mensajes
+                    DistractionEveryMin = 2;
                     DistractionEveryMax = 4;
-                    DistractionFactorMin = 2;       // x2–x3
+                    DistractionFactorMin = 2;
                     DistractionFactorMax = 3;
                     break;
             }
 
-            ResetDistractionSchedule();
+            // 🔹 FIX: NO llamar a ResetDistractionSchedule aquí
         }
 
         // programa cuándo tocará cambiar de perfil de nuevo
         private void ScheduleNextProfileChange()
         {
-            var rnd = _rng.Value ?? new Random();
             int min = Math.Max(10, ProfileChangeMinMessages);
             int max = Math.Max(min, ProfileChangeMaxMessages);
-            _nextProfileChangeAt = rnd.Next(min, max + 1);
+            _nextProfileChangeAt = GetRandomNext(min, max + 1);
             _msgsSinceProfileChange = 0;
         }
 
@@ -120,8 +131,7 @@ namespace Presentation
             if (baseMs <= 0) return 0;
             if (highPct < lowPct) { var t = lowPct; lowPct = highPct; highPct = t; }
 
-            var rnd = _rng.Value ?? new Random();
-            var u = (rnd.NextDouble() + rnd.NextDouble()) / 2.0;
+            var u = (GetRandomDouble() + GetRandomDouble()) / 2.0;
 
             var min = baseMs * lowPct / 100;
             var max = baseMs * highPct / 100;
@@ -134,7 +144,7 @@ namespace Presentation
             set { _preventBlockBaseMs = Math.Max(0, value); }
         }
 
-        public int preventblocktiming   // puedes seguir usándolo donde no quieras distracción
+        public int preventblocktiming
         {
             get { return JitterHumanPct(_preventBlockBaseMs, 80, 120); }
             set { _preventBlockBaseMs = Math.Max(0, value); }
@@ -142,54 +152,48 @@ namespace Presentation
 
         private int MicroJitter()
         {
-            var rnd = _rng.Value ?? new Random();
-            return rnd.Next(80, 251);
+            return GetRandomNext(80, 251);
         }
 
         // === Distracciones cada K mensajes ==========================================
-        // Contador de mensajes enviados desde la última distracción
         private int _processedSinceDistr = 0;
+        private int _nextThresholdK = 2;
 
-        // Siguiente umbral ("cada K") en el que disparar distracción
-        private int _nextThresholdK = 2; // se recalcula según config
-
-        // Config: modo fijo o rango aleatorio
         public bool UseDistractions { get; set; } = true;
-        public bool DistractionEveryFixed { get; set; } = false; // true: fijo; false: rango
-        public int DistractionEveryN { get; set; } = 3;          // p.ej. cada 3
-        public int DistractionEveryMin { get; set; } = 2;        // rango: min
-        public int DistractionEveryMax { get; set; } = 3;        // rango: max (incl.)
+        public bool DistractionEveryFixed { get; set; } = false;
+        public int DistractionEveryN { get; set; } = 3;
+        public int DistractionEveryMin { get; set; } = 2;
+        public int DistractionEveryMax { get; set; } = 3;
 
-        // Intensidad de distracción (factor 2x..3x)
         public int DistractionFactorMin { get; set; } = 2;
         public int DistractionFactorMax { get; set; } = 3;
 
-        // Inicializa el primer umbral
+        // 🔹 FIX: Recalcula el umbral de distracción e inicializa perfil si es necesario
         public void ResetDistractionSchedule()
         {
-            var rnd = _rng.Value ?? new Random();
             if (DistractionEveryFixed)
                 _nextThresholdK = Math.Max(1, DistractionEveryN);
             else
-                _nextThresholdK = Math.Max(1, rnd.Next(DistractionEveryMin, DistractionEveryMax + 1));
+                _nextThresholdK = Math.Max(1, GetRandomNext(DistractionEveryMin, DistractionEveryMax + 1));
 
             _processedSinceDistr = 0;
 
-            // solo tiene sentido inicializar perfiles si el modo humano está activo
+            // 🔹 FIX: Solo inicializa el perfil si nunca se ha hecho
             if (UseHumanTiming && _nextProfileChangeAt <= 0)
             {
-                // primera vez: aplicamos un perfil inicial y agendamos cambio
-                ApplyProfile(_currentProfile);
-                ScheduleNextProfileChange();
+                ApplyProfile(_currentProfile); // Aplica el perfil
+                ScheduleNextProfileChange();    // Agenda el próximo cambio
+
+                // 🔹 IMPORTANTE: Recalcula el umbral después de aplicar el perfil
+                if (DistractionEveryFixed)
+                    _nextThresholdK = Math.Max(1, DistractionEveryN);
+                else
+                    _nextThresholdK = Math.Max(1, GetRandomNext(DistractionEveryMin, DistractionEveryMax + 1));
             }
         }
 
-        // Llama UNA VEZ tras cada envío para obtener la pausa correcta
         public int NextPreventDelayMs()
         {
-            var rnd = _rng.Value ?? new Random();
-
-            // 🔹 Si no queremos comportamiento humano, devolvemos 0 (sin delay)
             if (!UseHumanTiming)
                 return 0;
 
@@ -204,47 +208,45 @@ namespace Presentation
                 }
                 else if (_msgsSinceProfileChange >= _nextProfileChangeAt)
                 {
-                    // elegimos un perfil distinto al actual
                     HumanProfile newProfile = _currentProfile;
                     while (newProfile == _currentProfile)
                     {
-                        int v = rnd.Next(0, 3); // 0,1,2 -> Fast, Normal, Slow
+                        int v = GetRandomNext(0, 3);
                         newProfile = (HumanProfile)v;
                     }
 
                     ApplyProfile(newProfile);
                     ScheduleNextProfileChange();
+
+                    // 🔹 Recalcula el umbral después de cambiar de perfil
+                    if (DistractionEveryFixed)
+                        _nextThresholdK = Math.Max(1, DistractionEveryN);
+                    else
+                        _nextThresholdK = Math.Max(1, GetRandomNext(DistractionEveryMin, DistractionEveryMax + 1));
                 }
             }
 
             _processedSinceDistr++;
 
+            // Cachea el valor base UNA SOLA VEZ
+            int baseDelay = preventblocktiming;
+
             // ¿toca distracción?
             if (UseDistractions && _processedSinceDistr >= _nextThresholdK)
             {
-                // próximo umbral
                 if (DistractionEveryFixed)
                     _nextThresholdK = Math.Max(1, DistractionEveryN);
                 else
-                    _nextThresholdK = Math.Max(1, rnd.Next(DistractionEveryMin, DistractionEveryMax + 1));
+                    _nextThresholdK = Math.Max(1, GetRandomNext(DistractionEveryMin, DistractionEveryMax + 1));
 
                 _processedSinceDistr = 0;
 
-                // factor 2x..3x (configurable)
-                var factor = rnd.Next(DistractionFactorMin, DistractionFactorMax + 1);
-
-                var longBase = preventblocktiming; // jitter natural actual
-                return longBase * factor + MicroJitter();
+                var factor = GetRandomNext(DistractionFactorMin, DistractionFactorMax + 1);
+                return baseDelay * factor + MicroJitter();
             }
 
-            // pausa normal (jitter natural + micro)
-            return preventblocktiming + MicroJitter();
+            return baseDelay + MicroJitter();
         }
-
-
-
-
-
 
 
 

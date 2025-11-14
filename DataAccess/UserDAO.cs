@@ -320,16 +320,15 @@ namespace DataAccess
                 */
 
 
-    
-                DateTime localDate = DateTime.Now;
-                String cultureName = "es-PE";
+            DateTime localDate = DateTime.Now;
+            String cultureName = "es-PE";
 
-             
-                    var culture = new CultureInfo(cultureName);
-                    string res = localDate.ToString(culture);
-                    
-                    return Convert.ToDateTime(res) ;
-    
+            var culture = new CultureInfo(cultureName);
+            string formattedDate = localDate.ToString(culture);
+
+            // Parse using the SAME culture
+            return DateTime.Parse(formattedDate, culture);
+
 
         }
 

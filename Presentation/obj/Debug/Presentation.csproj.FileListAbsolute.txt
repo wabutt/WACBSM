@@ -346,14 +346,9 @@ C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Debug\WAButt.application
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Debug\WAButt.exe
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Debug\WAButt.pdb
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Debug\AutoUpdater.NET.dll
-C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Debug\AutoUpdater.NET.pdb
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Debug\CsvHelper.dll
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Debug\SeleniumExtras.WaitHelpers.dll
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Debug\Microsoft.Bcl.AsyncInterfaces.dll
-C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Debug\WebView2Loader.dll
-C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Debug\Microsoft.Web.WebView2.Core.dll
-C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Debug\Microsoft.Web.WebView2.WinForms.dll
-C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Debug\Microsoft.Web.WebView2.Wpf.dll
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Debug\Newtonsoft.Json.dll
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Debug\WebDriver.dll
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Debug\ICSharpCode.SharpZipLib.dll
@@ -472,7 +467,6 @@ C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Debug\Zstandard.Net.dll
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Debug\K4os.Compression.LZ4.Streams.dll
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Debug\BouncyCastle.Crypto.dll
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Debug\Ubiety.Dns.Core.dll
-C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Debug\Renci.SshNet.dll
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Debug\K4os.Compression.LZ4.dll
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Debug\K4os.Hash.xxHash.dll
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Debug\Domain.pdb
@@ -646,3 +640,4 @@ C:\Users\Operaciones1\Downloads\WACBSM\Presentation\obj\Debug\WAButt.application
 C:\Users\Operaciones1\Downloads\WACBSM\Presentation\obj\Debug\Presentation.csproj.CopyComplete
 C:\Users\Operaciones1\Downloads\WACBSM\Presentation\obj\Debug\WAButt.exe
 C:\Users\Operaciones1\Downloads\WACBSM\Presentation\obj\Debug\WAButt.pdb
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Debug\Microsoft.Bcl.HashCode.dll
