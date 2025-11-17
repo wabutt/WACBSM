@@ -24,6 +24,7 @@ using ICSharpCode.SharpZipLib.Zip;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using CsvHelper.Configuration;
+using System.Net.Http;
 
 namespace Presentation
 {
@@ -66,7 +67,14 @@ namespace Presentation
         public static string chromewadefaultuserdata = "https://raw.githubusercontent.com/wabutt/itsmevsauce/master/Chrome%20WA%20Profile.zip";
         public static string chromesmsdefaultuserdata = "https://raw.githubusercontent.com/wabutt/itsmevsauce/master/Chrome%20SMS%20Profile.zip";
 
-      
+
+        public class LicenseCheckResult
+        {
+            public bool valid { get; set; }
+            public string message { get; set; }
+            public string plan { get; set; }
+            public string expiresAt { get; set; }
+        }
 
         public WAButtfrm()
         {
@@ -80,7 +88,7 @@ namespace Presentation
                 this.Load += (sender, e) => { this.Close(); };
                 return;
             }
-
+            /*
             if (!user.CheckHWID(user.GetMachineGuid()))
             {
                 MessageBox.Show("Contact to Creator :) trevorcalfan2@gmail.com",
@@ -88,7 +96,7 @@ namespace Presentation
                 Clipboard.SetText(user.GetMachineGuid());
                 this.Load += (sender, e) => { this.Close(); };
                 return;
-            }
+            }*/
 
             // Initialize ChromeDriver asynchronously
             Task.Run(async () =>
@@ -108,7 +116,124 @@ namespace Presentation
 
             updatestart();
             ExecuteStart();
+
+            this.Load += async (sender, e) =>
+            {
+                bool ok = await ValidateAPIKeyAsync(user);
+
+                if (ok)
+                {
+                    Console.WriteLine("Licencia válida para HWID: " + user.GetMachineGuid());
+                  
+                }
+                else
+                {
+                    Console.WriteLine("Licencia inválida para HWID: " + user.GetMachineGuid());
+                    // Ya se mostró mensaje desde ValidateAPIKeyAsync, así que solo cerramos:
+                    this.Close();
+                }
+            };
+
         }
+
+
+        public async Task<bool> ValidateAPIKeyAsync(UserModel user)
+        {
+            using (var http = new HttpClient())
+            {
+                http.Timeout = TimeSpan.FromSeconds(10);
+
+                http.DefaultRequestHeaders.Add(
+                    "X-API-KEY",
+                    "afe3d05f072e9fe4ce3f243f685af78db67136e70605098709f0e7c2527e2449"
+                );
+
+                var payloadObj = new
+                {
+                    licenseKey = "ABC123",   // key de prueba: debe existir en tu BD
+                    hwid = user.GetMachineGuid(),
+                    appVersion = Application.ProductVersion
+                };
+
+                string json = JsonConvert.SerializeObject(payloadObj);
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                HttpResponseMessage response;
+                try
+                {
+                    response = await http.PostAsync(
+                        "http://localhost:8080/api/license/check",
+                        content
+                    );
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(
+                        "No se pudo contactar al servidor de licencias.\n" + ex.Message,
+                        "Error de red",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error
+                    );
+                    return false;
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    MessageBox.Show(
+                        "Error del servidor de licencias: " + (int)response.StatusCode,
+                        "Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error
+                    );
+                    return false;
+                }
+
+                string responseJson = await response.Content.ReadAsStringAsync();
+
+                LicenseCheckResult result;
+                try
+                {
+                    result = JsonConvert.DeserializeObject<LicenseCheckResult>(responseJson);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(
+                        "Respuesta inválida del servidor de licencias.\n" + ex.Message,
+                        "Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error
+                    );
+                    return false;
+                }
+
+                if (result == null)
+                {
+                    MessageBox.Show(
+                        "Respuesta vacía del servidor de licencias.",
+                        "Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error
+                    );
+                    return false;
+                }
+
+                if (!result.valid)
+                {
+                    MessageBox.Show(
+                        "Licencia inválida: " + result.message,
+                        "Licencia",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning
+                    );
+                    return false;
+                }
+
+                // Aquí podrías guardar plan / expiresAt si te interesa
+                return true;
+            }
+        }
+
+
 
         private async Task DwchromedriverAsync()
         {
@@ -956,7 +1081,7 @@ namespace Presentation
 
             try
             {
-                // Muestra la pestaña de la lista (igual que tu código original)
+                // Muestra la pestaña de la lista
                 maintab.SelectedTab = contactlisttab;
 
                 // Detectar delimitador en el header (',' o ';')
@@ -977,14 +1102,16 @@ namespace Presentation
                 using (var csv = new CsvReader(sr, cfg))
                 {
                     // Leer encabezados
-                    if (!csv.Read() || !csv.ReadHeader())
-                        throw new InvalidOperationException("El archivo CSV no contiene encabezados.");
+                    csv.Read();
+                    csv.ReadHeader();
 
-                    var headers = csv.HeaderRecord?.ToList() ?? new System.Collections.Generic.List<string>();
+                    // 🔧 Cabeceras según la versión de CsvHelper
+                    var headers = csv.Context.Reader.HeaderRecord?.ToList() ?? new List<string>();
 
                     // Buscar columnas por posibles nombres
                     string phoneCol = FirstExisting(headers,
-                        "Phone 1 - Value", "Primary Phone", "Mobile Phone", "Phone", "Teléfono 1 - Valor", "Teléfono principal");
+                        "Phone 1 - Value", "Primary Phone", "Mobile Phone", "Phone",
+                        "Teléfono 1 - Valor", "Teléfono principal");
 
                     string nameCol = FirstExisting(headers,
                         "First Name", "Given Name", "Name", "Nombre");
@@ -1003,7 +1130,6 @@ namespace Presentation
                     var colSent = contactsdgv.Columns.Add("colSent", "Enviado (S/N)");
                     contactsdgv.Columns[colSent].ReadOnly = true;
 
-                    // Ancho como en tu versión
                     contactsdgv.Columns[0].Width = 200;
                     contactsdgv.Columns[1].Width = 350;
                     contactsdgv.Columns[2].Width = 100;
@@ -1018,19 +1144,24 @@ namespace Presentation
                         if (string.IsNullOrWhiteSpace(phone) && string.IsNullOrWhiteSpace(first))
                             continue;
 
-                        // NO normalizamos números: se agregan tal cual
+                        // Se agregan tal cual
                         contactsdgv.Rows.Add(phone, first, string.Empty);
                     }
 
                     contactsdgv.ResumeLayout();
-                    MessageBox.Show("Datos importados!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("Datos importados!", "Observación",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(ex.Message, "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+
+
 
         // ===== Helpers =====
 
@@ -1119,11 +1250,13 @@ namespace Presentation
                     if (!csv.Read() || !csv.ReadHeader())
                         throw new InvalidOperationException("El archivo CSV no contiene encabezados.");
 
-                    var headers = csv.HeaderRecord?.ToList() ?? new List<string>();
+                    // ✅ Cabeceras correctas según tu versión de CsvHelper
+                    var headers = csv.Context.Reader.HeaderRecord?.ToList() ?? new List<string>();
 
                     // Columnas posibles (en/es)
                     string phoneCol = FirstExisting(headers,
-                        "Phone 1 - Value", "Primary Phone", "Mobile Phone", "Phone", "Teléfono 1 - Valor", "Teléfono principal");
+                        "Phone 1 - Value", "Primary Phone", "Mobile Phone", "Phone",
+                        "Teléfono 1 - Valor", "Teléfono principal");
 
                     string nameCol = FirstExisting(headers,
                         "First Name", "Given Name", "Name", "Nombre");
@@ -1158,14 +1291,18 @@ namespace Presentation
                     }
 
                     contacts2dgv.ResumeLayout();
-                    MessageBox.Show("Datos importados!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("Datos importados!", "Observación",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(ex.Message, "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
+
         private async void startbtn_Click(object sender, EventArgs e)
         {
             cancellationToken = new CancellationTokenSource();
@@ -3477,7 +3614,7 @@ namespace Presentation
                 severalpausetxt.Location = new Point(676, 22);
             }
 
-
+            /*
 
             if (apptab.SelectedTab == wabottab)
             {
@@ -3489,7 +3626,7 @@ namespace Presentation
                 colorpanel.BackColor = Color.FromArgb(19, 116, 233);
             }
 
-
+            */
 
         }
         private async void connectgoobtn_Click(object sender, EventArgs e)
@@ -4303,6 +4440,11 @@ namespace Presentation
         }
 
         private void cmsgmail_Opening(object sender, CancelEventArgs e)
+        {
+
+        }
+
+        private void apppanel_Paint(object sender, PaintEventArgs e)
         {
 
         }

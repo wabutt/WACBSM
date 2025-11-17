@@ -27,8 +27,6 @@ namespace Presentation
         public bool driverstate2;
         public bool clickstate = false;
 
-
-
         // === Base & RNG ======================
         private volatile int _preventBlockBaseMs = 0;
 
@@ -74,6 +72,12 @@ namespace Presentation
 
         // 🔹 NUEVO: prende/apaga todo el comportamiento humano
         public bool UseHumanTiming { get; set; } = true;
+
+        // 🔥 NUEVO: Sistema de Page Refresh para prevenir Chrome crash
+        private int _totalMessagesProcessed = 0;
+        public bool UsePageRefresh { get; set; } = true;
+        public int RefreshEveryNMessages { get; set; } = 80;  // Basado en tu experiencia: crash en ~180
+        public Action OnPageRefreshNeeded { get; set; }
 
         // 🔹 FIX: Aplica valores según perfil SIN llamar a ResetDistractionSchedule
         private void ApplyProfile(HumanProfile profile)
@@ -192,6 +196,12 @@ namespace Presentation
             }
         }
 
+        // 🔥 NUEVO: Método para resetear el contador de mensajes (útil al iniciar sesión nueva)
+        public void ResetMessageCounter()
+        {
+            _totalMessagesProcessed = 0;
+        }
+
         public int NextPreventDelayMs()
         {
             if (!UseHumanTiming)
@@ -228,6 +238,17 @@ namespace Presentation
 
             _processedSinceDistr++;
 
+            // 🔥 NUEVO: Incrementar contador total de mensajes procesados
+            _totalMessagesProcessed++;
+
+            // 🔥 NUEVO: Verificar si necesita refresh para prevenir Chrome crash
+            if (UsePageRefresh &&
+                _totalMessagesProcessed % RefreshEveryNMessages == 0 &&
+                _totalMessagesProcessed > 0)
+            {
+                TriggerPageRefresh();
+            }
+
             // Cachea el valor base UNA SOLA VEZ
             int baseDelay = preventblocktiming;
 
@@ -248,8 +269,18 @@ namespace Presentation
             return baseDelay + MicroJitter();
         }
 
+        // 🔥 NUEVO: Método que dispara el callback de refresh
+        private void TriggerPageRefresh()
+        {
+            Console.WriteLine($"\n{'=',70}");
+            Console.WriteLine($"🔄 PAGE REFRESH TRIGGERED");
+            Console.WriteLine($"   Reason: Prevent Chrome crash (after {_totalMessagesProcessed} messages)");
+            Console.WriteLine($"   Current Profile: {_currentProfile}");
+            Console.WriteLine($"{'=',70}\n");
 
-
+            // Ejecuta el callback si está configurado
+            OnPageRefreshNeeded?.Invoke();
+        }
 
 
 
@@ -414,7 +445,6 @@ namespace Presentation
 
                     // Reducir detección de automatización
                     options.AddExcludedArgument("enable-automation");
-                    options.AddAdditionalOption("useAutomationExtension", false);
                     options.PageLoadStrategy = PageLoadStrategy.Normal;
 
                     // Crear driver
@@ -588,7 +618,6 @@ namespace Presentation
                     );
 
                     options.AddExcludedArgument("enable-automation");
-                    options.AddAdditionalOption("useAutomationExtension", false);
                     options.PageLoadStrategy = PageLoadStrategy.Eager;
 
                     driver2 = new ChromeDriver(service, options);
