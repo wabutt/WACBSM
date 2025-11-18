@@ -143,3 +143,4 @@ C:\Users\Operaciones1\Downloads\WACBSM\DataAccess\obj\Debug\DataAccess.csproj.Co
 C:\Users\Operaciones1\Downloads\WACBSM\DataAccess\obj\Debug\DataAccess.csproj.CopyComplete
 C:\Users\Operaciones1\Downloads\WACBSM\DataAccess\obj\Debug\DataAccess.dll
 C:\Users\Operaciones1\Downloads\WACBSM\DataAccess\obj\Debug\DataAccess.pdb
+C:\Users\Operaciones1\Downloads\WACBSM\DataAccess\obj\Debug\DataAccess.csproj.AssemblyReference.cache

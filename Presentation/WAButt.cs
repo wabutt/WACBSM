@@ -67,17 +67,27 @@ namespace Presentation
         public static string chromewadefaultuserdata = "https://raw.githubusercontent.com/wabutt/itsmevsauce/master/Chrome%20WA%20Profile.zip";
         public static string chromesmsdefaultuserdata = "https://raw.githubusercontent.com/wabutt/itsmevsauce/master/Chrome%20SMS%20Profile.zip";
 
+        // ---- LICENSE STUFF START ----
 
         public class LicenseCheckResult
         {
             public bool valid { get; set; }
             public string message { get; set; }
+            public string status { get; set; }   // ACTIVE, EXPIRED, SUSPENDED, MAX_DEVICES, NOT_FOUND, UNAUTHORIZED
             public string plan { get; set; }
-            public string expiresAt { get; set; }
+            public string expiresAt { get; set; }   // ISO string o null
+            public int devicesUsed { get; set; }
+            public int maxDevices { get; set; }
         }
+
+
+        private string _licenseKey;
 
         public WAButtfrm()
         {
+            // Leer licencia guardada
+            _licenseKey = Properties.Settings.Default.LicenseKey;
+
             AutoUpdater.InstalledVersion = Version.Parse("1.0.0.14");
             UserModel user = new UserModel();
 
@@ -88,15 +98,6 @@ namespace Presentation
                 this.Load += (sender, e) => { this.Close(); };
                 return;
             }
-            /*
-            if (!user.CheckHWID(user.GetMachineGuid()))
-            {
-                MessageBox.Show("Contact to Creator :) trevorcalfan2@gmail.com",
-                    "<3", MessageBoxButtons.OK, MessageBoxIcon.Hand);
-                Clipboard.SetText(user.GetMachineGuid());
-                this.Load += (sender, e) => { this.Close(); };
-                return;
-            }*/
 
             // Initialize ChromeDriver asynchronously
             Task.Run(async () =>
@@ -117,32 +118,250 @@ namespace Presentation
             updatestart();
             ExecuteStart();
 
+            // Validación de licencia al cargar el formulario
             this.Load += async (sender, e) =>
             {
-                bool ok = await ValidateAPIKeyAsync(user);
+                apptab.Visible = false;
 
-                if (ok)
+                try
                 {
-                    Console.WriteLine("Licencia válida para HWID: " + user.GetMachineGuid());
-                  
+                   
+                    int attempts = 0;
+                    const int maxAttempts = 3;
+
+                    while (attempts < maxAttempts)
+                    {
+                        attempts++;
+
+                        // 1) Si NO hay licencia guardada, pedirla
+                        if (string.IsNullOrWhiteSpace(_licenseKey))
+                        {
+                            var entered = PromptForLicenseKey();
+                            _licenseKey = string.IsNullOrWhiteSpace(entered) ? null : entered.Trim();
+                        }
+
+                        // 2) Si el usuario no ingresó nada, cerrar
+                        if (string.IsNullOrWhiteSpace(_licenseKey))
+                        {
+                            MessageBox.Show(
+                                "No se ingresó ninguna licencia. La aplicación se cerrará.",
+                                "Licencia requerida",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Warning
+                            );
+                            this.Close();
+                            return;
+                        }
+
+                        // 3) Validar contra el backend
+                        var result = await ValidateAPIKeyAsync(user, _licenseKey);
+
+                        // Si hubo error técnico (red / servidor) => result == null
+                        if (result == null)
+                        {
+                            // Ya se mostró MessageBox dentro de ValidateAPIKeyAsync
+                            this.Close();
+                            return;
+                        }
+
+                        // 4) Si la licencia ES válida → éxito
+                        if (result.valid)
+                        {
+                            Console.WriteLine("Licencia válida para HWID: " + user.GetMachineGuid());
+
+                            // Guardar la licencia en Settings para próximos arranques
+                            Properties.Settings.Default.LicenseKey = _licenseKey;
+                            Properties.Settings.Default.Save();
+
+                            // Construir texto para la ventana (título)
+                            string plan = string.IsNullOrWhiteSpace(result.plan)
+                                ? "SIN PLAN"
+                                : result.plan.ToUpper();
+
+                            string expText = "Sin vencimiento";
+                            if (!string.IsNullOrWhiteSpace(result.expiresAt))
+                            {
+                                if (DateTime.TryParse(result.expiresAt, out DateTime exp))
+                                {
+                                    expText = "Vence: " + exp.ToShortDateString();
+                                }
+                                else
+                                {
+                                    expText = "Vence: " + result.expiresAt;
+                                }
+                            }
+
+                            this.Text = $"WAButt - Licencia: {plan} - {expText}";
+
+                            // Desbloquear UI
+                            apptab.Visible = true;
+                            return;
+                        }
+
+                        // 5) La licencia NO es válida (incluye casos: borrada, expirada, suspendida, etc.)
+                        //    Aquí damos contexto y opción de ingresar otra.
+
+                        string msg = result.message ?? "Licencia no válida.";
+
+                        // Puedes tunear este flag si quieres solo para ciertos mensajes:
+                        bool ofrecerNuevaLicencia = true;
+
+                        if (ofrecerNuevaLicencia)
+                        {
+                            var userChoice = MessageBox.Show(
+                                "La licencia configurada ya no es válida:\n\n" +
+                                msg +
+                                "\n\n¿Desea ingresar otra licencia ahora?",
+                                "Licencia no válida",
+                                MessageBoxButtons.YesNo,
+                                MessageBoxIcon.Warning
+                            );
+
+                            if (userChoice == DialogResult.Yes)
+                            {
+                                // Limpiar licencia guardada y volver al while (nuevo intento)
+                                _licenseKey = null;
+                                Properties.Settings.Default.LicenseKey = string.Empty;
+                                Properties.Settings.Default.Save();
+                                continue; // vuelve al while, intentará de nuevo
+                            }
+                            else
+                            {
+                                // Usuario no quiere ingresar otra → cerrar
+                                this.Close();
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            // Caso en el que NO quieras ofrecer nueva licencia (por ejemplo, max devices)
+                            MessageBox.Show(
+                                msg,
+                                "Licencia no válida",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Warning
+                            );
+                            this.Close();
+                            return;
+                        }
+                    }
+
+                    // Si salió del while por demasiados intentos
+                    MessageBox.Show(
+                        "Se excedió el número de intentos de activación. La aplicación se cerrará.",
+                        "Error de licencia",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error
+                    );
+                    this.Close();
                 }
-                else
+                catch (Exception ex)
                 {
-                    Console.WriteLine("Licencia inválida para HWID: " + user.GetMachineGuid());
-                    // Ya se mostró mensaje desde ValidateAPIKeyAsync, así que solo cerramos:
+                    Console.WriteLine(ex.Message);
+                    MessageBox.Show(
+                        "Error al validar la licencia.\n" + ex.Message,
+                        "Error",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error
+                    );
                     this.Close();
                 }
             };
 
+
+        }
+
+        /// <summary>
+        /// Simple modal dialog to ask user for the license key.
+        /// </summary>
+        private string PromptForLicenseKey(string initialValue = "")
+        {
+            using (var form = new Form())
+            using (var lblTitle = new Label())
+            using (var lblHint = new Label())
+            using (var textBox = new TextBox())
+            using (var buttonOk = new Button())
+            using (var buttonCancel = new Button())
+            {
+                form.Text = "Activar licencia";
+                form.StartPosition = FormStartPosition.CenterScreen;
+                form.FormBorderStyle = FormBorderStyle.FixedDialog;
+                form.MinimizeBox = false;
+                form.MaximizeBox = false;
+                form.ClientSize = new Size(420, 160);
+                form.Font = new Font("Segoe UI", 9F);
+
+                // Título
+                lblTitle.Text = "Ingrese su código de licencia:";
+                lblTitle.AutoSize = true;
+                lblTitle.Location = new Point(12, 15);
+
+                // Hint / ayuda
+                lblHint.Text = "Ejemplo: XXXX-XXXX-XXXX-XXXX";
+                lblHint.AutoSize = true;
+                lblHint.ForeColor = Color.DimGray;
+                lblHint.Location = new Point(12, 35);
+
+                // TextBox para la licencia
+                textBox.SetBounds(12, 55, 396, 23);
+                textBox.Text = initialValue ?? string.Empty;
+                textBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+                textBox.CharacterCasing = CharacterCasing.Upper;   // fuerza mayúsculas
+
+                // Botón OK
+                buttonOk.Text = "Aceptar";
+                buttonOk.DialogResult = DialogResult.OK;
+                buttonOk.SetBounds(242, 105, 80, 27);
+                buttonOk.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+
+                // Botón Cancelar
+                buttonCancel.Text = "Cancelar";
+                buttonCancel.DialogResult = DialogResult.Cancel;
+                buttonCancel.SetBounds(328, 105, 80, 27);
+                buttonCancel.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+
+                form.AcceptButton = buttonOk;
+                form.CancelButton = buttonCancel;
+
+                form.Controls.AddRange(new Control[]
+                {
+            lblTitle,
+            lblHint,
+            textBox,
+            buttonOk,
+            buttonCancel
+                });
+
+                // Cuando se muestra el form, enfocar y seleccionar todo
+                form.Shown += (s, e) =>
+                {
+                    textBox.Focus();
+                    textBox.SelectAll();
+                };
+
+                var dialogResult = form.ShowDialog();
+
+                if (dialogResult == DialogResult.OK)
+                {
+                    var value = (textBox.Text ?? string.Empty).Trim();
+                    return string.IsNullOrEmpty(value) ? null : value;
+                }
+
+                return null;
+            }
         }
 
 
-        public async Task<bool> ValidateAPIKeyAsync(UserModel user)
+        public async Task<LicenseCheckResult> ValidateAPIKeyAsync(UserModel user, string licenseKey)
         {
             using (var http = new HttpClient())
             {
-                http.Timeout = TimeSpan.FromSeconds(10);
+                http.Timeout = TimeSpan.FromSeconds(20);
 
+                // Limpia headers por si se reusa HttpClient en algún futuro
+                http.DefaultRequestHeaders.Clear();
+
+                // Debe coincidir con LICENSE_API_KEY del .env de Laravel
                 http.DefaultRequestHeaders.Add(
                     "X-API-KEY",
                     "afe3d05f072e9fe4ce3f243f685af78db67136e70605098709f0e7c2527e2449"
@@ -150,9 +369,10 @@ namespace Presentation
 
                 var payloadObj = new
                 {
-                    licenseKey = "ABC123",   // key de prueba: debe existir en tu BD
+                    licenseKey = licenseKey,
                     hwid = user.GetMachineGuid(),
-                    appVersion = Application.ProductVersion
+                    appVersion = Application.ProductVersion,
+                    machineName = Environment.MachineName
                 };
 
                 string json = JsonConvert.SerializeObject(payloadObj);
@@ -162,7 +382,7 @@ namespace Presentation
                 try
                 {
                     response = await http.PostAsync(
-                        "http://localhost:8080/api/license/check",
+                        "http://localhost:8080/api/license/check",  // 👈 cambia host/puerto en producción
                         content
                     );
                 }
@@ -174,21 +394,50 @@ namespace Presentation
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error
                     );
-                    return false;
-                }
-
-                if (!response.IsSuccessStatusCode)
-                {
-                    MessageBox.Show(
-                        "Error del servidor de licencias: " + (int)response.StatusCode,
-                        "Error",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error
-                    );
-                    return false;
+                    return null;
                 }
 
                 string responseJson = await response.Content.ReadAsStringAsync();
+
+                // Si el servidor responde con 4xx/5xx, intentamos mostrar algo más amigable
+                if (!response.IsSuccessStatusCode)
+                {
+                    try
+                    {
+                        // Por si el backend devuelve un JSON con 'message'
+                        var apiError = JsonConvert.DeserializeObject<LicenseCheckResult>(responseJson);
+
+                        if (apiError != null && !string.IsNullOrWhiteSpace(apiError.message))
+                        {
+                            MessageBox.Show(
+                                apiError.message,
+                                "Error de licencia",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Warning
+                            );
+                        }
+                        else
+                        {
+                            MessageBox.Show(
+                                "Error del servidor de licencias: " + (int)response.StatusCode,
+                                "Error",
+                                MessageBoxButtons.OK,
+                                MessageBoxIcon.Error
+                            );
+                        }
+                    }
+                    catch
+                    {
+                        MessageBox.Show(
+                            "Error del servidor de licencias: " + (int)response.StatusCode,
+                            "Error",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error
+                        );
+                    }
+
+                    return null;
+                }
 
                 LicenseCheckResult result;
                 try
@@ -203,7 +452,7 @@ namespace Presentation
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error
                     );
-                    return false;
+                    return null;
                 }
 
                 if (result == null)
@@ -214,24 +463,17 @@ namespace Presentation
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error
                     );
-                    return false;
+                    return null;
                 }
 
-                if (!result.valid)
-                {
-                    MessageBox.Show(
-                        "Licencia inválida: " + result.message,
-                        "Licencia",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning
-                    );
-                    return false;
-                }
-
-                // Aquí podrías guardar plan / expiresAt si te interesa
-                return true;
+                // 👇 OJO: aquí YA NO mostramos MessageBox para licencia inválida
+                // eso lo maneja el 'Load' según result.status (EXPIRED, SUSPENDED, etc.)
+                return result;
             }
         }
+
+
+
 
 
 

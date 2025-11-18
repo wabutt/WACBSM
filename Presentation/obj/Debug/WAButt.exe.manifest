@@ -98,7 +98,7 @@
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>5igeSz8lLrudCMQdvMIcJEQca/VKC5QbsiACvWFJqHA=</dsig:DigestValue>
+        <dsig:DigestValue>ZClt1JVTVEbIvPOI7ekV8kVC7dulFjyoviidx060H6Y=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
@@ -110,7 +110,7 @@
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>GoH8jbzOHD5Kc1P8CGc80PUPQ7awVEQugqY7wMCUvwA=</dsig:DigestValue>
+        <dsig:DigestValue>226jW0K7UU7btJcZnTAJKcwRchy8ztteWUPLNUQqjAA=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
@@ -1495,14 +1495,14 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="WAButt.exe" size="1074176">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="WAButt.exe" size="1078784">
       <assemblyIdentity name="WAButt" version="1.0.0.0" language="neutral" processorArchitecture="amd64" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>rpOKIpfXWExh2xY7RooRHyiLQyh9m0b03BgsE9m8aa8=</dsig:DigestValue>
+        <dsig:DigestValue>EdU08x6iAqCrDDkF3/EZfsBAHCmChEAkdHMvRuUmp1k=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
@@ -1569,13 +1569,13 @@
       <dsig:DigestValue>YiB0LPsx6Py2WrWxkg97pBbR7DFK2Hbg8DvFnB8HPAU=</dsig:DigestValue>
     </hash>
   </file>
-  <file name="WAButt.exe.config" size="21612">
+  <file name="WAButt.exe.config" size="22255">
     <hash>
       <dsig:Transforms>
         <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
       </dsig:Transforms>
       <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-      <dsig:DigestValue>xYA+Pwu98rBt8+cV+R8paE4G8GOmF6WjLtVaUNYFm5c=</dsig:DigestValue>
+      <dsig:DigestValue>EBbV/bkNpKJwwG2xxxZCJPyy5p04tpX7Y0bIrCyNGjk=</dsig:DigestValue>
     </hash>
   </file>
   <file name="whatsapp (1).ico" size="109812">
