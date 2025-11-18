@@ -115,7 +115,7 @@ namespace Presentation.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("300")]
+        [global::System.Configuration.DefaultSettingValueAttribute("100")]
         public int waseveralpausecant {
             get {
                 return ((int)(this["waseveralpausecant"]));
