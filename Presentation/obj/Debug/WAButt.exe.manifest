@@ -1495,14 +1495,38 @@
     </dependentAssembly>
   </dependency>
   <dependency>
+<<<<<<< HEAD
     <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="WAButt.exe" size="1078784">
+=======
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="WAButt.exe" size="1074176">
+=======
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="WAButt.exe" size="1079296">
+>>>>>>> Stashed changes
+=======
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="WAButt.exe" size="1079296">
+>>>>>>> Stashed changes
+>>>>>>> f7eabd544e5ba9f653aeff0b9f48979ebe6b309d
       <assemblyIdentity name="WAButt" version="1.0.0.0" language="neutral" processorArchitecture="amd64" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
+<<<<<<< HEAD
         <dsig:DigestValue>EdU08x6iAqCrDDkF3/EZfsBAHCmChEAkdHMvRuUmp1k=</dsig:DigestValue>
+=======
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
+        <dsig:DigestValue>rpOKIpfXWExh2xY7RooRHyiLQyh9m0b03BgsE9m8aa8=</dsig:DigestValue>
+=======
+        <dsig:DigestValue>0uPjgfoU15gBYnNWwGrTWiwSeC5zMXrrea/2Hc8YGUc=</dsig:DigestValue>
+>>>>>>> Stashed changes
+=======
+        <dsig:DigestValue>0uPjgfoU15gBYnNWwGrTWiwSeC5zMXrrea/2Hc8YGUc=</dsig:DigestValue>
+>>>>>>> Stashed changes
+>>>>>>> f7eabd544e5ba9f653aeff0b9f48979ebe6b309d
       </hash>
     </dependentAssembly>
   </dependency>

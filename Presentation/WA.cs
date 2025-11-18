@@ -329,6 +329,17 @@ namespace Presentation
 
 
 
+            public static By FirstSearchResult => By.CssSelector("div[role='gridcell'][tabindex='0']");
+
+            // Fallback 1: Buscar por imagen de avatar
+            public static By FirstSearchResultWithAvatar => By.CssSelector("div[role='row'] div[role='gridcell'] img[alt]");
+
+            // Fallback 2: XPath combinado
+            public static By FirstSearchResultXPath => By.XPath("//div[@role='gridcell'][@tabindex='0'][.//img[@alt]]");
+
+            // Mensaje de "no encontrado"
+            public static By NoResultsMessage => By.XPath("//span[contains(text(), 'No se encontró')]");
+
 
 
             public static By AttachDocumentInput => By.CssSelector("input[accept*='*'][type='file']");
@@ -362,7 +373,7 @@ namespace Presentation
         public static By SendAttachmentButton => By.CssSelector("span[data-icon='send']");
 
             // Navigation
-            public static By FirstSearchResult => By.CssSelector("div[role='row']");
+           // old public static By FirstSearchResult => By.CssSelector("div[role='row']");
             public static By ConversationHeader => By.CssSelector("header div._amid");
 
             // Menu
@@ -511,63 +522,84 @@ namespace Presentation
 
         private void TypeIntoContentEditable(IWebElement el, string text)
         {
-            try
+            if (el == null || string.IsNullOrEmpty(text))
             {
-                // ✅ Normalizar ANTES de enviar
-                var normalized = NormalizeHtmlBreaks(text);
-
-                el.Click();
-                el.SendKeys(OpenQA.Selenium.Keys.Control + "a");
-                el.SendKeys(OpenQA.Selenium.Keys.Delete);
-
-                // ✅ Enviar línea por línea con Shift+Enter para saltos
-                var lines = normalized.Split('\n');
-                var actions = new Actions(driver);
-
-                for (int i = 0; i < lines.Length; i++)
-                {
-                    if (!string.IsNullOrEmpty(lines[i]))
-                    {
-                        el.SendKeys(lines[i]);
-                    }
-
-                    if (i < lines.Length - 1)
-                    {
-                        // Shift+Enter = salto sin enviar
-                        actions.KeyDown(SeleniumKeys.Shift)
-                               .SendKeys(SeleniumKeys.Enter)
-                               .KeyUp(SeleniumKeys.Shift)
-                               .Perform();
-                    }
-                }
-
+                Console.WriteLine("⚠ Elemento o texto vacío");
                 return;
             }
-            catch
+
+            try
             {
-                // ✅ Fallback JS con normalización
-                var normalized = NormalizeHtmlBreaks(text);
+                text = text.Replace("\r\n", "\n").Replace("\r", "\n");
+
+                Console.WriteLine($"📝 Insertando texto con DataTransfer API");
 
                 var js = (IJavaScriptExecutor)driver;
+
                 js.ExecuteScript(@"
-            var el = arguments[0], txt = arguments[1];
+            var el = arguments[0];
+            var text = arguments[1];
+            
+            // Focus y limpiar
             el.focus();
-            try {
-                document.execCommand('selectAll', false, null);
-                document.execCommand('insertText', false, txt);
-            } catch (e) {
-                var sel = window.getSelection();
-                sel.removeAllRanges();
-                var range = document.createRange();
-                range.selectNodeContents(el);
-                range.collapse(false);
-                sel.addRange(range);
-                el.dispatchEvent(new InputEvent('beforeinput', {inputType:'insertText', data:txt, bubbles:true}));
-                el.textContent = txt;
-                el.dispatchEvent(new InputEvent('input', {inputType:'insertText', data:txt, bubbles:true}));
+            el.innerHTML = '';
+            
+            // Usar DataTransfer para simular paste correctamente
+            var dataTransfer = new DataTransfer();
+            dataTransfer.setData('text/plain', text);
+            
+            var pasteEvent = new ClipboardEvent('paste', {
+                bubbles: true,
+                cancelable: true,
+                clipboardData: dataTransfer
+            });
+            
+            // Dejar que WhatsApp maneje el paste
+            if (!el.dispatchEvent(pasteEvent)) {
+                // Si fue cancelado, insertar manualmente
+                var lines = text.split('\n');
+                var fragment = document.createDocumentFragment();
+                
+                lines.forEach(function(line, index) {
+                    if (index > 0) {
+                        fragment.appendChild(document.createElement('br'));
+                    }
+                    fragment.appendChild(document.createTextNode(line));
+                });
+                
+                el.appendChild(fragment);
             }
-        ", el, normalized);
+            
+            // Mover cursor al final
+            var range = document.createRange();
+            range.selectNodeContents(el);
+            range.collapse(false);
+            
+            var selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            
+            // Eventos finales
+            el.dispatchEvent(new InputEvent('input', { 
+                bubbles: true,
+                inputType: 'insertFromPaste'
+            }));
+            
+        ", el, text);
+
+                Thread.Sleep(600);
+
+                Console.WriteLine("✓ Texto insertado con saltos de línea");
             }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Error: {ex.Message}");
+            }
+        }
+        // Helper para detectar emojis
+        private bool ContainsEmoji(string text)
+        {
+            return text.Any(c => c > 0xFFFF);
         }
         #region Browser Launch - Google Messages
 
@@ -747,25 +779,142 @@ namespace Presentation
         {
             try
             {
-                var firstResult = WaitForElement(WASelectors.FirstSearchResult, 6);
+                // Esperar a que los resultados de búsqueda carguen
+                Thread.Sleep(1500);
 
-                if (firstResult != null)
+                // Verificar si NO hay resultados
+                if (CheckNoResults())
                 {
-                    new Actions(driver).SendKeys(SeleniumKeys.Enter).Build().Perform();
-                    clickstate = true;
-                    Thread.Sleep(1000);
-                    Console.WriteLine("✓ Contacto seleccionado");
+                    clickstate = false;
+                    Console.WriteLine("✗ Sin resultados");
+                    ClickSearchIcon();
+                    return;
+                }
+
+                // Buscar el primer resultado clickeable
+                IWebElement result = FindClickableElement();
+
+                if (result != null)
+                {
+                    // Intentar hacer click con estrategia de fallback
+                    ClickElement(result);
                 }
                 else
                 {
                     clickstate = false;
-                    Console.WriteLine("✗ Contacto no encontrado");
+                    Console.WriteLine("✗ No se encontró contacto");
                     ClickSearchIcon();
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"✗ Error al hacer clic: {ex.Message}");
+                Console.WriteLine($"✗ Error en ContactClick: {ex.Message}");
+                clickstate = false;
+            }
+        }
+
+        // ============= MÉTODOS HELPER =============
+
+        private bool CheckNoResults()
+        {
+            try
+            {
+                var elements = driver.FindElements(WASelectors.NoResultsMessage);
+                return elements.Count > 0 && elements[0].Displayed;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private IWebElement FindClickableElement()
+        {
+            var selectors = new[]
+            {
+        new { Name = "FirstSearchResult", By = WASelectors.FirstSearchResult, Timeout = 4 },
+        new { Name = "WithAvatar", By = WASelectors.FirstSearchResultWithAvatar, Timeout = 3 },
+        new { Name = "XPath", By = WASelectors.FirstSearchResultXPath, Timeout = 2 }
+    };
+
+            foreach (var sel in selectors)
+            {
+                try
+                {
+                    var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(sel.Timeout));
+                    var element = wait.Until(d => {
+                        try
+                        {
+                            var el = d.FindElement(sel.By);
+                            // Verificar que sea visible Y tenga tamaño real
+                            if (el.Displayed && el.Size.Width > 0 && el.Size.Height > 0)
+                                return el;
+                            return null;
+                        }
+                        catch
+                        {
+                            return null;
+                        }
+                    });
+
+                    if (element != null)
+                    {
+                        Console.WriteLine($"✓ Elemento encontrado: {sel.Name}");
+                        return element;
+                    }
+                }
+                catch
+                {
+                    Console.WriteLine($"⚠ No encontrado: {sel.Name}");
+                    continue;
+                }
+            }
+
+            return null;
+        }
+
+        private void ClickElement(IWebElement element)
+        {
+            // Estrategia 1: Enviar ENTER (más natural)
+            try
+            {
+                new Actions(driver).SendKeys(SeleniumKeys.Enter).Build().Perform();
+                clickstate = true;
+                Thread.Sleep(1000);
+                Console.WriteLine("✓ Contacto seleccionado (Enter)");
+                return;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠ Enter falló: {ex.Message}");
+            }
+
+            // Estrategia 2: Click directo en el elemento
+            try
+            {
+                element.Click();
+                clickstate = true;
+                Thread.Sleep(1000);
+                Console.WriteLine("✓ Contacto seleccionado (Click)");
+                return;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠ Click falló: {ex.Message}");
+            }
+
+            // Estrategia 3: JavaScript click (última opción)
+            try
+            {
+                ((IJavaScriptExecutor)driver).ExecuteScript("arguments[0].click();", element);
+                clickstate = true;
+                Thread.Sleep(1000);
+                Console.WriteLine("✓ Contacto seleccionado (JS)");
+                return;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Todas las estrategias fallaron: {ex.Message}");
                 clickstate = false;
             }
         }
@@ -784,8 +933,19 @@ namespace Presentation
                 var box = WaitForComposer(20);
                 if (box == null) throw new NoSuchElementException("Composer no encontrado.");
 
-                var normalized = NormalizeHtmlBreaks(htmlishMessage); // <<< aquí interceptas los <br>
+                var normalized = NormalizeHtmlBreaks(htmlishMessage);
+
+                // 🔍 DEBUG: Ver qué texto se está procesando
+                Console.WriteLine($"🔍 htmlishMessage original: [{htmlishMessage}]");
+                Console.WriteLine($"🔍 normalized: [{normalized}]");
+                Console.WriteLine($"🔍 normalized length: {normalized.Length}");
+
                 TypeIntoComposer(box, normalized);
+
+                // 🔍 DEBUG: Ver qué quedó en el composer
+                var js = (IJavaScriptExecutor)driver;
+                var composerContent = js.ExecuteScript("return arguments[0].textContent;", box);
+                Console.WriteLine($"🔍 Contenido en composer después de escribir: [{composerContent}]");
 
                 Console.WriteLine("✓ Mensaje escrito (sin enviar)");
             }
@@ -794,51 +954,114 @@ namespace Presentation
                 Console.WriteLine($"✗ Error escribiendo mensaje: {ex.Message}");
             }
         }
+
         private void TypeIntoComposer(IWebElement el, string text)
         {
-            if (el == null) return;
-
-            // focus + limpiar
-            new Actions(driver)
-                .MoveToElement(el).Click()
-                .KeyDown(SeleniumKeys.Control).SendKeys("a").KeyUp(SeleniumKeys.Control)
-                .SendKeys(SeleniumKeys.Delete)
-                .Perform();
-
-            // teclear líneas
-            var lines = (text ?? string.Empty).Split('\n');
-            var act = new Actions(driver);
-            for (int i = 0; i < lines.Length; i++)
+            if (el == null || string.IsNullOrEmpty(text))
             {
-                var part = lines[i];
-                if (!string.IsNullOrEmpty(part)) act.SendKeys(part);
-                if (i < lines.Length - 1)
-                    act.KeyDown(SeleniumKeys.Shift).SendKeys(SeleniumKeys.Enter).KeyUp(SeleniumKeys.Shift); // salto sin enviar
+                Console.WriteLine("⚠ TypeIntoComposer: elemento null o texto vacío");
+                return;
             }
-            act.Perform();
 
-            // pequeño “nudge” para que Lexical actualice
-            new Actions(driver).SendKeys(" ").SendKeys(SeleniumKeys.Backspace).Perform();
+            try
+            {
+                Console.WriteLine($"📝 TypeIntoComposer recibió {text.Length} caracteres");
+
+                var js = (IJavaScriptExecutor)driver;
+
+                // ✅ Método más robusto - usando execCommand
+                var result = js.ExecuteScript(@"
+            var el = arguments[0];
+            var text = arguments[1];
+            
+            try {
+                console.log('[WhatsApp] Insertando texto:', text.substring(0, 50));
+                
+                // Focus
+                el.focus();
+                
+                // Limpiar usando execCommand
+                document.execCommand('selectAll', false, null);
+                document.execCommand('delete', false, null);
+                
+                // Insertar texto línea por línea
+                var lines = text.split('\n');
+                console.log('[WhatsApp] Total líneas:', lines.length);
+                
+                for (var i = 0; i < lines.length; i++) {
+                    if (lines[i].length > 0) {
+                        // Usar execCommand para insertar texto (más compatible)
+                        document.execCommand('insertText', false, lines[i]);
+                    }
+                    
+                    // Insertar salto de línea (excepto última línea)
+                    if (i < lines.length - 1) {
+                        // Shift+Enter programático
+                        var enterEvent = new KeyboardEvent('keydown', {
+                            bubbles: true,
+                            cancelable: true,
+                            key: 'Enter',
+                            code: 'Enter',
+                            keyCode: 13,
+                            shiftKey: true
+                        });
+                        el.dispatchEvent(enterEvent);
+                        
+                        // Insertar <br> manualmente si el evento no funcionó
+                        var br = document.createElement('br');
+                        el.appendChild(br);
+                    }
+                }
+                
+                console.log('[WhatsApp] Contenido final:', el.textContent);
+                console.log('[WhatsApp] HTML final:', el.innerHTML);
+                
+                // Eventos finales
+                el.dispatchEvent(new Event('input', { bubbles: true }));
+                el.dispatchEvent(new Event('change', { bubbles: true }));
+                
+                return el.textContent;
+                
+            } catch (e) {
+                console.error('[WhatsApp] Error:', e);
+                return 'ERROR: ' + e.message;
+            }
+        ", el, text);
+
+                Console.WriteLine($"🔍 JS retornó: [{result}]");
+
+                Thread.Sleep(500);
+
+                // Verificar contenido
+                var finalContent = (string)js.ExecuteScript("return arguments[0].textContent;", el);
+                Console.WriteLine($"🔍 Contenido final verificado: [{finalContent.Substring(0, Math.Min(50, finalContent.Length))}...]");
+
+                if (finalContent.Length < 5)
+                {
+                    Console.WriteLine("⚠ WARNING: El contenido parece estar vacío!");
+                }
+                else
+                {
+                    Console.WriteLine("✓ Texto escrito correctamente");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Error en TypeIntoComposer: {ex.Message}");
+            }
         }
+
         private static string NormalizeHtmlBreaks(string s)
         {
             if (string.IsNullOrEmpty(s)) return string.Empty;
 
-            // normaliza finales de línea
             s = s.Replace("\r\n", "\n").Replace("\r", "\n");
-
-            // <br>, <br/>, <br /> → \n
             s = Regex.Replace(s, @"<br\s*/?>", "\n", RegexOptions.IgnoreCase);
-
-            // cierra <div> o <p> = salto de línea
             s = Regex.Replace(s, @"</div\s*>", "\n", RegexOptions.IgnoreCase);
             s = Regex.Replace(s, @"</p\s*>", "\n", RegexOptions.IgnoreCase);
             s = Regex.Replace(s, @"<div[^>]*>|<p[^>]*>", string.Empty, RegexOptions.IgnoreCase);
-
-            // quita tags HTML
             s = Regex.Replace(s, @"<[^>]+>", string.Empty);
 
-            // ✅ Decode solo entidades comunes (NO Unicode/emojis)
             s = s.Replace("&nbsp;", " ")
                  .Replace("&amp;", "&")
                  .Replace("&lt;", "<")
@@ -930,44 +1153,53 @@ namespace Presentation
         {
             try
             {
-                // 1) Adjunta la imagen (asegúrate de que ImageMessage SOLO adjunta y NO envía)
+                // 1. Adjuntar imagen
                 ImageMessage(filePath);
-                Thread.Sleep(600);
+                Thread.Sleep(800);
 
-                // 2) Espera el cuadro de caption dentro del diálogo de media
+                // 2. Buscar caja de caption
                 var captionBox = WaitForElement(WASelectors.ImageCaptionInDialog, 8);
+
                 if (captionBox == null)
                 {
-                    // Fallback (por si WhatsApp abre el composer general en algunos flujos)
                     captionBox = WaitForElement(WASelectors.ComposerInput, 4);
                 }
 
                 if (captionBox == null)
-                    throw new NoSuchElementException("No encontré la caja de caption (contenteditable).");
+                {
+                    Console.WriteLine("✗ No se encontró caja de caption");
+                    return;
+                }
 
-                // 3) Escribe el caption de forma robusta
-                TypeIntoContentEditable(captionBox, caption ?? string.Empty);
-                Console.WriteLine("✓ Caption agregado");
+                // 3. Escribir caption si no está vacío
+                if (!string.IsNullOrWhiteSpace(caption))
+                {
+                    TypeIntoContentEditable(captionBox, caption);
+                    Thread.Sleep(500);
+                }
 
-                Thread.Sleep(800 + preventblocktiming);
+                Thread.Sleep(preventblocktiming);
 
-                // 4) Enviar (botón del modal de media)
+                // 4. Enviar
                 var sendBtn = WaitForElement(WASelectors.SendMediaButton, 6);
+
                 if (sendBtn != null)
                 {
                     sendBtn.Click();
-                    Console.WriteLine("✓ Media enviada");
+                    Console.WriteLine("✓ Imagen con caption enviada");
                 }
                 else
                 {
-                    // Último recurso, Enter
-                    captionBox.SendKeys(OpenQA.Selenium.Keys.Enter);
-                    Console.WriteLine("↩️ Enviado con Enter (fallback).");
+                    // Fallback: Enter
+                    new Actions(driver)
+                        .SendKeys(SeleniumKeys.Enter)
+                        .Perform();
+                    Console.WriteLine("✓ Enviado con Enter");
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"✗ Error con caption: {ex.Message}");
+                Console.WriteLine($"✗ Error en ImageTextMessage: {ex.Message}");
             }
         }
 

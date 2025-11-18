@@ -629,6 +629,7 @@ namespace Presentation
                     Actions action = new Actions(WA.driver);
 
                     action.SendKeys("a").Build().Perform();
+                    action.SendKeys(Keys.Backspace).Build().Perform();
                     Task.Delay(500).Wait();
 
                     wa.ContactMessage(message);
@@ -1557,14 +1558,15 @@ namespace Presentation
         }
         private string PrepareMessage(string contactName)
         {
+            // ✅ NO convertir \n a <br/>
             List<string> messages = new List<string>
-            {
-                m1txt.Text.Replace("\n", "<br/>"),
-                m2txt.Text.Replace("\n", "<br/>"),
-                m3txt.Text.Replace("\n", "<br/>"),
-                m4txt.Text.Replace("\n", "<br/>"),
-                m5txt.Text.Replace("\n", "<br/>")
-            };
+    {
+        m1txt.Text,
+        m2txt.Text,
+        m3txt.Text,
+        m4txt.Text,
+        m5txt.Text
+    };
 
             string message;
 
@@ -1587,18 +1589,20 @@ namespace Presentation
                 message = messages[0];
             }
 
+            // Normalizar saltos de línea Windows → Unix
+            message = message.Replace("\r\n", "\n").Replace("\r", "\n");
+
             // Replace placeholders
             if (sendfullnamecb.Checked)
             {
-                message = Regex.Replace(message, "{nombre}",
+                message = Regex.Replace(message, @"\{nombre\}",
                     string.IsNullOrEmpty(contactName) ? "" : contactName);
             }
 
             if (senddatetimecb.Checked)
             {
-                DateTime now = DateTime.Now;
-                message = Regex.Replace(message, "{fecha}",
-                    now.ToString("dddd, dd MMMM yyyy HH:mm"));
+                message = Regex.Replace(message, @"\{fecha\}",
+                    DateTime.Now.ToString("dddd, dd MMMM yyyy HH:mm"));
             }
 
             return message;
