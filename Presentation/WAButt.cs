@@ -2542,6 +2542,18 @@ namespace Presentation
 
                                 contacts2dgv.AllowUserToAddRows = true;
                                 contacts2dgv.AllowUserToDeleteRows = true;
+                                }
+                                catch (OperationCanceledException)
+                                {
+                                    Console.WriteLine("SMS sending cancelled by user");
+                                    HandleSendingCancellation2();
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine($"Error in SMS sending: {ex.Message}");
+                                    MessageBox.Show($"Error: {ex.Message}", "Error");
+                                    HandleSendingCancellation2();
+                                }
                             }
                         }
 
