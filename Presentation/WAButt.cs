@@ -25,12 +25,18 @@ using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using CsvHelper.Configuration;
 using System.Net.Http;
+using Presentation.Models;
+using Presentation.Services;
+using Presentation.Helpers;
+using Presentation.ViewModels;
 
 namespace Presentation
 {
     public partial class WAButtfrm : Form
     {
-     
+        // ViewModel for application logic
+        private MainViewModel _viewModel;
+
         public WA wa = new WA();
 
         public static string filenameextracted = string.Empty;
@@ -68,30 +74,20 @@ namespace Presentation
         public static string chromesmsdefaultuserdata = "https://raw.githubusercontent.com/wabutt/itsmevsauce/master/Chrome%20SMS%20Profile.zip";
 
         // ---- LICENSE STUFF START ----
-
-        public class LicenseCheckResult
-        {
-            public bool valid { get; set; }
-            public string message { get; set; }
-            public string status { get; set; }   // ACTIVE, EXPIRED, SUSPENDED, MAX_DEVICES, NOT_FOUND, UNAUTHORIZED
-            public string plan { get; set; }
-            public string expiresAt { get; set; }   // ISO string o null
-            public int devicesUsed { get; set; }
-            public int maxDevices { get; set; }
-        }
-
-
         private string _licenseKey;
 
         public WAButtfrm()
         {
+            // Initialize ViewModel and Services
+            _viewModel = new MainViewModel();
+
             // Leer licencia guardada
             _licenseKey = Properties.Settings.Default.LicenseKey;
 
             AutoUpdater.InstalledVersion = Version.Parse("1.0.0.14");
             UserModel user = new UserModel();
 
-            if (!CheckForInternetConnection())
+            if (!InternetHelper.CheckForInternetConnection())
             {
                 MessageBox.Show("No cuenta con acceso a internet, le recomendamos intentar mas tarde.",
                     "Observación", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -99,10 +95,10 @@ namespace Presentation
                 return;
             }
 
-            // Initialize ChromeDriver asynchronously
+            // Initialize ChromeDriver asynchronously using service
             Task.Run(async () =>
             {
-                if (!await ChromeDriverStateAsync())
+                if (!await _viewModel.ChromeDriverService.EnsureChromeDriverAsync())
                 {
                     this.Invoke((MethodInvoker)delegate {
                         this.Load += (sender, e) => { this.Close(); };
@@ -153,19 +149,19 @@ namespace Presentation
                             return;
                         }
 
-                        // 3) Validar contra el backend
-                        var result = await ValidateAPIKeyAsync(user, _licenseKey);
+                        // 3) Validar contra el backend usando LicenseService
+                        var result = await _viewModel.LicenseService.ValidateAPIKeyAsync(_licenseKey);
 
                         // Si hubo error técnico (red / servidor) => result == null
                         if (result == null)
                         {
-                            // Ya se mostró MessageBox dentro de ValidateAPIKeyAsync
+                            // Ya se mostró MessageBox dentro de LicenseService
                             this.Close();
                             return;
                         }
 
                         // 4) Si la licencia ES válida → éxito
-                        if (result.valid)
+                        if (result.IsValid)
                         {
                             Console.WriteLine("Licencia válida para HWID: " + user.GetMachineGuid());
 
@@ -174,21 +170,14 @@ namespace Presentation
                             Properties.Settings.Default.Save();
 
                             // Construir texto para la ventana (título)
-                            string plan = string.IsNullOrWhiteSpace(result.plan)
+                            string plan = string.IsNullOrWhiteSpace(result.Plan)
                                 ? "SIN PLAN"
-                                : result.plan.ToUpper();
+                                : result.Plan.ToUpper();
 
                             string expText = "Sin vencimiento";
-                            if (!string.IsNullOrWhiteSpace(result.expiresAt))
+                            if (result.ExpiresAt.HasValue)
                             {
-                                if (DateTime.TryParse(result.expiresAt, out DateTime exp))
-                                {
-                                    expText = "Vence: " + exp.ToShortDateString();
-                                }
-                                else
-                                {
-                                    expText = "Vence: " + result.expiresAt;
-                                }
+                                expText = "Vence: " + result.ExpiresAt.Value.ToShortDateString();
                             }
 
                             this.Text = $"WAButt - Licencia: {plan} - {expText}";
@@ -201,7 +190,7 @@ namespace Presentation
                         // 5) La licencia NO es válida (incluye casos: borrada, expirada, suspendida, etc.)
                         //    Aquí damos contexto y opción de ingresar otra.
 
-                        string msg = result.message ?? "Licencia no válida.";
+                        string msg = result.Message ?? "Licencia no válida.";
 
                         // Puedes tunear este flag si quieres solo para ciertos mensajes:
                         bool ofrecerNuevaLicencia = true;
@@ -352,125 +341,6 @@ namespace Presentation
         }
 
 
-        public async Task<LicenseCheckResult> ValidateAPIKeyAsync(UserModel user, string licenseKey)
-        {
-            using (var http = new HttpClient())
-            {
-                http.Timeout = TimeSpan.FromSeconds(20);
-
-                // Limpia headers por si se reusa HttpClient en algún futuro
-                http.DefaultRequestHeaders.Clear();
-
-                // Debe coincidir con LICENSE_API_KEY del .env de Laravel
-                http.DefaultRequestHeaders.Add(
-                    "X-API-KEY",
-                    "afe3d05f072e9fe4ce3f243f685af78db67136e70605098709f0e7c2527e2449"
-                );
-
-                var payloadObj = new
-                {
-                    licenseKey = licenseKey,
-                    hwid = user.GetMachineGuid(),
-                    appVersion = Application.ProductVersion,
-                    machineName = Environment.MachineName
-                };
-
-                string json = JsonConvert.SerializeObject(payloadObj);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-                HttpResponseMessage response;
-                try
-                {
-                    response = await http.PostAsync(
-                        "http://localhost:8080/api/license/check",  // 👈 cambia host/puerto en producción
-                        content
-                    );
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(
-                        "No se pudo contactar al servidor de licencias.\n" + ex.Message,
-                        "Error de red",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error
-                    );
-                    return null;
-                }
-
-                string responseJson = await response.Content.ReadAsStringAsync();
-
-                // Si el servidor responde con 4xx/5xx, intentamos mostrar algo más amigable
-                if (!response.IsSuccessStatusCode)
-                {
-                    try
-                    {
-                        // Por si el backend devuelve un JSON con 'message'
-                        var apiError = JsonConvert.DeserializeObject<LicenseCheckResult>(responseJson);
-
-                        if (apiError != null && !string.IsNullOrWhiteSpace(apiError.message))
-                        {
-                            MessageBox.Show(
-                                apiError.message,
-                                "Error de licencia",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Warning
-                            );
-                        }
-                        else
-                        {
-                            MessageBox.Show(
-                                "Error del servidor de licencias: " + (int)response.StatusCode,
-                                "Error",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Error
-                            );
-                        }
-                    }
-                    catch
-                    {
-                        MessageBox.Show(
-                            "Error del servidor de licencias: " + (int)response.StatusCode,
-                            "Error",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Error
-                        );
-                    }
-
-                    return null;
-                }
-
-                LicenseCheckResult result;
-                try
-                {
-                    result = JsonConvert.DeserializeObject<LicenseCheckResult>(responseJson);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(
-                        "Respuesta inválida del servidor de licencias.\n" + ex.Message,
-                        "Error",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error
-                    );
-                    return null;
-                }
-
-                if (result == null)
-                {
-                    MessageBox.Show(
-                        "Respuesta vacía del servidor de licencias.",
-                        "Error",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error
-                    );
-                    return null;
-                }
-
-                // 👇 OJO: aquí YA NO mostramos MessageBox para licencia inválida
-                // eso lo maneja el 'Load' según result.status (EXPIRED, SUSPENDED, etc.)
-                return result;
-            }
-        }
 
 
 
@@ -582,11 +452,11 @@ namespace Presentation
             }
         }
         
-        private void SendDocument(string filePath, string message, Actions action, string contactNumber)
+        private async Task SendDocument(string filePath, string message, Actions action, string contactNumber)
         {
             wa.ContactFile(filePath);
             wa.ContactSend(By.XPath(WA.SendIADButton));
-            Task.Delay(1000 + wa.preventblocktiming).Wait();
+            await Task.Delay(1000 + wa.preventblocktiming, cancellationToken.Token);
 
             if (!CheckAttachMessageStatus())
             {
@@ -595,7 +465,7 @@ namespace Presentation
                 wa.ContactSearch(contactNumber);
                 action.SendKeys(Keys.Space).Build().Perform();
                 wa.ContactClick();
-                Task.Delay(1000).Wait();
+                await Task.Delay(1000, cancellationToken.Token);
 
                 wa.ContactMessage(message);
                 wa.ContactActionEnter();
@@ -616,11 +486,11 @@ namespace Presentation
         }
         private async Task SendTextMessage(string message)
         {
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
                 if (pausetiming != 0)
                 {
-                    pausetimingaction(pausetiming, pauseToken.Token);
+                    await pausetimingaction(pausetiming, pauseToken.Token);
                     pausetiming = 0;
                 }
 
@@ -630,10 +500,10 @@ namespace Presentation
 
                     action.SendKeys("a").Build().Perform();
                     action.SendKeys(Keys.Backspace).Build().Perform();
-                    Task.Delay(500).Wait();
+                    await Task.Delay(500, cancellationToken.Token);
 
                     wa.ContactMessage(message);
-                    Task.Delay(1000 + wa.preventblocktiming).Wait();
+                    await Task.Delay(1000 + wa.preventblocktiming, cancellationToken.Token);
 
                     wa.ContactActionEnter();
                     Console.WriteLine("✓ Text message sent");
@@ -691,38 +561,38 @@ namespace Presentation
                 return chromedriverversion;
             }
         }
-        private void SendImageOrVideo(string filePath, string message, Actions action, string contactNumber)
+        private async Task SendImageOrVideo(string filePath, string message, Actions action, string contactNumber)
         {
             if (!CheckAttachMessageStatus())
             {
                 wa.ImageMessage(filePath);
-                Task.Delay(1000 + wa.preventblocktiming).Wait();
+                await Task.Delay(1000 + wa.preventblocktiming, cancellationToken.Token);
                 wa.ContactSend(By.XPath(WA.SendIADButton));
             }
             else
             {
-                if (GetImageState(filePath) || GetVideoState(filePath))
+                if (FileHelper.IsImageFile(filePath) || FileHelper.IsVideoFile(filePath))
                 {
                     wa.ImageTextMessage(filePath, message);
                     action.SendKeys(".").Build().Perform();
                     action.SendKeys(Keys.Backspace).Build().Perform();
-                    Task.Delay(1000 + wa.preventblocktiming).Wait();
+                    await Task.Delay(1000 + wa.preventblocktiming, cancellationToken.Token);
                     wa.ContactSend(By.XPath(WA.SendIADButton));
                 }
                 else
                 {
                     // Send file, then message separately
                     wa.ImageMessage(filePath);
-                    Task.Delay(1000 + wa.preventblocktiming).Wait();
+                    await Task.Delay(1000 + wa.preventblocktiming, cancellationToken.Token);
                     wa.ContactSend(By.XPath(WA.SendIADButton));
-                    Task.Delay(2000).Wait();
+                    await Task.Delay(2000, cancellationToken.Token);
 
                     // Re-search and send message
                     wa.ClickSearchIcon();
                     wa.ContactSearch(contactNumber);
                     action.SendKeys(Keys.Space).Build().Perform();
                     wa.ContactClick();
-                    Task.Delay(1000).Wait();
+                    await Task.Delay(1000, cancellationToken.Token);
 
                     wa.ContactMessage(message);
                     wa.ContactActionEnter();
@@ -731,11 +601,11 @@ namespace Presentation
         }
         private async Task SearchAndClickContact(string contactNumber)
         {
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
                 if (pausetiming != 0)
                 {
-                    pausetimingaction(pausetiming, pauseToken.Token);
+                    await pausetimingaction(pausetiming, pauseToken.Token);
                     pausetiming = 0;
                 }
 
@@ -750,7 +620,7 @@ namespace Presentation
                     action.SendKeys(Keys.Space).Build().Perform();
                     wa.ContactClick();
 
-                    Task.Delay(2000).Wait();
+                    await Task.Delay(2000, cancellationToken.Token);
                 }
                 catch (Exception ex)
                 {
@@ -760,11 +630,11 @@ namespace Presentation
         }
         private async Task SendWithAttachment(string message, string filePath, string contactNumber)
         {
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
                 if (pausetiming != 0)
                 {
-                    pausetimingaction(pausetiming, pauseToken.Token);
+                    await pausetimingaction(pausetiming, pauseToken.Token);
                     pausetiming = 0;
                 }
 
@@ -774,15 +644,15 @@ namespace Presentation
 
                     if (filetype == "I") // Image/Video
                     {
-                        SendImageOrVideo(filePath, message, action, contactNumber);
+                        await SendImageOrVideo(filePath, message, action, contactNumber);
                     }
                     else if (filetype == "A") // Audio
                     {
-                        SendAudio(filePath, message, action, contactNumber);
+                        await SendAudio(filePath, message, action, contactNumber);
                     }
                     else if (filetype == "D") // Document
                     {
-                        SendDocument(filePath, message, action, contactNumber);
+                        await SendDocument(filePath, message, action, contactNumber);
                     }
 
                     Console.WriteLine($"✓ Attachment sent: {filetype}");
@@ -794,11 +664,11 @@ namespace Presentation
             }, cancellationToken.Token);
         }
 
-        private void SendAudio(string filePath, string message, Actions action, string contactNumber)
+        private async Task SendAudio(string filePath, string message, Actions action, string contactNumber)
         {
             wa.ContactFileAudio(filePath);
             wa.ContactSend(By.XPath(WA.SendIADButton));
-            Task.Delay(1000 + wa.preventblocktiming).Wait();
+            await Task.Delay(1000 + wa.preventblocktiming, cancellationToken.Token);
 
             if (!CheckAttachMessageStatus())
             {
@@ -807,7 +677,7 @@ namespace Presentation
                 wa.ContactSearch(contactNumber);
                 action.SendKeys(Keys.Space).Build().Perform();
                 wa.ContactClick();
-                Task.Delay(1000).Wait();
+                await Task.Delay(1000, cancellationToken.Token);
 
                 wa.ContactMessage(message);
                 wa.ContactActionEnter();
@@ -829,7 +699,8 @@ namespace Presentation
                 {
                     try
                     {
-                        ReadJsonContacts("Contacts.json");
+                        var contacts = _viewModel.ContactService.LoadContactsFromJson(isSMS: false);
+                        _viewModel.ContactService.LoadToDataGridView(contactsdgv, contacts);
                     }
                     catch (Exception ex)
                     {
@@ -854,7 +725,8 @@ namespace Presentation
                 {
                     try
                     {
-                        ReadJson2Contacts("Contacts2.json");
+                        var contacts = _viewModel.ContactService.LoadContactsFromJson(isSMS: true);
+                        _viewModel.ContactService.LoadToDataGridView(contacts2dgv, contacts);
                     }
                     catch (Exception ex)
                     {
@@ -908,18 +780,6 @@ namespace Presentation
             logoutbtn.Enabled = true;
             connectwabtn.Enabled = true;
         }
-        private void WriteJSONToFile(string data, string filename)
-        {
-            string path = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                "tempfilesWAButt"
-            );
-            Directory.CreateDirectory(path);
-            File.WriteAllText(Path.Combine(path, filename), data);
-        }
-
-
-
         private void StoreSettings()
         {
             DataTable dt = new DataTable();
@@ -960,7 +820,7 @@ namespace Presentation
             dt.Rows.Add(row);
 
             string json = JsonConvert.SerializeObject(dt);
-            WriteJSONToFile(json, "UserSettings.json");
+            FileHelper.WriteJsonToFile(json, "UserSettings.json");
         }
         private void SetDefaultSettings()
         {
@@ -1016,17 +876,10 @@ namespace Presentation
         {
             if (eachmessagetiming > 0)
             {
-                await Task.Run(() =>
-                {
-                    try
-                    {
-                        Task.Delay(eachmessagetiming, eachmessagetoken.Token).Wait();
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Delay cancelled: {ex.Message}");
-                    }
-                });
+                await _viewModel.TimingService.ApplyDelayAsync(
+                    eachmessagetiming,
+                    eachmessagetoken.Token,
+                    pauseToken.Token);
             }
         }
         private void uploadbtn_Click(object sender, EventArgs e)
@@ -1135,7 +988,7 @@ namespace Presentation
         private async void connectwabtn_Click(object sender, EventArgs e)
         {
 
-            if (!CheckForInternetConnection())
+            if (!InternetHelper.CheckForInternetConnection())
             {
                 MessageBox.Show("No cuenta con acceso a internet.", "Error");
                 return;
@@ -1164,13 +1017,12 @@ namespace Presentation
 
 
         }
-        private void exportDgvToGmail()
+
+        private void ExportDgvToGmailCore(DataGridView grid)
         {
             // Ajusta estos índices si tus columnas están en otro orden:
             const int PhoneColIndex = 0;     // Columna con el teléfono
             const int FirstNameColIndex = 1; // Columna con el nombre
-
-            var grid = contactsdgv;
 
             if (grid == null || grid.Rows.Cast<DataGridViewRow>().All(r => r.IsNewRow))
             {
@@ -1231,6 +1083,11 @@ namespace Presentation
             }
         }
 
+        private void exportDgvToGmail()
+        {
+            ExportDgvToGmailCore(contactsdgv);
+        }
+
         // ---- Helper ----
         // No alteramos el contenido; solo hacemos el escape CSV cuando hace falta.
         private static string Csv(string value)
@@ -1244,163 +1101,11 @@ namespace Presentation
         }
         private void exportDgvToGmail2()
         {
-
-            // Ajusta estos índices si tus columnas están en otro orden:
-            const int PhoneColIndex = 0;     // Teléfono
-            const int FirstNameColIndex = 1; // Nombre
-
-            var grid = contacts2dgv;
-
-            if (grid == null || grid.Rows.Cast<DataGridViewRow>().All(r => r.IsNewRow))
-            {
-                MessageBox.Show("No hay datos a exportar", "Observación",
-                    MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-                return;
-            }
-
-            using (var sfd = new SaveFileDialog
-            {
-                Filter = "CSV (*.csv)|*.csv",
-                FileName = "contactos.csv",
-                AddExtension = true,
-                OverwritePrompt = true
-            })
-            {
-                if (sfd.ShowDialog() != DialogResult.OK)
-                    return;
-
-                try
-                {
-                    // UTF-8 con BOM para acentos/ñ correctos en Excel y Gmail
-                    using (var sw = new StreamWriter(sfd.FileName, false, new UTF8Encoding(true)))
-                    {
-                        // Encabezados reconocidos por Google Contacts
-                        sw.WriteLine("Name,Given Name,Phone 1 - Type,Phone 1 - Value");
-
-                        foreach (DataGridViewRow row in grid.Rows)
-                        {
-                            if (row.IsNewRow) continue;
-
-                            // NO se normaliza: se toma el teléfono tal cual está en la celda
-                            string firstName = Convert.ToString(row.Cells[FirstNameColIndex].Value) ?? string.Empty;
-                            string phoneRaw = Convert.ToString(row.Cells[PhoneColIndex].Value) ?? string.Empty;
-
-                            string name = firstName;     // si solo tienes nombre, úsalo como Name
-                            string phoneType = "Mobile"; // cambia a Home/Work si corresponde
-
-                            sw.WriteLine($"{Csv(name)},{Csv(firstName)},{Csv(phoneType)},{Csv(phoneRaw)}");
-                        }
-                    }
-
-                    MessageBox.Show("Datos exportados correctamente!", "Observación",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                catch (IOException ex)
-                {
-                    MessageBox.Show("No fue posible escribir datos en el disco. " + ex.Message,
-                        "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Error: " + ex.Message,
-                        "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
-
-
-
-
+            ExportDgvToGmailCore(contacts2dgv);
         }
         private void ImportGmailToDgv()
         {
-            var ofd = new OpenFileDialog
-            {
-                Filter = "CSV (*.csv)|*.csv",
-                FileName = ""
-            };
-
-            if (ofd.ShowDialog() != DialogResult.OK) return;
-            if (!File.Exists(ofd.FileName)) return;
-
-            try
-            {
-                // Muestra la pestaña de la lista
-                maintab.SelectedTab = contactlisttab;
-
-                // Detectar delimitador en el header (',' o ';')
-                var delimiter = DetectDelimiter(ofd.FileName);
-
-                var cfg = new CsvConfiguration(CultureInfo.InvariantCulture)
-                {
-                    HasHeaderRecord = true,
-                    Delimiter = delimiter,
-                    IgnoreBlankLines = true,
-                    TrimOptions = TrimOptions.Trim,
-                    BadDataFound = null,
-                    MissingFieldFound = null,
-                    HeaderValidated = null
-                };
-
-                using (var sr = new StreamReader(ofd.FileName, Encoding.UTF8, true))
-                using (var csv = new CsvReader(sr, cfg))
-                {
-                    // Leer encabezados
-                    csv.Read();
-                    csv.ReadHeader();
-
-                    // 🔧 Cabeceras según la versión de CsvHelper
-                    var headers = csv.Context.Reader.HeaderRecord?.ToList() ?? new List<string>();
-
-                    // Buscar columnas por posibles nombres
-                    string phoneCol = FirstExisting(headers,
-                        "Phone 1 - Value", "Primary Phone", "Mobile Phone", "Phone",
-                        "Teléfono 1 - Valor", "Teléfono principal");
-
-                    string nameCol = FirstExisting(headers,
-                        "First Name", "Given Name", "Name", "Nombre");
-
-                    // Validaciones mínimas
-                    if (string.IsNullOrEmpty(phoneCol) && string.IsNullOrEmpty(nameCol))
-                        throw new InvalidOperationException("No se encontraron columnas de teléfono ni nombre en el CSV.");
-
-                    // Preparar el DataGridView
-                    contactsdgv.SuspendLayout();
-                    contactsdgv.Columns.Clear();
-                    contactsdgv.Rows.Clear();
-
-                    contactsdgv.Columns.Add("colPhoneOrGroup", "Numero o Grupo");
-                    contactsdgv.Columns.Add("colName", "Nombre");
-                    var colSent = contactsdgv.Columns.Add("colSent", "Enviado (S/N)");
-                    contactsdgv.Columns[colSent].ReadOnly = true;
-
-                    contactsdgv.Columns[0].Width = 200;
-                    contactsdgv.Columns[1].Width = 350;
-                    contactsdgv.Columns[2].Width = 100;
-
-                    // Leer filas
-                    while (csv.Read())
-                    {
-                        string phone = phoneCol != null ? (csv.GetField(phoneCol) ?? string.Empty) : string.Empty;
-                        string first = nameCol != null ? (csv.GetField(nameCol) ?? string.Empty) : string.Empty;
-
-                        // Si no hay ningún dato útil, saltamos
-                        if (string.IsNullOrWhiteSpace(phone) && string.IsNullOrWhiteSpace(first))
-                            continue;
-
-                        // Se agregan tal cual
-                        contactsdgv.Rows.Add(phone, first, string.Empty);
-                    }
-
-                    contactsdgv.ResumeLayout();
-                    MessageBox.Show("Datos importados!", "Observación",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            ImportGmailToDgvCore(contactsdgv, maintab, contactlisttab);
         }
 
 
@@ -1458,22 +1163,24 @@ namespace Presentation
             }
             return sb.ToString();
         }
-        private void ImportGmailToDgv2()
+
+        private void ImportGmailToDgvCore(DataGridView grid, TabControl tabControl, TabPage tabPage)
         {
             var ofd = new OpenFileDialog
             {
                 Filter = "CSV (*.csv)|*.csv",
                 FileName = ""
             };
+
             if (ofd.ShowDialog() != DialogResult.OK) return;
             if (!File.Exists(ofd.FileName)) return;
 
             try
             {
-                // Mostrar la pestaña de la lista 2
-                main2tab.SelectedTab = contactlist2tab;
+                // Muestra la pestaña de la lista
+                tabControl.SelectedTab = tabPage;
 
-                // Detectar delimitador del archivo
+                // Detectar delimitador en el header (',' o ';')
                 var delimiter = DetectDelimiter(ofd.FileName);
 
                 var cfg = new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -1490,13 +1197,14 @@ namespace Presentation
                 using (var sr = new StreamReader(ofd.FileName, Encoding.UTF8, true))
                 using (var csv = new CsvReader(sr, cfg))
                 {
-                    if (!csv.Read() || !csv.ReadHeader())
-                        throw new InvalidOperationException("El archivo CSV no contiene encabezados.");
+                    // Leer encabezados
+                    csv.Read();
+                    csv.ReadHeader();
 
-                    // ✅ Cabeceras correctas según tu versión de CsvHelper
+                    // Cabeceras según la versión de CsvHelper
                     var headers = csv.Context.Reader.HeaderRecord?.ToList() ?? new List<string>();
 
-                    // Columnas posibles (en/es)
+                    // Buscar columnas por posibles nombres
                     string phoneCol = FirstExisting(headers,
                         "Phone 1 - Value", "Primary Phone", "Mobile Phone", "Phone",
                         "Teléfono 1 - Valor", "Teléfono principal");
@@ -1504,36 +1212,39 @@ namespace Presentation
                     string nameCol = FirstExisting(headers,
                         "First Name", "Given Name", "Name", "Nombre");
 
+                    // Validaciones mínimas
                     if (string.IsNullOrEmpty(phoneCol) && string.IsNullOrEmpty(nameCol))
                         throw new InvalidOperationException("No se encontraron columnas de teléfono ni nombre en el CSV.");
 
-                    // Preparar el DGV destino
-                    contacts2dgv.SuspendLayout();
-                    contacts2dgv.Columns.Clear();
-                    contacts2dgv.Rows.Clear();
+                    // Preparar el DataGridView
+                    grid.SuspendLayout();
+                    grid.Columns.Clear();
+                    grid.Rows.Clear();
 
-                    contacts2dgv.Columns.Add("colPhoneOrGroup", "Numero o Grupo");
-                    contacts2dgv.Columns.Add("colName", "Nombre");
-                    var sentIdx = contacts2dgv.Columns.Add("colSent", "Enviado (S/N)");
-                    contacts2dgv.Columns[sentIdx].ReadOnly = true;
+                    grid.Columns.Add("colPhoneOrGroup", "Numero o Grupo");
+                    grid.Columns.Add("colName", "Nombre");
+                    var colSent = grid.Columns.Add("colSent", "Enviado (S/N)");
+                    grid.Columns[colSent].ReadOnly = true;
 
-                    contacts2dgv.Columns[0].Width = 200;
-                    contacts2dgv.Columns[1].Width = 350;
-                    contacts2dgv.Columns[2].Width = 100;
+                    grid.Columns[0].Width = 200;
+                    grid.Columns[1].Width = 350;
+                    grid.Columns[2].Width = 100;
 
-                    // Leer filas (sin normalizar teléfonos)
+                    // Leer filas
                     while (csv.Read())
                     {
                         string phone = phoneCol != null ? (csv.GetField(phoneCol) ?? string.Empty) : string.Empty;
-                        string name = nameCol != null ? (csv.GetField(nameCol) ?? string.Empty) : string.Empty;
+                        string first = nameCol != null ? (csv.GetField(nameCol) ?? string.Empty) : string.Empty;
 
-                        if (string.IsNullOrWhiteSpace(phone) && string.IsNullOrWhiteSpace(name))
+                        // Si no hay ningún dato útil, saltamos
+                        if (string.IsNullOrWhiteSpace(phone) && string.IsNullOrWhiteSpace(first))
                             continue;
 
-                        contacts2dgv.Rows.Add(phone, name, string.Empty);
+                        // Se agregan tal cual
+                        grid.Rows.Add(phone, first, string.Empty);
                     }
 
-                    contacts2dgv.ResumeLayout();
+                    grid.ResumeLayout();
                     MessageBox.Show("Datos importados!", "Observación",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
@@ -1543,6 +1254,11 @@ namespace Presentation
                 MessageBox.Show(ex.Message, "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void ImportGmailToDgv2()
+        {
+            ImportGmailToDgvCore(contacts2dgv, main2tab, contactlist2tab);
         }
 
 
@@ -1642,13 +1358,13 @@ namespace Presentation
             wa.ResetDistractionSchedule();
 
             eachmessagetiming = eachmessagetimingcb.Checked
-                ? Convert.ToInt32(eachmessagetimingtxt.Text) * 1000
+                ? ValidationHelper.SafeInt(eachmessagetimingtxt.Text) * 1000
                 : 0;
         }
 
         private async Task<bool> ValidatePreSendConditions()
         {
-            if (!CheckForInternetConnection())
+            if (!InternetHelper.CheckForInternetConnection())
             {
                 MessageBox.Show("No cuenta con acceso a internet, no puedes continuar.",
                     "Observación", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -1702,7 +1418,7 @@ namespace Presentation
 
             wa.preventblocktiming2 = preventblock2cb.Checked ? 4000 : 0;
             eachmessagetiming2 = eachmessagetiming2cb.Checked
-                ? Convert.ToInt32(eachmessagetiming2txt.Text) * 1000
+                ? ValidationHelper.SafeInt(eachmessagetiming2txt.Text) * 1000
                 : 0;
         }
 
@@ -1783,7 +1499,7 @@ namespace Presentation
         {
             if (string.IsNullOrEmpty(severalpausetxt.Text)) return;
 
-            int pauseEvery = Convert.ToInt32(severalpausetxt.Text);
+            int pauseEvery = ValidationHelper.SafeInt(severalpausetxt.Text);
 
             if (currentIndex == pauseEvery && !severalpausetoken.IsCancellationRequested)
             {
@@ -1792,17 +1508,14 @@ namespace Presentation
                     "Pausa", MessageBoxButtons.OK, MessageBoxIcon.Information
                 );
 
-                await Task.Run(() =>
+                try
                 {
-                    try
-                    {
-                        Task.Delay(TimeSpan.FromMinutes(15), severalpausetoken.Token).Wait();
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Pause cancelled: {ex.Message}");
-                    }
-                });
+                    await Task.Delay(TimeSpan.FromMinutes(15), severalpausetoken.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    Console.WriteLine("Pause cancelled");
+                }
             }
         }
         private void stopbtn_Click(object sender, EventArgs e)
@@ -1842,7 +1555,7 @@ namespace Presentation
 
         private async Task Excecutesendtask()
         {
-            if (!CheckForInternetConnection())
+            if (!InternetHelper.CheckForInternetConnection())
             {
                 MessageBox.Show("No cuenta con acceso a internet, no puedes continuar.", "Observación",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -1889,7 +1602,7 @@ namespace Presentation
             // Timings
             wa.preventblocktiming = preventblockcb.Checked ? 4000 : 0;
             eachmessagetiming = eachmessagetimingcb.Checked
-                ? Math.Max(0, SafeInt(eachmessagetimingtxt.Text)) * 1000
+                ? Math.Max(0, ValidationHelper.SafeInt(eachmessagetimingtxt.Text)) * 1000
                 : 0;
 
             // Prepara textos base (se respetan saltos con <br/> y sin normalizar teléfonos)
@@ -1912,7 +1625,7 @@ namespace Presentation
                 {
                     if (fila.IsNewRow) continue;
 
-                    if (!CheckForInternetConnection())
+                    if (!InternetHelper.CheckForInternetConnection())
                     {
                         StopForNoInternet();
                         break;
@@ -2024,8 +1737,7 @@ namespace Presentation
 
         /* ==================== Helpers ==================== */
 
-        // Evita cast/format exceptions
-        private int SafeInt(string s) => int.TryParse(s, out var v) ? v : 0;
+        // Migrated to ValidationHelper.SafeInt()
 
         // Habilita/deshabilita controles durante el envío
         private void ToggleUiSendingState(bool isSending)
@@ -2048,7 +1760,7 @@ namespace Presentation
         {
             if (string.IsNullOrWhiteSpace(severalpausetxt.Text)) return;
 
-            int threshold = SafeInt(severalpausetxt.Text);
+            int threshold = ValidationHelper.SafeInt(severalpausetxt.Text);
             if (threshold <= 0) return;
 
             if (rowIndex == threshold && !severalpausetoken.IsCancellationRequested)
@@ -2183,12 +1895,12 @@ namespace Presentation
                         }
                         else
                         {
-                            if (GetImageState(filename))
+                            if (FileHelper.IsImageFile(filename))
                             {
                                 wa.ImageTextMessage(filename, message);
                                 Task.Delay(1000 + wa.preventblocktiming).Wait();
                             }
-                            else if (GetVideoState(filename))
+                            else if (FileHelper.IsVideoFile(filename))
                             {
                                 wa.VideoTextMessage(filename, message);
                                 action.SendKeys(".").Build().Perform();
@@ -2316,7 +2028,7 @@ namespace Presentation
         private async Task Excecutesendtask2()
         {
 
-            if (CheckForInternetConnection())
+            if (InternetHelper.CheckForInternetConnection())
             {
 
                 //condicionales y token de cancellation
@@ -2333,7 +2045,7 @@ namespace Presentation
 
 
                 stopbtnclicked2 = false;
-                rowcount2 = Convert.ToInt32(contacts2dgv.RowCount) - 1;
+                rowcount2 = contacts2dgv.RowCount - 1;
                 send2pbr.Value = 0;
                 send2pbr.Maximum = rowcount2;
                 totalmessages2lbl.Text = rowcount2.ToString();
@@ -2396,7 +2108,7 @@ namespace Presentation
 
 
 
-                                if (manymessages2cb.Checked == true)
+                                if (manymessages2cb.Checked)
                                 {
                                     if (sms2txt.Text == "" || sms3txt.Text == "" || sms4txt.Text == "" || sms5txt.Text == "")
                                     {
@@ -2410,38 +2122,26 @@ namespace Presentation
 
 
 
-                                foreach (DataGridViewRow fila in contacts2dgv.Rows)
+                                try
                                 {
+                                    foreach (DataGridViewRow fila in contacts2dgv.Rows)
+                                    {
+                                        if (fila.IsNewRow) continue;
 
+                                        // Check for cancellation
+                                        cancellationToken2.Token.ThrowIfCancellationRequested();
 
-                                    if (fila.IsNewRow) continue;
-
-
-
-
-                                    if (CheckForInternetConnection())
+                                        if (InternetHelper.CheckForInternetConnection())
                                     {
 
-                                        if (preventblock2cb.Checked == true)
-                                        {
-                                            wa.preventblocktiming2 = 4000;
-                                        }
-                                        else
-                                        {
-                                            wa.preventblocktiming2 = 0;
-                                        }
+                                        wa.preventblocktiming2 = preventblock2cb.Checked ? 4000 : 0;
 
 
 
 
-                                        if (eachmessagetiming2cb.Checked == true)
-                                        {
-                                            eachmessagetiming2 = Convert.ToInt32(eachmessagetiming2txt.Text) * 1000;
-                                        }
-                                        else
-                                        {
-                                            eachmessagetiming2 = 0;
-                                        }
+                                        eachmessagetiming2 = eachmessagetiming2cb.Checked
+                                            ? ValidationHelper.SafeInt(eachmessagetiming2txt.Text) * 1000
+                                            : 0;
 
 
 
@@ -2765,7 +2465,7 @@ namespace Presentation
                                     {
 
 
-                                        if (fila.Index == Convert.ToInt32(severalpause2txt.Text) && !severalpausetoken2.IsCancellationRequested)
+                                        if (fila.Index == ValidationHelper.SafeInt(severalpause2txt.Text) && !severalpausetoken2.IsCancellationRequested)
                                         {
 
                                             Console.WriteLine("<<<<<<<<<<<<<<<<<<<este es la cuenta ctual de la fila  " + fila.Index);
@@ -2842,6 +2542,18 @@ namespace Presentation
 
                                 contacts2dgv.AllowUserToAddRows = true;
                                 contacts2dgv.AllowUserToDeleteRows = true;
+                                }
+                                catch (OperationCanceledException)
+                                {
+                                    Console.WriteLine("SMS sending cancelled by user");
+                                    HandleSendingCancellation2();
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine($"Error in SMS sending: {ex.Message}");
+                                    MessageBox.Show($"Error: {ex.Message}", "Error");
+                                    HandleSendingCancellation2();
+                                }
                             }
                         }
 
@@ -2872,20 +2584,18 @@ namespace Presentation
 
         }
         #endregion
-        private void pastedatabtn_Click(object sender, EventArgs e)
+        private void PasteDataCore(DataGridView grid, TabControl tabControl, TabPage tabPage)
         {
-
-            maintab.SelectedTab = contactlisttab;
+            tabControl.SelectedTab = tabPage;
             try
             {
-                contactsdgv.Rows.Clear();
-                contactsdgv.Refresh();
+                grid.Rows.Clear();
+                grid.Refresh();
 
                 string s = Clipboard.GetText();
-
                 string[] lines = s.Replace("\n", "").Split('\r');
 
-                contactsdgv.Rows.Add(lines.Length - 1);
+                grid.Rows.Add(lines.Length - 1);
                 string[] fields;
                 int row = 0;
                 int col = 0;
@@ -2895,8 +2605,7 @@ namespace Presentation
                     fields = item.Split('\t');
                     foreach (string f in fields)
                     {
-
-                        contactsdgv[col, row].Value = f;
+                        grid[col, row].Value = f;
                         col++;
                     }
                     row++;
@@ -2905,18 +2614,25 @@ namespace Presentation
             }
             catch (Exception)
             {
-                MessageBox.Show("pegar 2 COLUMNAS (NUMERO, NOMBRE DE CONTACTO) de EXCEL", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                MessageBox.Show("Solo se pueden pegar 2 COLUMNAS (NUMERO, NOMBRE DE CONTACTO) de EXCEL",
+                    "Observación", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
             }
+        }
 
-
-
-
+        private void pastedatabtn_Click(object sender, EventArgs e)
+        {
+            PasteDataCore(contactsdgv, maintab, contactlisttab);
         }
 
         private void Storecontaacts()
         {
-            ToJson(contactsdgv, "Contacts.json");
-            ToJson(contacts2dgv, "Contacts2.json");
+            // Convert and save WhatsApp contacts
+            var contacts = _viewModel.ContactService.ConvertFromDataGridView(contactsdgv);
+            _viewModel.ContactService.SaveContactsToJson(contacts, isSMS: false);
+
+            // Convert and save SMS contacts
+            var contacts2 = _viewModel.ContactService.ConvertFromDataGridView(contacts2dgv);
+            _viewModel.ContactService.SaveContactsToJson(contacts2, isSMS: true);
         }
 
         private void Storemessages()
@@ -2927,17 +2643,19 @@ namespace Presentation
             );
             Directory.CreateDirectory(path);
 
-            File.WriteAllText(Path.Combine(path, "m1.txt"), m1txt.Text);
-            File.WriteAllText(Path.Combine(path, "m2.txt"), m2txt.Text);
-            File.WriteAllText(Path.Combine(path, "m3.txt"), m3txt.Text);
-            File.WriteAllText(Path.Combine(path, "m4.txt"), m4txt.Text);
-            File.WriteAllText(Path.Combine(path, "m5.txt"), m5txt.Text);
+            // Store WhatsApp messages
+            var waMessages = new[] { m1txt.Text, m2txt.Text, m3txt.Text, m4txt.Text, m5txt.Text };
+            for (int i = 0; i < waMessages.Length; i++)
+            {
+                File.WriteAllText(Path.Combine(path, $"m{i + 1}.txt"), waMessages[i]);
+            }
 
-            File.WriteAllText(Path.Combine(path, "sms1.txt"), sms1txt.Text);
-            File.WriteAllText(Path.Combine(path, "sms2.txt"), sms2txt.Text);
-            File.WriteAllText(Path.Combine(path, "sms3.txt"), sms3txt.Text);
-            File.WriteAllText(Path.Combine(path, "sms4.txt"), sms4txt.Text);
-            File.WriteAllText(Path.Combine(path, "sms5.txt"), sms5txt.Text);
+            // Store SMS messages
+            var smsMessages = new[] { sms1txt.Text, sms2txt.Text, sms3txt.Text, sms4txt.Text, sms5txt.Text };
+            for (int i = 0; i < smsMessages.Length; i++)
+            {
+                File.WriteAllText(Path.Combine(path, $"sms{i + 1}.txt"), smsMessages[i]);
+            }
         }
 
 
@@ -2950,16 +2668,13 @@ namespace Presentation
                 "tempfilesWAButt"
             );
 
-            if (File.Exists(Path.Combine(basePath, "m1.txt")))
-                m1txt.Text = File.ReadAllText(Path.Combine(basePath, "m1.txt"));
-            if (File.Exists(Path.Combine(basePath, "m2.txt")))
-                m2txt.Text = File.ReadAllText(Path.Combine(basePath, "m2.txt"));
-            if (File.Exists(Path.Combine(basePath, "m3.txt")))
-                m3txt.Text = File.ReadAllText(Path.Combine(basePath, "m3.txt"));
-            if (File.Exists(Path.Combine(basePath, "m4.txt")))
-                m4txt.Text = File.ReadAllText(Path.Combine(basePath, "m4.txt"));
-            if (File.Exists(Path.Combine(basePath, "m5.txt")))
-                m5txt.Text = File.ReadAllText(Path.Combine(basePath, "m5.txt"));
+            var messageBoxes = new[] { m1txt, m2txt, m3txt, m4txt, m5txt };
+            for (int i = 0; i < messageBoxes.Length; i++)
+            {
+                string filePath = Path.Combine(basePath, $"m{i + 1}.txt");
+                if (File.Exists(filePath))
+                    messageBoxes[i].Text = File.ReadAllText(filePath);
+            }
         }
         private void Restoremessages2()
         {
@@ -2968,74 +2683,15 @@ namespace Presentation
                 "tempfilesWAButt"
             );
 
-            if (File.Exists(Path.Combine(basePath, "sms1.txt")))
-                sms1txt.Text = File.ReadAllText(Path.Combine(basePath, "sms1.txt"));
-            if (File.Exists(Path.Combine(basePath, "sms2.txt")))
-                sms2txt.Text = File.ReadAllText(Path.Combine(basePath, "sms2.txt"));
-            if (File.Exists(Path.Combine(basePath, "sms3.txt")))
-                sms3txt.Text = File.ReadAllText(Path.Combine(basePath, "sms3.txt"));
-            if (File.Exists(Path.Combine(basePath, "sms4.txt")))
-                sms4txt.Text = File.ReadAllText(Path.Combine(basePath, "sms4.txt"));
-            if (File.Exists(Path.Combine(basePath, "sms5.txt")))
-                sms5txt.Text = File.ReadAllText(Path.Combine(basePath, "sms5.txt"));
-        }
-
-        private void ToJson(DataGridView dgv, string filename)
-        {
-            DataTable dt = new DataTable();
-            dt.Columns.Add("number", typeof(string));
-            dt.Columns.Add("name", typeof(string));
-
-            foreach (DataGridViewRow item in dgv.Rows)
+            var smsBoxes = new[] { sms1txt, sms2txt, sms3txt, sms4txt, sms5txt };
+            for (int i = 0; i < smsBoxes.Length; i++)
             {
-                if (!string.IsNullOrEmpty(Convert.ToString(item.Cells[0].Value)))
-                {
-                    DataRow row = dt.NewRow();
-                    row["number"] = Convert.ToString(item.Cells[0].Value);
-                    row["name"] = Convert.ToString(item.Cells[1].Value);
-                    dt.Rows.Add(row);
-                }
-            }
-
-            string json = JsonConvert.SerializeObject(dt);
-            WriteJSONToFile(json, filename);
-        }
-        public void ReadJsonContacts(string filename)
-        {
-            string path = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                "tempfilesWAButt", filename
-            );
-
-            if (File.Exists(path))
-            {
-                string json = File.ReadAllText(path);
-                DataTable dt = JsonConvert.DeserializeObject<DataTable>(json);
-
-                foreach (DataRow item in dt.Rows)
-                {
-                    contactsdgv.Rows.Add(item[0], item[1]);
-                }
+                string filePath = Path.Combine(basePath, $"sms{i + 1}.txt");
+                if (File.Exists(filePath))
+                    smsBoxes[i].Text = File.ReadAllText(filePath);
             }
         }
-        public void ReadJson2Contacts(string filename)
-        {
-            string path = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                "tempfilesWAButt", filename
-            );
 
-            if (File.Exists(path))
-            {
-                string json = File.ReadAllText(path);
-                DataTable dt = JsonConvert.DeserializeObject<DataTable>(json);
-
-                foreach (DataRow item in dt.Rows)
-                {
-                    contacts2dgv.Rows.Add(item[0], item[1]);
-                }
-            }
-        }
         private string DecodeEncodedNonAsciiCharacters(string value)
         {
             return Regex.Replace(
@@ -3048,12 +2704,13 @@ namespace Presentation
         private List<int> NotEmptyMessages()
         {
             List<int> result = new List<int>();
+            var messageBoxes = new[] { m1txt, m2txt, m3txt, m4txt, m5txt };
 
-            if (!string.IsNullOrWhiteSpace(m1txt.Text)) result.Add(0);
-            if (!string.IsNullOrWhiteSpace(m2txt.Text)) result.Add(1);
-            if (!string.IsNullOrWhiteSpace(m3txt.Text)) result.Add(2);
-            if (!string.IsNullOrWhiteSpace(m4txt.Text)) result.Add(3);
-            if (!string.IsNullOrWhiteSpace(m5txt.Text)) result.Add(4);
+            for (int i = 0; i < messageBoxes.Length; i++)
+            {
+                if (!string.IsNullOrWhiteSpace(messageBoxes[i].Text))
+                    result.Add(i);
+            }
 
             return result;
         }
@@ -3088,93 +2745,27 @@ namespace Presentation
 
             if (contactsdgv.Rows.Count > 1)
             {
-
-
                 SaveFileDialog sfd = new SaveFileDialog
                 {
                     Filter = "Archivo de Texto (*.txt)|*.txt",
                     FileName = ""
                 };
-                bool fileError = false;
+
                 if (sfd.ShowDialog() == DialogResult.OK)
                 {
-                    if (File.Exists(sfd.FileName))
+                    try
                     {
-                        try
-                        {
-                            File.Delete(sfd.FileName);
-                        }
-                        catch (IOException ex)
-                        {
-                            fileError = true;
-                            MessageBox.Show("No fue posible escribir datos en el disco." + ex.Message);
-                        }
+                        // Convert DataGridView to contact list
+                        var contacts = _viewModel.ContactService.ConvertFromDataGridView(contactsdgv);
+
+                        // Export to text file using ContactService
+                        _viewModel.ContactService.ExportToTextFile(contacts, sfd.FileName);
+
+                        MessageBox.Show("Datos exportados correctamente!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
-                    if (!fileError)
+                    catch (Exception ex)
                     {
-                        try
-                        {
-
-                            string value = "";
-
-
-                            DataGridViewRow dr = new DataGridViewRow();
-                            StreamWriter swOut = new StreamWriter(sfd.FileName);
-
-
-
-                            //write DataGridView rows to csv
-                            for (int j = 0; j <= contactsdgv.Rows.Count - 2; j++)
-                            {
-                                if (j > 0)
-                                {
-                                    swOut.WriteLine();
-                                }
-
-                                dr = contactsdgv.Rows[j];
-
-                                for (int i = 0; i <= contactsdgv.Columns.Count - 2; i++)
-                                {
-                                    if (i > 0)
-                                    {
-                                        swOut.Write("\t");
-                                    }
-                                    if (i < 1)
-                                    {
-                                        if (Convert.ToString(dr.Cells[i].Value).Replace(" ", "").Length > 9)
-                                        {
-
-                                            if (Convert.ToString(dr.Cells[i].Value).StartsWith("+") == false && IsDigitsOnly(Convert.ToString(dr.Cells[i].Value)))
-                                            {
-                                                swOut.Write("+");
-                                            }
-
-
-
-                                        }
-
-                                    }
-
-                                    value = Convert.ToString(dr.Cells[i].Value);
-
-
-                                    //replace comma's with spaces
-                                    value = value.Replace('\t', ' ');
-                                    //replace embedded newlines with spaces
-                                    value = value.Replace(Environment.NewLine, " ");
-
-                                    swOut.Write(value);
-                                }
-                            }
-                            swOut.Close();
-                            MessageBox.Show("Datos exportados correctamente!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show("Error :" + ex.Message);
-                        }
+                        MessageBox.Show("Error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
             }
@@ -3186,6 +2777,19 @@ namespace Presentation
 
 
 
+        }
+
+        private void SetupContactGridColumns(DataGridView grid)
+        {
+            grid.Columns.Clear();
+            grid.Columns.Add("Column", "Numero o Grupo");
+            grid.Columns.Add("Column", "Nombre");
+            grid.Columns.Add("Column", "Enviado (S/N)");
+
+            grid.Columns[0].Width = 200;
+            grid.Columns[1].Width = 350;
+            grid.Columns[2].Width = 100;
+            grid.Columns[2].ReadOnly = true;
         }
 
         private void openbtn_Click(object sender, EventArgs e)
@@ -3205,47 +2809,14 @@ namespace Presentation
 
 
 
-                    StreamReader sr = new StreamReader(sfd.FileName);
-                    StringBuilder sb = new StringBuilder();
+                    // Import contacts from file using ContactService
+                    var contacts = _viewModel.ContactService.ImportFromTextFile(sfd.FileName);
 
+                    // Clear and setup DataGridView using helper
+                    SetupContactGridColumns(contactsdgv);
 
-                    string s;
-
-                    contactsdgv.Columns.Clear();
-
-
-                    contactsdgv.Columns.Add("Column", "Numero o Grupo");
-                    contactsdgv.Columns.Add("Column", "Nombre");
-                    contactsdgv.Columns.Add("Column", "Enviado (S/N)");
-
-                    while (!sr.EndOfStream)
-                    {
-                        s = sr.ReadLine();
-
-                        string[] str = s.Split('\t');
-
-
-
-                        contactsdgv.Rows.Add(str[0].ToString(), str[1].ToString());
-
-
-                    }
-                    sr.Close();
-
-                    DataGridViewColumn column = contactsdgv.Columns[0];
-                    column.Width = 200;
-
-
-
-                    DataGridViewColumn column1 = contactsdgv.Columns[1];
-                    column1.Width = 350;
-
-
-
-
-                    DataGridViewColumn column2 = contactsdgv.Columns[2];
-                    column2.Width = 100;
-                    column2.ReadOnly = true;
+                    // Load contacts to DataGridView
+                    _viewModel.ContactService.LoadToDataGridView(contactsdgv, contacts);
 
                     MessageBox.Show("Datos importados!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
@@ -3261,80 +2832,51 @@ namespace Presentation
 
         }
 
-        private void minutosToolStripMenuItem_Click(object sender, EventArgs e)
+        private void SetPauseTiming(int seconds)
         {
-
-
-
             if (pausetiming == 0)
             {
-                pauseToken = new CancellationTokenSource();
+                // Only create new token if it's null or already canceled
+                if (pauseToken == null || pauseToken.IsCancellationRequested)
+                {
+                    pauseToken = new CancellationTokenSource();
+                }
 
-                pausetiming = 300;
+                pausetiming = seconds;
                 pausebtn.Text = "Reanudar";
                 MessageBox.Show("Los envíos se pausarán en breve.", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 logoutbtn.Enabled = true;
             }
+        }
 
-
-
+        private void minutosToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            SetPauseTiming(300); // 5 minutes
         }
 
         private void minutosToolStripMenuItem1_Click(object sender, EventArgs e)
         {
-            pauseToken = new CancellationTokenSource();
-
-            if (pausetiming == 0)
-            {
-                pausetiming = 1800;
-                pausebtn.Text = "Reanudar";
-                MessageBox.Show("Los envíos se pausarán en breve.", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                logoutbtn.Enabled = true;
-            }
-
-
+            SetPauseTiming(1800); // 30 minutes
         }
 
         private void horaToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            pauseToken = new CancellationTokenSource();
-            if (pausetiming == 0)
-            {
-                pausetiming = 3600;
-                pausebtn.Text = "Reanudar";
-                MessageBox.Show("Los envíos se pausarán en breve.", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                logoutbtn.Enabled = true;
-            }
-
+            SetPauseTiming(3600); // 1 hour
         }
 
         private void horaToolStripMenuItem1_Click(object sender, EventArgs e)
         {
-            pauseToken = new CancellationTokenSource();
-            if (pausetiming == 0)
-            {
-                pausetiming = 7200;
-                pausebtn.Text = "Reanudar";
-                MessageBox.Show("Los envíos se pausarán en breve.", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                logoutbtn.Enabled = true;
-            }
-
-
+            SetPauseTiming(7200); // 2 hours
         }
 
-        private void pausetimingaction(int seconds, CancellationToken token)
+        private async Task pausetimingaction(int seconds, CancellationToken token)
         {
-            try
+            if (seconds > 0)
             {
-                if (seconds > 0)
-                {
-                    MessageBox.Show($"Pausando por {seconds / 60} minutos", "Pausa");
-                    Task.Delay(TimeSpan.FromSeconds(seconds), token).Wait();
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Pause cancelled: {ex.Message}");
+                await _viewModel.TimingService.ApplyPauseAsync(
+                    seconds,
+                    token,
+                    msg => MessageBox.Show(msg, "Pausa"));
             }
         }
         private async Task ExecuteSendTask()
@@ -3352,14 +2894,14 @@ namespace Presentation
 
                     cancellationToken.Token.ThrowIfCancellationRequested();
 
-                    if (!CheckForInternetConnection())
+                    if (!InternetHelper.CheckForInternetConnection())
                     {
                         StopSendingDueToNoInternet();
                         break;
                     }
 
                     // Process contact
-                    await ProcessSingleContact(fila);
+                    await ProcessSingleContact(fila, cancellationToken.Token);
 
                     // Update progress
                     count++;
@@ -3380,11 +2922,73 @@ namespace Presentation
             catch (OperationCanceledException)
             {
                 Console.WriteLine("Sending cancelled by user");
+                HandleSendingCancellation();
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error in sending: {ex.Message}");
                 MessageBox.Show($"Error: {ex.Message}", "Error");
+                FinalizeSending();
+            }
+        }
+
+        private void HandleSendingCancellation()
+        {
+            // Complete or reset progress bar
+            if (sendpbr.Value > 0 && sendpbr.Value < sendpbr.Maximum)
+            {
+                sendpbr.Value = sendpbr.Maximum; // Complete it to show it finished
+            }
+
+            // Update message labels
+            notsendedmessagelbl.Text = (rowcount - sendedmessage).ToString();
+
+            // Re-enable UI controls
+            contactsdgv.AllowUserToAddRows = true;
+            contactsdgv.AllowUserToDeleteRows = true;
+            uploadbtn.Enabled = true;
+            clearfilenamebtn.Enabled = true;
+            startbtn.Enabled = true;
+            logoutbtn.Enabled = true;
+            connectwabtn.Enabled = true;
+            stopbtn.Enabled = false;
+            pausebtn.Enabled = false;
+
+            // Show cancellation message to user
+            if (stopbtnclicked)
+            {
+                MessageBox.Show("Envío cancelado por el usuario.", "Cancelado",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                stopbtnclicked = false; // Reset flag
+            }
+        }
+
+        private void HandleSendingCancellation2()
+        {
+            // Complete or reset progress bar for SMS
+            if (send2pbr.Value > 0 && send2pbr.Value < send2pbr.Maximum)
+            {
+                send2pbr.Value = send2pbr.Maximum; // Complete it to show it finished
+            }
+
+            // Update message labels
+            notsendedmessage2lbl.Text = (rowcount2 - sendedmessage2).ToString();
+
+            // Re-enable UI controls
+            contacts2dgv.AllowUserToAddRows = true;
+            contacts2dgv.AllowUserToDeleteRows = true;
+            start2btn.Enabled = true;
+            logout2btn.Enabled = true;
+            connectgoobtn.Enabled = true;
+            stop2btn.Enabled = false;
+            pause2btn.Enabled = false;
+
+            // Show cancellation message to user
+            if (stopbtnclicked2)
+            {
+                MessageBox.Show("Envío SMS cancelado por el usuario.", "Cancelado",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                stopbtnclicked2 = false; // Reset flag
             }
         }
         private void FinalizeSending()
@@ -3526,7 +3130,7 @@ namespace Presentation
         {
             try
             {
-                if (!CheckForInternetConnection())
+                if (!InternetHelper.CheckForInternetConnection())
                 {
                     MessageBox.Show("No cuenta con acceso a internet.", "Error",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -3559,19 +3163,7 @@ namespace Presentation
                 logoutbtn.Enabled = true;
             }
         }
-        public static bool CheckForInternetConnection()
-        {
-            try
-            {
-                using (var client = new WebClient())
-                using (client.OpenRead("http://google.com/generate_204"))
-                    return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
+        // Migrated to InternetHelper.CheckForInternetConnection()
         private void manymessagescb_Click(object sender, EventArgs e)
         {
 
@@ -3613,10 +3205,7 @@ namespace Presentation
         {
             // wa.GetContactsFromGroup();
         }
-        private bool IsDigitsOnly(string str)
-        {
-            return str.All(c => char.IsDigit(c));
-        }
+        // Migrated to ValidationHelper.IsDigitsOnly()
         private void severalpausetxt_KeyPress(object sender, KeyPressEventArgs e)
         {
             InputNumbers(sender, e);
@@ -3877,7 +3466,7 @@ namespace Presentation
         }
         private async void connectgoobtn_Click(object sender, EventArgs e)
         {
-            if (!CheckForInternetConnection())
+            if (!InternetHelper.CheckForInternetConnection())
             {
                 MessageBox.Show("No cuenta con acceso a internet.", "Error");
                 return;
@@ -3916,132 +3505,33 @@ namespace Presentation
         }
         private void pastedata2btn_Click(object sender, EventArgs e)
         {
-            main2tab.SelectedTab = contactlist2tab;
-            try
-            {
-                contacts2dgv.Rows.Clear();
-                contacts2dgv.Refresh();
-
-                string s = Clipboard.GetText();
-
-                string[] lines = s.Replace("\n", "").Split('\r');
-
-                contacts2dgv.Rows.Add(lines.Length - 1);
-                string[] fields;
-                int row = 0;
-                int col = 0;
-
-                foreach (string item in lines)
-                {
-                    fields = item.Split('\t');
-                    foreach (string f in fields)
-                    {
-
-                        contacts2dgv[col, row].Value = f;
-                        col++;
-                    }
-                    row++;
-                    col = 0;
-                }
-            }
-            catch (Exception)
-            {
-                MessageBox.Show("Solo se pueden pegar 2 COLUMNAS (NUMERO, NOMBRE DE CONTACTO) de EXCEL", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-            }
+            PasteDataCore(contacts2dgv, main2tab, contactlist2tab);
         }
         private void save2btn_Click(object sender, EventArgs e)
         {
-
-
             if (contacts2dgv.Rows.Count > 1)
             {
-
-
                 SaveFileDialog sfd = new SaveFileDialog
                 {
                     Filter = "Archivo de Texto (*.txt)|*.txt",
                     FileName = ""
                 };
-                bool fileError = false;
+
                 if (sfd.ShowDialog() == DialogResult.OK)
                 {
-                    if (File.Exists(sfd.FileName))
+                    try
                     {
-                        try
-                        {
-                            File.Delete(sfd.FileName);
-                        }
-                        catch (IOException ex)
-                        {
-                            fileError = true;
-                            MessageBox.Show("No fue posible escribir datos en el disco." + ex.Message);
-                        }
+                        // Convert DataGridView to contact list
+                        var contacts = _viewModel.ContactService.ConvertFromDataGridView(contacts2dgv);
+
+                        // Export to text file using ContactService
+                        _viewModel.ContactService.ExportToTextFile(contacts, sfd.FileName);
+
+                        MessageBox.Show("Datos exportados correctamente!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
-                    if (!fileError)
+                    catch (Exception ex)
                     {
-                        try
-                        {
-
-                            string value = "";
-
-
-                            DataGridViewRow dr = new DataGridViewRow();
-                            StreamWriter swOut = new StreamWriter(sfd.FileName);
-
-
-
-                            //write DataGridView rows to csv
-                            for (int j = 0; j <= contacts2dgv.Rows.Count - 2; j++)
-                            {
-                                if (j > 0)
-                                {
-                                    swOut.WriteLine();
-                                }
-
-                                dr = contacts2dgv.Rows[j];
-
-                                for (int i = 0; i <= contacts2dgv.Columns.Count - 2; i++)
-                                {
-                                    if (i > 0)
-                                    {
-                                        swOut.Write("\t");
-                                    }
-                                    if (i < 1)
-                                    {
-                                        if (Convert.ToString(dr.Cells[i].Value).Replace(" ", "").Length > 9)
-                                        {
-
-                                            if (Convert.ToString(dr.Cells[i].Value).StartsWith("+") == false && IsDigitsOnly(Convert.ToString(dr.Cells[i].Value)))
-                                            {
-                                                swOut.Write("+");
-                                            }
-
-
-
-                                        }
-
-                                    }
-
-                                    value = Convert.ToString(dr.Cells[i].Value);
-
-
-                                    //replace comma's with spaces
-                                    value = value.Replace('\t', ' ');
-                                    //replace embedded newlines with spaces
-                                    value = value.Replace(Environment.NewLine, " ");
-
-                                    swOut.Write(value);
-                                }
-                            }
-                            swOut.Close();
-                            MessageBox.Show("Datos exportados correctamente!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show("Error :" + ex.Message);
-                        }
+                        MessageBox.Show("Error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
             }
@@ -4049,7 +3539,6 @@ namespace Presentation
             {
                 MessageBox.Show("No hay datos a exportar", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
             }
-
         }
         private void open2btn_Click(object sender, EventArgs e)
         {
@@ -4067,47 +3556,14 @@ namespace Presentation
 
 
 
-                    StreamReader sr = new StreamReader(sfd.FileName);
-                    StringBuilder sb = new StringBuilder();
+                    // Import contacts from file using ContactService
+                    var contacts = _viewModel.ContactService.ImportFromTextFile(sfd.FileName);
 
+                    // Clear and setup DataGridView using helper
+                    SetupContactGridColumns(contacts2dgv);
 
-                    string s;
-
-                    contacts2dgv.Columns.Clear();
-
-
-                    contacts2dgv.Columns.Add("Column", "Numero o Grupo");
-                    contacts2dgv.Columns.Add("Column", "Nombre");
-                    contacts2dgv.Columns.Add("Column", "Enviado (S/N)");
-
-                    while (!sr.EndOfStream)
-                    {
-                        s = sr.ReadLine();
-
-                        string[] str = s.Split('\t');
-
-
-
-                        contacts2dgv.Rows.Add(str[0].ToString(), str[1].ToString());
-
-
-                    }
-                    sr.Close();
-
-                    DataGridViewColumn column = contacts2dgv.Columns[0];
-                    column.Width = 200;
-
-
-
-                    DataGridViewColumn column1 = contacts2dgv.Columns[1];
-                    column1.Width = 350;
-
-
-
-
-                    DataGridViewColumn column2 = contacts2dgv.Columns[2];
-                    column2.Width = 100;
-                    column2.ReadOnly = true;
+                    // Load contacts to DataGridView
+                    _viewModel.ContactService.LoadToDataGridView(contacts2dgv, contacts);
 
                     MessageBox.Show("Datos importados!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
@@ -4117,8 +3573,11 @@ namespace Presentation
 
             }
         }
-        private async Task ProcessSingleContact(DataGridViewRow fila)
+        private async Task ProcessSingleContact(DataGridViewRow fila, CancellationToken token)
         {
+            // Check for cancellation at the start
+            token.ThrowIfCancellationRequested();
+
             string contactNumber = Convert.ToString(fila.Cells[0].Value);
             string contactName = Convert.ToString(fila.Cells[1].Value);
 
@@ -4132,8 +3591,14 @@ namespace Presentation
 
             Console.WriteLine($"Processing: {contactNumber}");
 
+            // Check for cancellation before preparing message
+            token.ThrowIfCancellationRequested();
+
             // Prepare message
             string messageToSend = PrepareMessage(contactName);
+
+            // Check for cancellation before searching contact
+            token.ThrowIfCancellationRequested();
 
             // Search and click contact
             await SearchAndClickContact(contactNumber);
@@ -4145,6 +3610,9 @@ namespace Presentation
                 notsendedmessagelbl.Text = notsendedmessage.ToString();
                 return;
             }
+
+            // Check for cancellation before sending
+            token.ThrowIfCancellationRequested();
 
             // Send message/file
             await SendMessageOrFile(messageToSend, filenametxt.Text, contactNumber);
@@ -4321,14 +3789,11 @@ namespace Presentation
 
         public void ClearEmptyRows(DataGridView dgv)
         {
-            for (int i = dgv.Rows.Count - 1; i >= 0; i--)
-            {
-                DataGridViewRow row = dgv.Rows[i];
-                if (!row.IsNewRow && string.IsNullOrEmpty(Convert.ToString(row.Cells[0].Value)))
-                {
-                    dgv.Rows.RemoveAt(i);
-                }
-            }
+            // Convert, remove empty contacts, and reload
+            var contacts = _viewModel.ContactService.ConvertFromDataGridView(dgv);
+            var validContacts = _viewModel.ContactService.RemoveEmptyContacts(contacts);
+            dgv.Rows.Clear();
+            _viewModel.ContactService.LoadToDataGridView(dgv, validContacts);
         }
 
         private void clearemptyrowsbtn_Click(object sender, EventArgs e)
@@ -4343,39 +3808,19 @@ namespace Presentation
         }
         private void DeleteDuplicate1()
         {
-            DataTable items = new DataTable();
+            // Convert DataGridView to contact list
+            var contacts = _viewModel.ContactService.ConvertFromDataGridView(contactsdgv);
 
-            items.Columns.Add("Numero o Grupo", typeof(string));
-            items.Columns.Add("Nombre", typeof(string));
-            items.Columns.Add("Enviado(S/N)", typeof(string));
+            // Remove duplicates using ContactService
+            var uniqueContacts = _viewModel.ContactService.RemoveDuplicates(contacts);
 
-            for (int i = 0; i < contactsdgv.Rows.Count; i++)
-            {
-                DataRow rw = items.NewRow();
-                rw[0] = Convert.ToString(contactsdgv.Rows[i].Cells[0].Value);
-                rw[1] = Convert.ToString(contactsdgv.Rows[i].Cells[1].Value);
-                rw[2] = Convert.ToString(contactsdgv.Rows[i].Cells[2].Value);
-                if (!items.Rows.Cast<DataRow>().Any(row => row["Numero o Grupo"].Equals(rw["Numero o Grupo"])))
-                    items.Rows.Add(rw);
-            }
-
-
-
+            // Clear and reload DataGridView
             contactsdgv.Rows.Clear();
+            _viewModel.ContactService.LoadToDataGridView(contactsdgv, uniqueContacts);
 
-
-            foreach (DataRow item in items.Rows)
-            {
-                contactsdgv.Rows.Add(Convert.ToString(item[0]), Convert.ToString(item[1]), Convert.ToString(item[2]));
-            }
-
-
-
-
+            // Set column widths
             DataGridViewColumn column = contactsdgv.Columns[0];
             column.Width = 200;
-
-
 
             DataGridViewColumn column1 = contactsdgv.Columns[1];
             column1.Width = 350;
@@ -4389,58 +3834,50 @@ namespace Presentation
         }
         private void DeleteDuplicate2()
         {
-            DataTable items = new DataTable();
+            // Convert DataGridView to contact list
+            var contacts = _viewModel.ContactService.ConvertFromDataGridView(contacts2dgv);
 
-            items.Columns.Add("Numero o Grupo", typeof(string));
-            items.Columns.Add("Nombre", typeof(string));
-            items.Columns.Add("Enviado(S/N)", typeof(string));
+            // Remove duplicates using ContactService
+            var uniqueContacts = _viewModel.ContactService.RemoveDuplicates(contacts);
 
-            for (int i = 0; i < contacts2dgv.Rows.Count; i++)
-            {
-                DataRow rw = items.NewRow();
-                rw[0] = Convert.ToString(contacts2dgv.Rows[i].Cells[0].Value);
-                rw[1] = Convert.ToString(contacts2dgv.Rows[i].Cells[1].Value);
-                rw[2] = Convert.ToString(contacts2dgv.Rows[i].Cells[2].Value);
-                if (!items.Rows.Cast<DataRow>().Any(row => row["Numero o Grupo"].Equals(rw["Numero o Grupo"])))
-                    items.Rows.Add(rw);
-            }
-
-
-
+            // Clear and reload DataGridView
             contacts2dgv.Rows.Clear();
+            _viewModel.ContactService.LoadToDataGridView(contacts2dgv, uniqueContacts);
 
-
-            foreach (DataRow item in items.Rows)
-            {
-                contacts2dgv.Rows.Add(Convert.ToString(item[0]), Convert.ToString(item[1]), Convert.ToString(item[2]));
-            }
-
-
-
-
+            // Set column widths
             DataGridViewColumn column = contacts2dgv.Columns[0];
             column.Width = 200;
 
-
-
             DataGridViewColumn column1 = contacts2dgv.Columns[1];
             column1.Width = 350;
-
-
-
 
             DataGridViewColumn column2 = contacts2dgv.Columns[2];
             column2.Width = 100;
             column2.ReadOnly = true;
         }
-        private void dgvwacopymodecms_ItemClicked(object sender, ToolStripItemClickedEventArgs e)
-        {
 
+        private void CopyGridToClipboard(DataGridView grid)
+        {
+            // Copiar celdas seleccionadas al portapapeles
+            if (grid.GetCellCount(DataGridViewElementStates.Selected) > 0)
+            {
+                try
+                {
+                    // Usar el método nativo del DataGridView para copiar
+                    grid.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithAutoHeaderText;
+                    Clipboard.SetDataObject(grid.GetClipboardContent());
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error al copiar: {ex.Message}", "Error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
         }
 
         private void copiarToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            SendKeys.Send("^C");
+            CopyGridToClipboard(contactsdgv);
         }
 
         private void contactsdgv_MouseClick(object sender, MouseEventArgs e)
@@ -4476,34 +3913,20 @@ namespace Presentation
         }
         private bool CheckAttachMessageStatus()
         {
-            return !(!CheckAttachMessageStatusSub() || sendonlyattachcb.Checked);
+            // Simplified: !(!A || B) = A && !B
+            return CheckAttachMessageStatusSub() && !sendonlyattachcb.Checked;
         }
 
         private bool CheckAttachMessageStatusSub()
         {
-            return string.IsNullOrEmpty(filenametxt.Text) ||
-                   !string.IsNullOrWhiteSpace(m1txt.Text) ||
-                   !string.IsNullOrWhiteSpace(m2txt.Text) ||
-                   !string.IsNullOrWhiteSpace(m3txt.Text) ||
-                   !string.IsNullOrWhiteSpace(m4txt.Text) ||
-                   !string.IsNullOrWhiteSpace(m5txt.Text);
+            if (string.IsNullOrEmpty(filenametxt.Text))
+                return true;
+
+            var messageBoxes = new[] { m1txt, m2txt, m3txt, m4txt, m5txt };
+            return messageBoxes.Any(mb => !string.IsNullOrWhiteSpace(mb.Text));
         }
 
-        private string GetExtension(string path)
-        {
-            return Path.GetExtension(path);
-        }
-        private bool GetImageState(string path)
-        {
-            string ext = Path.GetExtension(path).ToLower();
-            return ext == ".svg" || ext == ".png" || ext == ".jpg" ||
-                   ext == ".jpeg" || ext == ".gif" || ext == ".webp";
-        }
-        private bool GetVideoState(string path)
-        {
-            string ext = Path.GetExtension(path).ToLower();
-            return ext == ".mp4" || ext == ".mov" || ext == ".m4v";
-        }
+        // Migrated to FileHelper.GetExtension(), IsImageFile(), IsVideoFile()
 
         private void eliminarDuplicadosToolStripMenuItem_Click(object sender, EventArgs e)
         {
@@ -4515,66 +3938,93 @@ namespace Presentation
             ClearEmptyRows(contactsdgv);
         }
 
-        private void pegarToolStripMenuItem_Click(object sender, EventArgs e)
+        private void PasteFromClipboard(DataGridView grid)
         {
             try
             {
-
-                string s = Clipboard.GetText();
-
-                string[] lines = s.Replace("\n", "").Split('\r');
-
-                string[] fields;
-                int row = contactsdgv.CurrentCell.RowIndex;
-                int col = 0;
-                int sum = row + lines.Length;
-                int totalrows = contactsdgv.Rows.Cast<DataGridViewRow>().Where(rown => !(rown.Cells[0].Value == null && rown.Cells[1].Value == null)).Count();
-
-                Console.WriteLine(lines.Length);
-                Console.WriteLine(row + 2);
-                Console.WriteLine(totalrows);
-
-
-                for (int i = 0; i < sum - totalrows; i++)
+                // Validar que haya una celda seleccionada
+                if (grid.CurrentCell == null)
                 {
-                    contactsdgv.Rows.Add();
+                    MessageBox.Show("Selecciona una celda donde pegar los datos.", "Observación",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
                 }
 
-
-
-                foreach (string item in lines)
+                // Obtener texto del portapapeles
+                string clipboardText = Clipboard.GetText();
+                if (string.IsNullOrWhiteSpace(clipboardText))
                 {
+                    MessageBox.Show("El portapapeles está vacío.", "Observación",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
 
-                    fields = item.Split('\t');
-                    foreach (string f in fields)
+                // Normalizar saltos de línea (Windows: \r\n, Unix: \n, Mac: \r)
+                clipboardText = clipboardText.Replace("\r\n", "\n").Replace("\r", "\n");
+                string[] lines = clipboardText.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+                if (lines.Length == 0)
+                {
+                    MessageBox.Show("No hay datos válidos para pegar.", "Observación",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                int startRow = grid.CurrentCell.RowIndex;
+                int currentRow = startRow;
+
+                // Calcular cuántas filas necesitamos
+                int totalRowsNeeded = startRow + lines.Length;
+                int currentTotalRows = grid.Rows.Count;
+
+                // Agregar filas faltantes si es necesario
+                if (totalRowsNeeded > currentTotalRows)
+                {
+                    int rowsToAdd = totalRowsNeeded - currentTotalRows;
+                    for (int i = 0; i < rowsToAdd; i++)
                     {
+                        grid.Rows.Add();
+                    }
+                }
 
-
-
-                        contactsdgv[col, row].Value = f;
-
-
-
-                        col++;
-
-
-
+                // Pegar los datos
+                foreach (string line in lines)
+                {
+                    if (string.IsNullOrWhiteSpace(line))
+                    {
+                        currentRow++;
+                        continue;
                     }
 
-                    row++;
+                    // Separar por tabulador
+                    string[] fields = line.Split('\t');
 
-                    col = 0;
+                    // Solo pegar en las primeras 2 columnas (Número y Nombre)
+                    // La columna 2 (Enviado S/N) se mantiene intacta
+                    for (int col = 0; col < Math.Min(fields.Length, 2); col++)
+                    {
+                        if (currentRow < grid.Rows.Count)
+                        {
+                            grid[col, currentRow].Value = fields[col].Trim();
+                        }
+                    }
+
+                    currentRow++;
                 }
 
-                foreach (DataGridViewRow item in contactsdgv.Rows)
-                {
-                    item.Cells[2].Value = null;
-                }
+                MessageBox.Show($"Se pegaron {lines.Length} filas correctamente.", "Éxito",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Observación", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                MessageBox.Show($"Error al pegar datos: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void pegarToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            PasteFromClipboard(contactsdgv);
         }
 
         private void limpiarToolStripMenuItem_Click(object sender, EventArgs e)
@@ -4598,69 +4048,12 @@ namespace Presentation
 
         private void toolStripMenuItem5_Click(object sender, EventArgs e)
         {
-            SendKeys.Send("^C");
+            CopyGridToClipboard(contacts2dgv);
         }
 
         private void toolStripMenuItem6_Click(object sender, EventArgs e)
         {
-            try
-            {
-
-                string s = Clipboard.GetText();
-                
-                string[] lines = s.Replace("\n", "").Split('\r');
-
-                string[] fields;
-                int row = contacts2dgv.CurrentCell.RowIndex;
-                int col = 0;
-                int sum = row + lines.Length;
-                int totalrows = contacts2dgv.Rows.Cast<DataGridViewRow>().Where(rown => !(rown.Cells[0].Value == null && rown.Cells[1].Value == null)).Count();
-
-                Console.WriteLine(lines.Length);
-                Console.WriteLine(row + 2);
-                Console.WriteLine(totalrows);
-
-
-                for (int i = 0; i < sum - totalrows; i++)
-                {
-                    contacts2dgv.Rows.Add();
-                }
-
-
-
-                foreach (string item in lines)
-                {
-
-                    fields = item.Split('\t');
-                    foreach (string f in fields)
-                    {
-
-
-
-                        contacts2dgv[col, row].Value = f;
-
-
-
-                        col++;
-
-
-
-                    }
-
-                    row++;
-
-                    col = 0;
-                }
-
-                foreach (DataGridViewRow item in contacts2dgv.Rows)
-                {
-                    item.Cells[2].Value = null;
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "Observación", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-            }
+            PasteFromClipboard(contacts2dgv);
         }
 
         private void toolStripMenuItem7_Click(object sender, EventArgs e)
