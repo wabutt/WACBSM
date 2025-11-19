@@ -2122,16 +2122,16 @@ namespace Presentation
 
 
 
-                                foreach (DataGridViewRow fila in contacts2dgv.Rows)
+                                try
                                 {
+                                    foreach (DataGridViewRow fila in contacts2dgv.Rows)
+                                    {
+                                        if (fila.IsNewRow) continue;
 
+                                        // Check for cancellation
+                                        cancellationToken2.Token.ThrowIfCancellationRequested();
 
-                                    if (fila.IsNewRow) continue;
-
-
-
-
-                                    if (InternetHelper.CheckForInternetConnection())
+                                        if (InternetHelper.CheckForInternetConnection())
                                     {
 
                                         wa.preventblocktiming2 = preventblock2cb.Checked ? 4000 : 0;
@@ -2910,11 +2910,73 @@ namespace Presentation
             catch (OperationCanceledException)
             {
                 Console.WriteLine("Sending cancelled by user");
+                HandleSendingCancellation();
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Error in sending: {ex.Message}");
                 MessageBox.Show($"Error: {ex.Message}", "Error");
+                FinalizeSending();
+            }
+        }
+
+        private void HandleSendingCancellation()
+        {
+            // Complete or reset progress bar
+            if (sendpbr.Value > 0 && sendpbr.Value < sendpbr.Maximum)
+            {
+                sendpbr.Value = sendpbr.Maximum; // Complete it to show it finished
+            }
+
+            // Update message labels
+            notsendedmessagelbl.Text = (rowcount - sendedmessage).ToString();
+
+            // Re-enable UI controls
+            contactsdgv.AllowUserToAddRows = true;
+            contactsdgv.AllowUserToDeleteRows = true;
+            uploadbtn.Enabled = true;
+            clearfilenamebtn.Enabled = true;
+            startbtn.Enabled = true;
+            logoutbtn.Enabled = true;
+            connectwabtn.Enabled = true;
+            stopbtn.Enabled = false;
+            pausebtn.Enabled = false;
+
+            // Show cancellation message to user
+            if (stopbtnclicked)
+            {
+                MessageBox.Show("Envío cancelado por el usuario.", "Cancelado",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                stopbtnclicked = false; // Reset flag
+            }
+        }
+
+        private void HandleSendingCancellation2()
+        {
+            // Complete or reset progress bar for SMS
+            if (send2pbr.Value > 0 && send2pbr.Value < send2pbr.Maximum)
+            {
+                send2pbr.Value = send2pbr.Maximum; // Complete it to show it finished
+            }
+
+            // Update message labels
+            notsendedmessage2lbl.Text = (rowcount2 - sendedmessage2).ToString();
+
+            // Re-enable UI controls
+            contacts2dgv.AllowUserToAddRows = true;
+            contacts2dgv.AllowUserToDeleteRows = true;
+            start2btn.Enabled = true;
+            logout2btn.Enabled = true;
+            connectgoobtn.Enabled = true;
+            stop2btn.Enabled = false;
+            pause2btn.Enabled = false;
+
+            // Show cancellation message to user
+            if (stopbtnclicked2)
+            {
+                MessageBox.Show("Envío SMS cancelado por el usuario.", "Cancelado",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                stopbtnclicked2 = false; // Reset flag
             }
         }
         private void FinalizeSending()
