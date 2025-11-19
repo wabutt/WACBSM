@@ -3837,17 +3837,17 @@ namespace Presentation
         }
         private bool CheckAttachMessageStatus()
         {
-            return !(!CheckAttachMessageStatusSub() || sendonlyattachcb.Checked);
+            // Simplified: !(!A || B) = A && !B
+            return CheckAttachMessageStatusSub() && !sendonlyattachcb.Checked;
         }
 
         private bool CheckAttachMessageStatusSub()
         {
-            return string.IsNullOrEmpty(filenametxt.Text) ||
-                   !string.IsNullOrWhiteSpace(m1txt.Text) ||
-                   !string.IsNullOrWhiteSpace(m2txt.Text) ||
-                   !string.IsNullOrWhiteSpace(m3txt.Text) ||
-                   !string.IsNullOrWhiteSpace(m4txt.Text) ||
-                   !string.IsNullOrWhiteSpace(m5txt.Text);
+            if (string.IsNullOrEmpty(filenametxt.Text))
+                return true;
+
+            var messageBoxes = new[] { m1txt, m2txt, m3txt, m4txt, m5txt };
+            return messageBoxes.Any(mb => !string.IsNullOrWhiteSpace(mb.Text));
         }
 
         // Migrated to FileHelper.GetExtension(), IsImageFile(), IsVideoFile()
