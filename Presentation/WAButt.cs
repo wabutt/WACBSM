@@ -3782,9 +3782,28 @@ namespace Presentation
             column2.ReadOnly = true;
         }
 
+        private void CopyGridToClipboard(DataGridView grid)
+        {
+            // Copiar celdas seleccionadas al portapapeles
+            if (grid.GetCellCount(DataGridViewElementStates.Selected) > 0)
+            {
+                try
+                {
+                    // Usar el método nativo del DataGridView para copiar
+                    grid.ClipboardCopyMode = DataGridViewClipboardCopyMode.EnableWithAutoHeaderText;
+                    Clipboard.SetDataObject(grid.GetClipboardContent());
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Error al copiar: {ex.Message}", "Error",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
         private void copiarToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            SendKeys.Send("^C");
+            CopyGridToClipboard(contactsdgv);
         }
 
         private void contactsdgv_MouseClick(object sender, MouseEventArgs e)
@@ -3845,66 +3864,93 @@ namespace Presentation
             ClearEmptyRows(contactsdgv);
         }
 
-        private void pegarToolStripMenuItem_Click(object sender, EventArgs e)
+        private void PasteFromClipboard(DataGridView grid)
         {
             try
             {
-
-                string s = Clipboard.GetText();
-
-                string[] lines = s.Replace("\n", "").Split('\r');
-
-                string[] fields;
-                int row = contactsdgv.CurrentCell.RowIndex;
-                int col = 0;
-                int sum = row + lines.Length;
-                int totalrows = contactsdgv.Rows.Cast<DataGridViewRow>().Where(rown => !(rown.Cells[0].Value == null && rown.Cells[1].Value == null)).Count();
-
-                Console.WriteLine(lines.Length);
-                Console.WriteLine(row + 2);
-                Console.WriteLine(totalrows);
-
-
-                for (int i = 0; i < sum - totalrows; i++)
+                // Validar que haya una celda seleccionada
+                if (grid.CurrentCell == null)
                 {
-                    contactsdgv.Rows.Add();
+                    MessageBox.Show("Selecciona una celda donde pegar los datos.", "Observación",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
                 }
 
-
-
-                foreach (string item in lines)
+                // Obtener texto del portapapeles
+                string clipboardText = Clipboard.GetText();
+                if (string.IsNullOrWhiteSpace(clipboardText))
                 {
+                    MessageBox.Show("El portapapeles está vacío.", "Observación",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
 
-                    fields = item.Split('\t');
-                    foreach (string f in fields)
+                // Normalizar saltos de línea (Windows: \r\n, Unix: \n, Mac: \r)
+                clipboardText = clipboardText.Replace("\r\n", "\n").Replace("\r", "\n");
+                string[] lines = clipboardText.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+                if (lines.Length == 0)
+                {
+                    MessageBox.Show("No hay datos válidos para pegar.", "Observación",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                int startRow = grid.CurrentCell.RowIndex;
+                int currentRow = startRow;
+
+                // Calcular cuántas filas necesitamos
+                int totalRowsNeeded = startRow + lines.Length;
+                int currentTotalRows = grid.Rows.Count;
+
+                // Agregar filas faltantes si es necesario
+                if (totalRowsNeeded > currentTotalRows)
+                {
+                    int rowsToAdd = totalRowsNeeded - currentTotalRows;
+                    for (int i = 0; i < rowsToAdd; i++)
                     {
+                        grid.Rows.Add();
+                    }
+                }
 
-
-
-                        contactsdgv[col, row].Value = f;
-
-
-
-                        col++;
-
-
-
+                // Pegar los datos
+                foreach (string line in lines)
+                {
+                    if (string.IsNullOrWhiteSpace(line))
+                    {
+                        currentRow++;
+                        continue;
                     }
 
-                    row++;
+                    // Separar por tabulador
+                    string[] fields = line.Split('\t');
 
-                    col = 0;
+                    // Solo pegar en las primeras 2 columnas (Número y Nombre)
+                    // La columna 2 (Enviado S/N) se mantiene intacta
+                    for (int col = 0; col < Math.Min(fields.Length, 2); col++)
+                    {
+                        if (currentRow < grid.Rows.Count)
+                        {
+                            grid[col, currentRow].Value = fields[col].Trim();
+                        }
+                    }
+
+                    currentRow++;
                 }
 
-                foreach (DataGridViewRow item in contactsdgv.Rows)
-                {
-                    item.Cells[2].Value = null;
-                }
+                MessageBox.Show($"Se pegaron {lines.Length} filas correctamente.", "Éxito",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show(ex.Message, "Observación", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                MessageBox.Show($"Error al pegar datos: {ex.Message}", "Error",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void pegarToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            PasteFromClipboard(contactsdgv);
         }
 
         private void limpiarToolStripMenuItem_Click(object sender, EventArgs e)
@@ -3928,69 +3974,12 @@ namespace Presentation
 
         private void toolStripMenuItem5_Click(object sender, EventArgs e)
         {
-            SendKeys.Send("^C");
+            CopyGridToClipboard(contacts2dgv);
         }
 
         private void toolStripMenuItem6_Click(object sender, EventArgs e)
         {
-            try
-            {
-
-                string s = Clipboard.GetText();
-                
-                string[] lines = s.Replace("\n", "").Split('\r');
-
-                string[] fields;
-                int row = contacts2dgv.CurrentCell.RowIndex;
-                int col = 0;
-                int sum = row + lines.Length;
-                int totalrows = contacts2dgv.Rows.Cast<DataGridViewRow>().Where(rown => !(rown.Cells[0].Value == null && rown.Cells[1].Value == null)).Count();
-
-                Console.WriteLine(lines.Length);
-                Console.WriteLine(row + 2);
-                Console.WriteLine(totalrows);
-
-
-                for (int i = 0; i < sum - totalrows; i++)
-                {
-                    contacts2dgv.Rows.Add();
-                }
-
-
-
-                foreach (string item in lines)
-                {
-
-                    fields = item.Split('\t');
-                    foreach (string f in fields)
-                    {
-
-
-
-                        contacts2dgv[col, row].Value = f;
-
-
-
-                        col++;
-
-
-
-                    }
-
-                    row++;
-
-                    col = 0;
-                }
-
-                foreach (DataGridViewRow item in contacts2dgv.Rows)
-                {
-                    item.Cells[2].Value = null;
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "Observación", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-            }
+            PasteFromClipboard(contacts2dgv);
         }
 
         private void toolStripMenuItem7_Click(object sender, EventArgs e)
