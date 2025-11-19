@@ -10,9 +10,9 @@
 | Métrica | Valor |
 |---------|-------|
 | **Líneas Iniciales** | 4,694 |
-| **Líneas Finales** | **4,261** |
-| **Reducción Total** | **-433 líneas (-9.2%)** |
-| **Commits Realizados** | 13 commits |
+| **Líneas Finales** | **4,077** |
+| **Reducción Total** | **-617 líneas (-13.1%)** |
+| **Commits Realizados** | 18 commits |
 | **Estado** | Todo pusheado ✅ |
 
 ---
@@ -57,14 +57,37 @@
 - ✅ `Restoremessages()`: Simplificado con loop (5 llamadas → 1 loop)
 - ✅ `Restoremessages2()`: Simplificado con loop (5 llamadas → 1 loop)
 
-### 9. Utilidades de Mensajes (NUEVO)
+### 9. Utilidades de Mensajes
 - ✅ `NotEmptyMessages()`: Simplificado con loop (5 ifs → 1 loop)
+
+### 10. Validación de Entrada (NUEVO)
+- ✅ Eliminado método vacío `dgvwacopymodecms_ItemClicked` (-4 líneas)
+- ✅ Reemplazado `Convert.ToInt32` con `ValidationHelper.SafeInt` (6 ocurrencias)
+- ✅ Eliminado `Convert.ToInt32` redundante en `RowCount` (ya es int)
+
+### 11. Gmail Import/Export (NUEVO)
+- ✅ Consolidados métodos de exportación Gmail:
+  - `exportDgvToGmail()` + `exportDgvToGmail2()` → `ExportDgvToGmailCore(DataGridView)`
+- ✅ Consolidados métodos de importación Gmail:
+  - `ImportGmailToDgv()` + `ImportGmailToDgv2()` → `ImportGmailToDgvCore(DataGridView, TabControl, TabPage)`
+- ✅ Eliminadas ~137 líneas de código duplicado
+
+### 12. Menús de Pausa (NUEVO)
+- ✅ Consolidados 4 handlers de menú de pausa:
+  - `minutosToolStripMenuItem_Click`, `minutosToolStripMenuItem1_Click`
+  - `horaToolStripMenuItem_Click`, `horaToolStripMenuItem1_Click`
+  - Todos ahora llaman a `SetPauseTiming(int seconds)`
+- ✅ Eliminadas ~31 líneas de lógica duplicada
 
 ---
 
 ## 📦 Commits de la Sesión
 
 ```
+b7d1d5d - Consolidate duplicate pause timing menu handlers
+66b967b - Consolidate duplicate Gmail import/export methods
+c34ecd0 - Improve input validation and remove empty method
+a163222 - Remove duplicate WriteJSONToFile method
 95296d1 - Refactor NotEmptyMessages to use loop
 c187726 - Refactor message storage methods to use loops
 e8328d1 - Add final progress update - 430 lines reduced (9.2%)
@@ -108,8 +131,8 @@ e0452d8 - Migrate license and contact management to service layer
 
 ### WAButt.cs
 - **Antes:** 4,694 líneas
-- **Después:** 4,261 líneas
-- **Reducción:** -433 líneas (-9.2%)
+- **Después:** 4,077 líneas
+- **Reducción:** -617 líneas (-13.1%)
 
 ### Services Actualizados
 - `LicenseService.cs`: API actualizada
@@ -123,10 +146,12 @@ e0452d8 - Migrate license and contact management to service layer
 1. ✅ Compilar solución (verificar 0 errores)
 2. ✅ Validación de licencia al iniciar
 3. ✅ Importar/exportar contactos (ambas pestañas)
-4. ✅ Eliminar duplicados
-5. ✅ Limpiar filas vacías
-6. ✅ Guardar/cargar contactos automático (JSON)
-7. ✅ Guardar/cargar mensajes automático
+4. ✅ Importar/exportar desde Gmail CSV (ambas pestañas)
+5. ✅ Eliminar duplicados
+6. ✅ Limpiar filas vacías
+7. ✅ Guardar/cargar contactos automático (JSON)
+8. ✅ Guardar/cargar mensajes automático
+9. ✅ Menús de pausa (5 min, 30 min, 1 hora, 2 horas)
 
 ### Media Prioridad
 8. ✅ Pausar/reanudar envíos
@@ -140,8 +165,8 @@ e0452d8 - Migrate license and contact management to service layer
 
 ```
 Inicio:  ████████████████████████████████████████████████ 4,694 líneas
-Ahora:   ████████████████████████████████████████ 4,261 líneas
-         ↓↓↓↓↓↓↓↓↓↓ Reducción: 433 líneas ↓↓↓↓↓↓↓↓↓↓
+Ahora:   ███████████████████████████████████████ 4,077 líneas
+         ↓↓↓↓↓↓↓↓↓↓↓↓↓ Reducción: 617 líneas ↓↓↓↓↓↓↓↓↓↓↓↓↓
 ```
 
 ---
@@ -149,9 +174,9 @@ Ahora:   ███████████████████████�
 ## 🎉 Logros de la Sesión
 
 ### Reducción de Código
-- ✅ **433 líneas eliminadas** (-9.2%)
-- ✅ **13 commits realizados**
-- ✅ **9 áreas migradas**
+- ✅ **617 líneas eliminadas** (-13.1%)
+- ✅ **18 commits realizados**
+- ✅ **12 áreas migradas/optimizadas**
 
 ### Calidad de Código
 - ✅ Código más DRY (Don't Repeat Yourself)
