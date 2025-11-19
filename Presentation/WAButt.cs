@@ -2854,12 +2854,13 @@ namespace Presentation
         private List<int> NotEmptyMessages()
         {
             List<int> result = new List<int>();
+            var messageBoxes = new[] { m1txt, m2txt, m3txt, m4txt, m5txt };
 
-            if (!string.IsNullOrWhiteSpace(m1txt.Text)) result.Add(0);
-            if (!string.IsNullOrWhiteSpace(m2txt.Text)) result.Add(1);
-            if (!string.IsNullOrWhiteSpace(m3txt.Text)) result.Add(2);
-            if (!string.IsNullOrWhiteSpace(m4txt.Text)) result.Add(3);
-            if (!string.IsNullOrWhiteSpace(m5txt.Text)) result.Add(4);
+            for (int i = 0; i < messageBoxes.Length; i++)
+            {
+                if (!string.IsNullOrWhiteSpace(messageBoxes[i].Text))
+                    result.Add(i);
+            }
 
             return result;
         }
