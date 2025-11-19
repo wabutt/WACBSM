@@ -1495,7 +1495,7 @@ namespace Presentation
             wa.ResetDistractionSchedule();
 
             eachmessagetiming = eachmessagetimingcb.Checked
-                ? Convert.ToInt32(eachmessagetimingtxt.Text) * 1000
+                ? ValidationHelper.SafeInt(eachmessagetimingtxt.Text) * 1000
                 : 0;
         }
 
@@ -1555,7 +1555,7 @@ namespace Presentation
 
             wa.preventblocktiming2 = preventblock2cb.Checked ? 4000 : 0;
             eachmessagetiming2 = eachmessagetiming2cb.Checked
-                ? Convert.ToInt32(eachmessagetiming2txt.Text) * 1000
+                ? ValidationHelper.SafeInt(eachmessagetiming2txt.Text) * 1000
                 : 0;
         }
 
@@ -1636,7 +1636,7 @@ namespace Presentation
         {
             if (string.IsNullOrEmpty(severalpausetxt.Text)) return;
 
-            int pauseEvery = Convert.ToInt32(severalpausetxt.Text);
+            int pauseEvery = ValidationHelper.SafeInt(severalpausetxt.Text);
 
             if (currentIndex == pauseEvery && !severalpausetoken.IsCancellationRequested)
             {
@@ -2182,7 +2182,7 @@ namespace Presentation
 
 
                 stopbtnclicked2 = false;
-                rowcount2 = Convert.ToInt32(contacts2dgv.RowCount) - 1;
+                rowcount2 = contacts2dgv.RowCount - 1;
                 send2pbr.Value = 0;
                 send2pbr.Maximum = rowcount2;
                 totalmessages2lbl.Text = rowcount2.ToString();
@@ -2285,7 +2285,7 @@ namespace Presentation
 
                                         if (eachmessagetiming2cb.Checked == true)
                                         {
-                                            eachmessagetiming2 = Convert.ToInt32(eachmessagetiming2txt.Text) * 1000;
+                                            eachmessagetiming2 = ValidationHelper.SafeInt(eachmessagetiming2txt.Text) * 1000;
                                         }
                                         else
                                         {
@@ -2614,7 +2614,7 @@ namespace Presentation
                                     {
 
 
-                                        if (fila.Index == Convert.ToInt32(severalpause2txt.Text) && !severalpausetoken2.IsCancellationRequested)
+                                        if (fila.Index == ValidationHelper.SafeInt(severalpause2txt.Text) && !severalpausetoken2.IsCancellationRequested)
                                         {
 
                                             Console.WriteLine("<<<<<<<<<<<<<<<<<<<este es la cuenta ctual de la fila  " + fila.Index);
@@ -3997,10 +3997,6 @@ namespace Presentation
             DataGridViewColumn column2 = contacts2dgv.Columns[2];
             column2.Width = 100;
             column2.ReadOnly = true;
-        }
-        private void dgvwacopymodecms_ItemClicked(object sender, ToolStripItemClickedEventArgs e)
-        {
-
         }
 
         private void copiarToolStripMenuItem_Click(object sender, EventArgs e)
