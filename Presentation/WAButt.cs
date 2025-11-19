@@ -886,18 +886,10 @@ namespace Presentation
         {
             if (eachmessagetiming > 0)
             {
-                try
-                {
-                    using (var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
-                        eachmessagetoken.Token, pauseToken.Token))
-                    {
-                        await Task.Delay(eachmessagetiming, linkedCts.Token);
-                    }
-                }
-                catch (OperationCanceledException)
-                {
-                    Console.WriteLine("Delay cancelled");
-                }
+                await _viewModel.TimingService.ApplyDelayAsync(
+                    eachmessagetiming,
+                    eachmessagetoken.Token,
+                    pauseToken.Token);
             }
         }
         private void uploadbtn_Click(object sender, EventArgs e)
@@ -3108,17 +3100,12 @@ namespace Presentation
 
         private async Task pausetimingaction(int seconds, CancellationToken token)
         {
-            try
+            if (seconds > 0)
             {
-                if (seconds > 0)
-                {
-                    MessageBox.Show($"Pausando por {seconds / 60} minutos", "Pausa");
-                    await Task.Delay(TimeSpan.FromSeconds(seconds), token);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                Console.WriteLine("Pause cancelled");
+                await _viewModel.TimingService.ApplyPauseAsync(
+                    seconds,
+                    token,
+                    msg => MessageBox.Show(msg, "Pausa"));
             }
         }
         private async Task ExecuteSendTask()
