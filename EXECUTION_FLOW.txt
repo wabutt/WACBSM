@@ -1,0 +1,113 @@
+EXECUTION FLOW DIAGRAM
+======================
+
+[Start Button Click]
+       |
+       V
+startbtn_Click() - Line 1549
+  - Creates 4 new CancellationTokenSource objects
+  - Calls ExecuteSendTask()
+       |
+       V
+ExecuteSendTask() - Line 3340
+  [Validates conditions]
+       |
+       V
+  [Loop through each contact row]
+       |
+       +---> cancellationToken.Token.ThrowIfCancellationRequested() [Line 3353]
+       |
+       +---> ProcessSingleContact(fila) [Line 3362]  ⚠️ NO CANCELLATION TOKEN PASSED
+       |        |
+       |        +---> SearchAndClickContact(contactNumber) [Line 4139]
+       |        |      - Task.Run with cancellationToken [Line 759]
+       |        |      - BLOCKS with Task.Delay(2000).Wait() [Line 753] ⚠️
+       |        |
+       |        +---> SendMessageOrFile(message, filePath, contactNumber) [Line 4150]
+       |               - Task.Run with cancellationToken [Line 645/794]
+       |               - BLOCKS with multiple .Wait() calls ⚠️
+       |
+       +---> UpdateProgress(count) [Line 3366] - Updates progress bar
+       |      - sendpbr.Value = count
+       |
+       +---> HandlePausePoints(fila.Index) [Line 3369]
+       |      - BLOCKS with Task.Delay(15 min).Wait() [Line 1799] ⚠️
+       |
+       +---> DelayBetweenMessages() [Line 3374]  ⚠️ ONLY checks eachmessagetoken, NOT pauseToken
+              - BLOCKS with Task.Delay().Wait() [Line 1023]
+
+
+PAUSE MECHANISM
+===============
+
+pausebtn_Click() - Line 1827
+  |
+  +-- IF pausetiming > 0 (already paused)
+  |    - Call pauseToken.Cancel() to RESUME
+  |
+  +-- ELSE
+       - Show pause menu
+         |
+         +-- minutosToolStripMenuItem_Click() [Line 3264]
+         |    - pauseToken = new CancellationTokenSource() [Line 3271] ⚠️ Creates NEW!
+         |    - pausetiming = 300 seconds
+         |    - pausebtn.Text = "Reanudar"
+         |
+         +-- minutosToolStripMenuItem1_Click() [Line 3283]
+         |    - pauseToken = new CancellationTokenSource() [Line 3285] ⚠️ Creates NEW!
+         |    - pausetiming = 1800 seconds
+         |
+         +-- horaToolStripMenuItem_Click() [Line 3298]
+         |    - pauseToken = new CancellationTokenSource() [Line 3300] ⚠️ Creates NEW!
+         |    - pausetiming = 3600 seconds
+         |
+         +-- horaToolStripMenuItem1_Click() [Line 3311]
+              - pauseToken = new CancellationTokenSource() [Line 3313] ⚠️ Creates NEW!
+              - pausetiming = 7200 seconds
+
+
+STOP MECHANISM
+==============
+
+stopbtn_Click() - Line 1808
+  |
+  +-- Show confirmation dialog
+  |
+  +-- IF user confirms:
+       - pauseToken?.Cancel()
+       - cancellationToken?.Cancel()
+       - eachmessagetoken?.Cancel()
+       - severalpausetoken?.Cancel()
+       - stopbtnclicked = true
+       - ResetUIAfterStop()
+
+
+PROBLEM AREAS
+=============
+
+1. BLOCKING OPERATIONS (prevent cancellation responsiveness):
+   - SearchAndClickContact() Line 753: Task.Delay(2000).Wait()
+   - SendTextMessage() Line 633: Task.Delay(500).Wait()
+   - SendTextMessage() Line 636: Task.Delay(1000 + wa.preventblocktiming).Wait()
+   - DelayBetweenMessages() Line 1023: Task.Delay(...).Wait()
+   - HandlePausePoints() Line 1799: Task.Delay(TimeSpan.FromMinutes(15)).Wait()
+   - pausetimingaction() Line 1332: Task.Delay(...).Wait()
+
+2. MISSING CANCELLATION PROPAGATION:
+   - ProcessSingleContact() doesn't accept/use cancellation token
+   - SearchAndClickContact() signature doesn't expose cancellation token
+   - SendMessageOrFile() signature doesn't expose cancellation token
+   
+3. PAUSE TOKEN ISSUES:
+   - pauseToken reassigned when pause menu items clicked (creates NEW token)
+   - DelayBetweenMessages() ignores pauseToken (only uses eachmessagetoken)
+   - pauseToken not checked during long blocking operations
+
+4. PROGRESS BAR ISSUES:
+   - Updated only after ProcessSingleContact completes
+   - If ProcessSingleContact blocks for long time, progress bar appears stuck
+   - No intermediate progress updates during long operations
+
+5. TOKEN INITIALIZATION:
+   - All tokens recreated on each Start button click
+   - No cleanup of previous tokens (potential resource leak)
