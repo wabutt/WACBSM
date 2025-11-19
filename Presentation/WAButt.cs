@@ -780,18 +780,6 @@ namespace Presentation
             logoutbtn.Enabled = true;
             connectwabtn.Enabled = true;
         }
-        private void WriteJSONToFile(string data, string filename)
-        {
-            string path = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                "tempfilesWAButt"
-            );
-            Directory.CreateDirectory(path);
-            File.WriteAllText(Path.Combine(path, filename), data);
-        }
-
-
-
         private void StoreSettings()
         {
             DataTable dt = new DataTable();
@@ -832,7 +820,7 @@ namespace Presentation
             dt.Rows.Add(row);
 
             string json = JsonConvert.SerializeObject(dt);
-            WriteJSONToFile(json, "UserSettings.json");
+            FileHelper.WriteJsonToFile(json, "UserSettings.json");
         }
         private void SetDefaultSettings()
         {
