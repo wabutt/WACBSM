@@ -582,11 +582,11 @@ namespace Presentation
             }
         }
         
-        private void SendDocument(string filePath, string message, Actions action, string contactNumber)
+        private async Task SendDocument(string filePath, string message, Actions action, string contactNumber)
         {
             wa.ContactFile(filePath);
             wa.ContactSend(By.XPath(WA.SendIADButton));
-            Task.Delay(1000 + wa.preventblocktiming).Wait();
+            await Task.Delay(1000 + wa.preventblocktiming, cancellationToken.Token);
 
             if (!CheckAttachMessageStatus())
             {
@@ -595,7 +595,7 @@ namespace Presentation
                 wa.ContactSearch(contactNumber);
                 action.SendKeys(Keys.Space).Build().Perform();
                 wa.ContactClick();
-                Task.Delay(1000).Wait();
+                await Task.Delay(1000, cancellationToken.Token);
 
                 wa.ContactMessage(message);
                 wa.ContactActionEnter();
@@ -616,11 +616,11 @@ namespace Presentation
         }
         private async Task SendTextMessage(string message)
         {
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
                 if (pausetiming != 0)
                 {
-                    pausetimingaction(pausetiming, pauseToken.Token);
+                    await pausetimingaction(pausetiming, pauseToken.Token);
                     pausetiming = 0;
                 }
 
@@ -630,10 +630,10 @@ namespace Presentation
 
                     action.SendKeys("a").Build().Perform();
                     action.SendKeys(Keys.Backspace).Build().Perform();
-                    Task.Delay(500).Wait();
+                    await Task.Delay(500, cancellationToken.Token);
 
                     wa.ContactMessage(message);
-                    Task.Delay(1000 + wa.preventblocktiming).Wait();
+                    await Task.Delay(1000 + wa.preventblocktiming, cancellationToken.Token);
 
                     wa.ContactActionEnter();
                     Console.WriteLine("✓ Text message sent");
@@ -691,12 +691,12 @@ namespace Presentation
                 return chromedriverversion;
             }
         }
-        private void SendImageOrVideo(string filePath, string message, Actions action, string contactNumber)
+        private async Task SendImageOrVideo(string filePath, string message, Actions action, string contactNumber)
         {
             if (!CheckAttachMessageStatus())
             {
                 wa.ImageMessage(filePath);
-                Task.Delay(1000 + wa.preventblocktiming).Wait();
+                await Task.Delay(1000 + wa.preventblocktiming, cancellationToken.Token);
                 wa.ContactSend(By.XPath(WA.SendIADButton));
             }
             else
@@ -706,23 +706,23 @@ namespace Presentation
                     wa.ImageTextMessage(filePath, message);
                     action.SendKeys(".").Build().Perform();
                     action.SendKeys(Keys.Backspace).Build().Perform();
-                    Task.Delay(1000 + wa.preventblocktiming).Wait();
+                    await Task.Delay(1000 + wa.preventblocktiming, cancellationToken.Token);
                     wa.ContactSend(By.XPath(WA.SendIADButton));
                 }
                 else
                 {
                     // Send file, then message separately
                     wa.ImageMessage(filePath);
-                    Task.Delay(1000 + wa.preventblocktiming).Wait();
+                    await Task.Delay(1000 + wa.preventblocktiming, cancellationToken.Token);
                     wa.ContactSend(By.XPath(WA.SendIADButton));
-                    Task.Delay(2000).Wait();
+                    await Task.Delay(2000, cancellationToken.Token);
 
                     // Re-search and send message
                     wa.ClickSearchIcon();
                     wa.ContactSearch(contactNumber);
                     action.SendKeys(Keys.Space).Build().Perform();
                     wa.ContactClick();
-                    Task.Delay(1000).Wait();
+                    await Task.Delay(1000, cancellationToken.Token);
 
                     wa.ContactMessage(message);
                     wa.ContactActionEnter();
@@ -731,11 +731,11 @@ namespace Presentation
         }
         private async Task SearchAndClickContact(string contactNumber)
         {
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
                 if (pausetiming != 0)
                 {
-                    pausetimingaction(pausetiming, pauseToken.Token);
+                    await pausetimingaction(pausetiming, pauseToken.Token);
                     pausetiming = 0;
                 }
 
@@ -750,7 +750,7 @@ namespace Presentation
                     action.SendKeys(Keys.Space).Build().Perform();
                     wa.ContactClick();
 
-                    Task.Delay(2000).Wait();
+                    await Task.Delay(2000, cancellationToken.Token);
                 }
                 catch (Exception ex)
                 {
@@ -760,11 +760,11 @@ namespace Presentation
         }
         private async Task SendWithAttachment(string message, string filePath, string contactNumber)
         {
-            await Task.Run(() =>
+            await Task.Run(async () =>
             {
                 if (pausetiming != 0)
                 {
-                    pausetimingaction(pausetiming, pauseToken.Token);
+                    await pausetimingaction(pausetiming, pauseToken.Token);
                     pausetiming = 0;
                 }
 
@@ -774,15 +774,15 @@ namespace Presentation
 
                     if (filetype == "I") // Image/Video
                     {
-                        SendImageOrVideo(filePath, message, action, contactNumber);
+                        await SendImageOrVideo(filePath, message, action, contactNumber);
                     }
                     else if (filetype == "A") // Audio
                     {
-                        SendAudio(filePath, message, action, contactNumber);
+                        await SendAudio(filePath, message, action, contactNumber);
                     }
                     else if (filetype == "D") // Document
                     {
-                        SendDocument(filePath, message, action, contactNumber);
+                        await SendDocument(filePath, message, action, contactNumber);
                     }
 
                     Console.WriteLine($"✓ Attachment sent: {filetype}");
@@ -794,11 +794,11 @@ namespace Presentation
             }, cancellationToken.Token);
         }
 
-        private void SendAudio(string filePath, string message, Actions action, string contactNumber)
+        private async Task SendAudio(string filePath, string message, Actions action, string contactNumber)
         {
             wa.ContactFileAudio(filePath);
             wa.ContactSend(By.XPath(WA.SendIADButton));
-            Task.Delay(1000 + wa.preventblocktiming).Wait();
+            await Task.Delay(1000 + wa.preventblocktiming, cancellationToken.Token);
 
             if (!CheckAttachMessageStatus())
             {
@@ -807,7 +807,7 @@ namespace Presentation
                 wa.ContactSearch(contactNumber);
                 action.SendKeys(Keys.Space).Build().Perform();
                 wa.ContactClick();
-                Task.Delay(1000).Wait();
+                await Task.Delay(1000, cancellationToken.Token);
 
                 wa.ContactMessage(message);
                 wa.ContactActionEnter();
@@ -1016,17 +1016,18 @@ namespace Presentation
         {
             if (eachmessagetiming > 0)
             {
-                await Task.Run(() =>
+                try
                 {
-                    try
+                    using (var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(
+                        eachmessagetoken.Token, pauseToken.Token))
                     {
-                        Task.Delay(eachmessagetiming, eachmessagetoken.Token).Wait();
+                        await Task.Delay(eachmessagetiming, linkedCts.Token);
                     }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Delay cancelled: {ex.Message}");
-                    }
-                });
+                }
+                catch (OperationCanceledException)
+                {
+                    Console.WriteLine("Delay cancelled");
+                }
             }
         }
         private void uploadbtn_Click(object sender, EventArgs e)
@@ -1792,17 +1793,14 @@ namespace Presentation
                     "Pausa", MessageBoxButtons.OK, MessageBoxIcon.Information
                 );
 
-                await Task.Run(() =>
+                try
                 {
-                    try
-                    {
-                        Task.Delay(TimeSpan.FromMinutes(15), severalpausetoken.Token).Wait();
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Pause cancelled: {ex.Message}");
-                    }
-                });
+                    await Task.Delay(TimeSpan.FromMinutes(15), severalpausetoken.Token);
+                }
+                catch (OperationCanceledException)
+                {
+                    Console.WriteLine("Pause cancelled");
+                }
             }
         }
         private void stopbtn_Click(object sender, EventArgs e)
@@ -3263,78 +3261,85 @@ namespace Presentation
 
         private void minutosToolStripMenuItem_Click(object sender, EventArgs e)
         {
-
-
-
             if (pausetiming == 0)
             {
-                pauseToken = new CancellationTokenSource();
+                // Only create new token if it's null or already canceled
+                if (pauseToken == null || pauseToken.IsCancellationRequested)
+                {
+                    pauseToken = new CancellationTokenSource();
+                }
 
                 pausetiming = 300;
                 pausebtn.Text = "Reanudar";
                 MessageBox.Show("Los envíos se pausarán en breve.", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 logoutbtn.Enabled = true;
             }
-
-
-
         }
 
         private void minutosToolStripMenuItem1_Click(object sender, EventArgs e)
         {
-            pauseToken = new CancellationTokenSource();
-
             if (pausetiming == 0)
             {
+                // Only create new token if it's null or already canceled
+                if (pauseToken == null || pauseToken.IsCancellationRequested)
+                {
+                    pauseToken = new CancellationTokenSource();
+                }
+
                 pausetiming = 1800;
                 pausebtn.Text = "Reanudar";
                 MessageBox.Show("Los envíos se pausarán en breve.", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 logoutbtn.Enabled = true;
             }
-
-
         }
 
         private void horaToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            pauseToken = new CancellationTokenSource();
             if (pausetiming == 0)
             {
+                // Only create new token if it's null or already canceled
+                if (pauseToken == null || pauseToken.IsCancellationRequested)
+                {
+                    pauseToken = new CancellationTokenSource();
+                }
+
                 pausetiming = 3600;
                 pausebtn.Text = "Reanudar";
                 MessageBox.Show("Los envíos se pausarán en breve.", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 logoutbtn.Enabled = true;
             }
-
         }
 
         private void horaToolStripMenuItem1_Click(object sender, EventArgs e)
         {
-            pauseToken = new CancellationTokenSource();
             if (pausetiming == 0)
             {
+                // Only create new token if it's null or already canceled
+                if (pauseToken == null || pauseToken.IsCancellationRequested)
+                {
+                    pauseToken = new CancellationTokenSource();
+                }
+
                 pausetiming = 7200;
                 pausebtn.Text = "Reanudar";
                 MessageBox.Show("Los envíos se pausarán en breve.", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 logoutbtn.Enabled = true;
             }
-
-
         }
 
-        private void pausetimingaction(int seconds, CancellationToken token)
+        private async Task pausetimingaction(int seconds, CancellationToken token)
         {
             try
             {
                 if (seconds > 0)
                 {
                     MessageBox.Show($"Pausando por {seconds / 60} minutos", "Pausa");
-                    Task.Delay(TimeSpan.FromSeconds(seconds), token).Wait();
+                    await Task.Delay(TimeSpan.FromSeconds(seconds), token);
                 }
             }
-            catch (Exception ex)
+            catch (OperationCanceledException)
             {
-                Console.WriteLine($"Pause cancelled: {ex.Message}");
+                Console.WriteLine("Pause cancelled");
             }
         }
         private async Task ExecuteSendTask()
@@ -3359,7 +3364,7 @@ namespace Presentation
                     }
 
                     // Process contact
-                    await ProcessSingleContact(fila);
+                    await ProcessSingleContact(fila, cancellationToken.Token);
 
                     // Update progress
                     count++;
@@ -4117,8 +4122,11 @@ namespace Presentation
 
             }
         }
-        private async Task ProcessSingleContact(DataGridViewRow fila)
+        private async Task ProcessSingleContact(DataGridViewRow fila, CancellationToken token)
         {
+            // Check for cancellation at the start
+            token.ThrowIfCancellationRequested();
+
             string contactNumber = Convert.ToString(fila.Cells[0].Value);
             string contactName = Convert.ToString(fila.Cells[1].Value);
 
@@ -4132,8 +4140,14 @@ namespace Presentation
 
             Console.WriteLine($"Processing: {contactNumber}");
 
+            // Check for cancellation before preparing message
+            token.ThrowIfCancellationRequested();
+
             // Prepare message
             string messageToSend = PrepareMessage(contactName);
+
+            // Check for cancellation before searching contact
+            token.ThrowIfCancellationRequested();
 
             // Search and click contact
             await SearchAndClickContact(contactNumber);
@@ -4145,6 +4159,9 @@ namespace Presentation
                 notsendedmessagelbl.Text = notsendedmessage.ToString();
                 return;
             }
+
+            // Check for cancellation before sending
+            token.ThrowIfCancellationRequested();
 
             // Send message/file
             await SendMessageOrFile(messageToSend, filenametxt.Text, contactNumber);
