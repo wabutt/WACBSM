@@ -3947,14 +3947,11 @@ namespace Presentation
 
         public void ClearEmptyRows(DataGridView dgv)
         {
-            for (int i = dgv.Rows.Count - 1; i >= 0; i--)
-            {
-                DataGridViewRow row = dgv.Rows[i];
-                if (!row.IsNewRow && string.IsNullOrEmpty(Convert.ToString(row.Cells[0].Value)))
-                {
-                    dgv.Rows.RemoveAt(i);
-                }
-            }
+            // Convert, remove empty contacts, and reload
+            var contacts = _viewModel.ContactService.ConvertFromDataGridView(dgv);
+            var validContacts = _viewModel.ContactService.RemoveEmptyContacts(contacts);
+            dgv.Rows.Clear();
+            _viewModel.ContactService.LoadToDataGridView(dgv, validContacts);
         }
 
         private void clearemptyrowsbtn_Click(object sender, EventArgs e)
