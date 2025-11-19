@@ -128,6 +128,28 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <!-- Models -->
+    <Compile Include="Models\ContactModel.cs" />
+    <Compile Include="Models\LicenseModel.cs" />
+    <Compile Include="Models\MessageModel.cs" />
+    <Compile Include="Models\ProgressModel.cs" />
+    <Compile Include="Models\SendingSettingsModel.cs" />
+    <!-- Services -->
+    <Compile Include="Services\AttachmentService.cs" />
+    <Compile Include="Services\ChromeDriverService.cs" />
+    <Compile Include="Services\ContactService.cs" />
+    <Compile Include="Services\LicenseService.cs" />
+    <Compile Include="Services\SettingsService.cs" />
+    <Compile Include="Services\TimingService.cs" />
+    <!-- Helpers -->
+    <Compile Include="Helpers\CsvHelper.cs" />
+    <Compile Include="Helpers\FileHelper.cs" />
+    <Compile Include="Helpers\InternetHelper.cs" />
+    <Compile Include="Helpers\StringHelper.cs" />
+    <Compile Include="Helpers\ValidationHelper.cs" />
+    <!-- ViewModels -->
+    <Compile Include="ViewModels\MainViewModel.cs" />
+    <!-- Original Files -->
     <Compile Include="ExtractContacts.cs">
       <SubType>Form</SubType>
     </Compile>

@@ -25,12 +25,18 @@ using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using CsvHelper.Configuration;
 using System.Net.Http;
+using Presentation.Models;
+using Presentation.Services;
+using Presentation.Helpers;
+using Presentation.ViewModels;
 
 namespace Presentation
 {
     public partial class WAButtfrm : Form
     {
-     
+        // ViewModel for application logic
+        private MainViewModel _viewModel;
+
         public WA wa = new WA();
 
         public static string filenameextracted = string.Empty;
@@ -85,13 +91,16 @@ namespace Presentation
 
         public WAButtfrm()
         {
+            // Initialize ViewModel and Services
+            _viewModel = new MainViewModel();
+
             // Leer licencia guardada
             _licenseKey = Properties.Settings.Default.LicenseKey;
 
             AutoUpdater.InstalledVersion = Version.Parse("1.0.0.14");
             UserModel user = new UserModel();
 
-            if (!CheckForInternetConnection())
+            if (!InternetHelper.CheckForInternetConnection())
             {
                 MessageBox.Show("No cuenta con acceso a internet, le recomendamos intentar mas tarde.",
                     "Observación", MessageBoxButtons.OK, MessageBoxIcon.Error);
