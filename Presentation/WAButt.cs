@@ -2108,7 +2108,7 @@ namespace Presentation
 
 
 
-                                if (manymessages2cb.Checked == true)
+                                if (manymessages2cb.Checked)
                                 {
                                     if (sms2txt.Text == "" || sms3txt.Text == "" || sms4txt.Text == "" || sms5txt.Text == "")
                                     {
@@ -2134,26 +2134,14 @@ namespace Presentation
                                     if (InternetHelper.CheckForInternetConnection())
                                     {
 
-                                        if (preventblock2cb.Checked == true)
-                                        {
-                                            wa.preventblocktiming2 = 4000;
-                                        }
-                                        else
-                                        {
-                                            wa.preventblocktiming2 = 0;
-                                        }
+                                        wa.preventblocktiming2 = preventblock2cb.Checked ? 4000 : 0;
 
 
 
 
-                                        if (eachmessagetiming2cb.Checked == true)
-                                        {
-                                            eachmessagetiming2 = ValidationHelper.SafeInt(eachmessagetiming2txt.Text) * 1000;
-                                        }
-                                        else
-                                        {
-                                            eachmessagetiming2 = 0;
-                                        }
+                                        eachmessagetiming2 = eachmessagetiming2cb.Checked
+                                            ? ValidationHelper.SafeInt(eachmessagetiming2txt.Text) * 1000
+                                            : 0;
 
 
 
