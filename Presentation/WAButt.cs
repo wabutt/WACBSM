@@ -108,10 +108,10 @@ namespace Presentation
                 return;
             }
 
-            // Initialize ChromeDriver asynchronously
+            // Initialize ChromeDriver asynchronously using service
             Task.Run(async () =>
             {
-                if (!await ChromeDriverStateAsync())
+                if (!await _viewModel.ChromeDriverService.EnsureChromeDriverAsync())
                 {
                     this.Invoke((MethodInvoker)delegate {
                         this.Load += (sender, e) => { this.Close(); };
