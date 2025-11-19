@@ -2829,7 +2829,7 @@ namespace Presentation
 
         }
 
-        private void minutosToolStripMenuItem_Click(object sender, EventArgs e)
+        private void SetPauseTiming(int seconds)
         {
             if (pausetiming == 0)
             {
@@ -2839,62 +2839,31 @@ namespace Presentation
                     pauseToken = new CancellationTokenSource();
                 }
 
-                pausetiming = 300;
+                pausetiming = seconds;
                 pausebtn.Text = "Reanudar";
                 MessageBox.Show("Los envíos se pausarán en breve.", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 logoutbtn.Enabled = true;
             }
+        }
+
+        private void minutosToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            SetPauseTiming(300); // 5 minutes
         }
 
         private void minutosToolStripMenuItem1_Click(object sender, EventArgs e)
         {
-            if (pausetiming == 0)
-            {
-                // Only create new token if it's null or already canceled
-                if (pauseToken == null || pauseToken.IsCancellationRequested)
-                {
-                    pauseToken = new CancellationTokenSource();
-                }
-
-                pausetiming = 1800;
-                pausebtn.Text = "Reanudar";
-                MessageBox.Show("Los envíos se pausarán en breve.", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                logoutbtn.Enabled = true;
-            }
+            SetPauseTiming(1800); // 30 minutes
         }
 
         private void horaToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            if (pausetiming == 0)
-            {
-                // Only create new token if it's null or already canceled
-                if (pauseToken == null || pauseToken.IsCancellationRequested)
-                {
-                    pauseToken = new CancellationTokenSource();
-                }
-
-                pausetiming = 3600;
-                pausebtn.Text = "Reanudar";
-                MessageBox.Show("Los envíos se pausarán en breve.", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                logoutbtn.Enabled = true;
-            }
+            SetPauseTiming(3600); // 1 hour
         }
 
         private void horaToolStripMenuItem1_Click(object sender, EventArgs e)
         {
-            if (pausetiming == 0)
-            {
-                // Only create new token if it's null or already canceled
-                if (pauseToken == null || pauseToken.IsCancellationRequested)
-                {
-                    pauseToken = new CancellationTokenSource();
-                }
-
-                pausetiming = 7200;
-                pausebtn.Text = "Reanudar";
-                MessageBox.Show("Los envíos se pausarán en breve.", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                logoutbtn.Enabled = true;
-            }
+            SetPauseTiming(7200); // 2 hours
         }
 
         private async Task pausetimingaction(int seconds, CancellationToken token)
