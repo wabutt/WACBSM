@@ -4018,39 +4018,19 @@ namespace Presentation
         }
         private void DeleteDuplicate1()
         {
-            DataTable items = new DataTable();
+            // Convert DataGridView to contact list
+            var contacts = _viewModel.ContactService.ConvertFromDataGridView(contactsdgv);
 
-            items.Columns.Add("Numero o Grupo", typeof(string));
-            items.Columns.Add("Nombre", typeof(string));
-            items.Columns.Add("Enviado(S/N)", typeof(string));
+            // Remove duplicates using ContactService
+            var uniqueContacts = _viewModel.ContactService.RemoveDuplicates(contacts);
 
-            for (int i = 0; i < contactsdgv.Rows.Count; i++)
-            {
-                DataRow rw = items.NewRow();
-                rw[0] = Convert.ToString(contactsdgv.Rows[i].Cells[0].Value);
-                rw[1] = Convert.ToString(contactsdgv.Rows[i].Cells[1].Value);
-                rw[2] = Convert.ToString(contactsdgv.Rows[i].Cells[2].Value);
-                if (!items.Rows.Cast<DataRow>().Any(row => row["Numero o Grupo"].Equals(rw["Numero o Grupo"])))
-                    items.Rows.Add(rw);
-            }
-
-
-
+            // Clear and reload DataGridView
             contactsdgv.Rows.Clear();
+            _viewModel.ContactService.LoadToDataGridView(contactsdgv, uniqueContacts);
 
-
-            foreach (DataRow item in items.Rows)
-            {
-                contactsdgv.Rows.Add(Convert.ToString(item[0]), Convert.ToString(item[1]), Convert.ToString(item[2]));
-            }
-
-
-
-
+            // Set column widths
             DataGridViewColumn column = contactsdgv.Columns[0];
             column.Width = 200;
-
-
 
             DataGridViewColumn column1 = contactsdgv.Columns[1];
             column1.Width = 350;
@@ -4064,45 +4044,22 @@ namespace Presentation
         }
         private void DeleteDuplicate2()
         {
-            DataTable items = new DataTable();
+            // Convert DataGridView to contact list
+            var contacts = _viewModel.ContactService.ConvertFromDataGridView(contacts2dgv);
 
-            items.Columns.Add("Numero o Grupo", typeof(string));
-            items.Columns.Add("Nombre", typeof(string));
-            items.Columns.Add("Enviado(S/N)", typeof(string));
+            // Remove duplicates using ContactService
+            var uniqueContacts = _viewModel.ContactService.RemoveDuplicates(contacts);
 
-            for (int i = 0; i < contacts2dgv.Rows.Count; i++)
-            {
-                DataRow rw = items.NewRow();
-                rw[0] = Convert.ToString(contacts2dgv.Rows[i].Cells[0].Value);
-                rw[1] = Convert.ToString(contacts2dgv.Rows[i].Cells[1].Value);
-                rw[2] = Convert.ToString(contacts2dgv.Rows[i].Cells[2].Value);
-                if (!items.Rows.Cast<DataRow>().Any(row => row["Numero o Grupo"].Equals(rw["Numero o Grupo"])))
-                    items.Rows.Add(rw);
-            }
-
-
-
+            // Clear and reload DataGridView
             contacts2dgv.Rows.Clear();
+            _viewModel.ContactService.LoadToDataGridView(contacts2dgv, uniqueContacts);
 
-
-            foreach (DataRow item in items.Rows)
-            {
-                contacts2dgv.Rows.Add(Convert.ToString(item[0]), Convert.ToString(item[1]), Convert.ToString(item[2]));
-            }
-
-
-
-
+            // Set column widths
             DataGridViewColumn column = contacts2dgv.Columns[0];
             column.Width = 200;
 
-
-
             DataGridViewColumn column1 = contacts2dgv.Columns[1];
             column1.Width = 350;
-
-
-
 
             DataGridViewColumn column2 = contacts2dgv.Columns[2];
             column2.Width = 100;
