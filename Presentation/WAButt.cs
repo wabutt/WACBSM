@@ -2793,17 +2793,19 @@ namespace Presentation
             );
             Directory.CreateDirectory(path);
 
-            File.WriteAllText(Path.Combine(path, "m1.txt"), m1txt.Text);
-            File.WriteAllText(Path.Combine(path, "m2.txt"), m2txt.Text);
-            File.WriteAllText(Path.Combine(path, "m3.txt"), m3txt.Text);
-            File.WriteAllText(Path.Combine(path, "m4.txt"), m4txt.Text);
-            File.WriteAllText(Path.Combine(path, "m5.txt"), m5txt.Text);
+            // Store WhatsApp messages
+            var waMessages = new[] { m1txt.Text, m2txt.Text, m3txt.Text, m4txt.Text, m5txt.Text };
+            for (int i = 0; i < waMessages.Length; i++)
+            {
+                File.WriteAllText(Path.Combine(path, $"m{i + 1}.txt"), waMessages[i]);
+            }
 
-            File.WriteAllText(Path.Combine(path, "sms1.txt"), sms1txt.Text);
-            File.WriteAllText(Path.Combine(path, "sms2.txt"), sms2txt.Text);
-            File.WriteAllText(Path.Combine(path, "sms3.txt"), sms3txt.Text);
-            File.WriteAllText(Path.Combine(path, "sms4.txt"), sms4txt.Text);
-            File.WriteAllText(Path.Combine(path, "sms5.txt"), sms5txt.Text);
+            // Store SMS messages
+            var smsMessages = new[] { sms1txt.Text, sms2txt.Text, sms3txt.Text, sms4txt.Text, sms5txt.Text };
+            for (int i = 0; i < smsMessages.Length; i++)
+            {
+                File.WriteAllText(Path.Combine(path, $"sms{i + 1}.txt"), smsMessages[i]);
+            }
         }
 
 
@@ -2816,16 +2818,13 @@ namespace Presentation
                 "tempfilesWAButt"
             );
 
-            if (File.Exists(Path.Combine(basePath, "m1.txt")))
-                m1txt.Text = File.ReadAllText(Path.Combine(basePath, "m1.txt"));
-            if (File.Exists(Path.Combine(basePath, "m2.txt")))
-                m2txt.Text = File.ReadAllText(Path.Combine(basePath, "m2.txt"));
-            if (File.Exists(Path.Combine(basePath, "m3.txt")))
-                m3txt.Text = File.ReadAllText(Path.Combine(basePath, "m3.txt"));
-            if (File.Exists(Path.Combine(basePath, "m4.txt")))
-                m4txt.Text = File.ReadAllText(Path.Combine(basePath, "m4.txt"));
-            if (File.Exists(Path.Combine(basePath, "m5.txt")))
-                m5txt.Text = File.ReadAllText(Path.Combine(basePath, "m5.txt"));
+            var messageBoxes = new[] { m1txt, m2txt, m3txt, m4txt, m5txt };
+            for (int i = 0; i < messageBoxes.Length; i++)
+            {
+                string filePath = Path.Combine(basePath, $"m{i + 1}.txt");
+                if (File.Exists(filePath))
+                    messageBoxes[i].Text = File.ReadAllText(filePath);
+            }
         }
         private void Restoremessages2()
         {
@@ -2834,16 +2833,13 @@ namespace Presentation
                 "tempfilesWAButt"
             );
 
-            if (File.Exists(Path.Combine(basePath, "sms1.txt")))
-                sms1txt.Text = File.ReadAllText(Path.Combine(basePath, "sms1.txt"));
-            if (File.Exists(Path.Combine(basePath, "sms2.txt")))
-                sms2txt.Text = File.ReadAllText(Path.Combine(basePath, "sms2.txt"));
-            if (File.Exists(Path.Combine(basePath, "sms3.txt")))
-                sms3txt.Text = File.ReadAllText(Path.Combine(basePath, "sms3.txt"));
-            if (File.Exists(Path.Combine(basePath, "sms4.txt")))
-                sms4txt.Text = File.ReadAllText(Path.Combine(basePath, "sms4.txt"));
-            if (File.Exists(Path.Combine(basePath, "sms5.txt")))
-                sms5txt.Text = File.ReadAllText(Path.Combine(basePath, "sms5.txt"));
+            var smsBoxes = new[] { sms1txt, sms2txt, sms3txt, sms4txt, sms5txt };
+            for (int i = 0; i < smsBoxes.Length; i++)
+            {
+                string filePath = Path.Combine(basePath, $"sms{i + 1}.txt");
+                if (File.Exists(filePath))
+                    smsBoxes[i].Text = File.ReadAllText(filePath);
+            }
         }
 
         private string DecodeEncodedNonAsciiCharacters(string value)
