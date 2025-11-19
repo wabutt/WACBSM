@@ -10,9 +10,9 @@
 | Métrica | Valor |
 |---------|-------|
 | **Líneas Iniciales** | 4,694 |
-| **Líneas Finales** | **4,077** |
-| **Reducción Total** | **-617 líneas (-13.1%)** |
-| **Commits Realizados** | 18 commits |
+| **Líneas Finales** | **4,045** |
+| **Reducción Total** | **-649 líneas (-13.8%)** |
+| **Commits Realizados** | 21 commits |
 | **Estado** | Todo pusheado ✅ |
 
 ---
@@ -79,11 +79,25 @@
   - Todos ahora llaman a `SetPauseTiming(int seconds)`
 - ✅ Eliminadas ~31 líneas de lógica duplicada
 
+### 13. Pegar Datos desde Portapapeles (NUEVO)
+- ✅ Consolidados métodos de pegar desde Excel:
+  - `pastedatabtn_Click()` + `pastedata2btn_Click()` → `PasteDataCore(DataGridView, TabControl, TabPage)`
+- ✅ Mensajes de error estandarizados
+- ✅ Eliminadas ~32 líneas de código duplicado
+
+### 14. Mejoras de Calidad de Código (NUEVO)
+- ✅ Simplificada lógica booleana en `CheckAttachMessageStatus()`: `!(!A || B)` → `A && !B`
+- ✅ `CheckAttachMessageStatusSub()`: 5 comparaciones OR → array + LINQ
+- ✅ Código más limpio y mantenible
+
 ---
 
 ## 📦 Commits de la Sesión
 
 ```
+824a8fc - Simplify and improve CheckAttachMessageStatus methods
+4d88bd5 - Consolidate duplicate paste data methods
+8691e9e - Update session summary with latest progress (617 lines reduced)
 b7d1d5d - Consolidate duplicate pause timing menu handlers
 66b967b - Consolidate duplicate Gmail import/export methods
 c34ecd0 - Improve input validation and remove empty method
@@ -131,8 +145,8 @@ e0452d8 - Migrate license and contact management to service layer
 
 ### WAButt.cs
 - **Antes:** 4,694 líneas
-- **Después:** 4,077 líneas
-- **Reducción:** -617 líneas (-13.1%)
+- **Después:** 4,045 líneas
+- **Reducción:** -649 líneas (-13.8%)
 
 ### Services Actualizados
 - `LicenseService.cs`: API actualizada
@@ -165,8 +179,8 @@ e0452d8 - Migrate license and contact management to service layer
 
 ```
 Inicio:  ████████████████████████████████████████████████ 4,694 líneas
-Ahora:   ███████████████████████████████████████ 4,077 líneas
-         ↓↓↓↓↓↓↓↓↓↓↓↓↓ Reducción: 617 líneas ↓↓↓↓↓↓↓↓↓↓↓↓↓
+Ahora:   ██████████████████████████████████████ 4,045 líneas
+         ↓↓↓↓↓↓↓↓↓↓↓↓↓↓ Reducción: 649 líneas ↓↓↓↓↓↓↓↓↓↓↓↓↓↓
 ```
 
 ---
@@ -174,9 +188,9 @@ Ahora:   ███████████████████████�
 ## 🎉 Logros de la Sesión
 
 ### Reducción de Código
-- ✅ **617 líneas eliminadas** (-13.1%)
-- ✅ **18 commits realizados**
-- ✅ **12 áreas migradas/optimizadas**
+- ✅ **649 líneas eliminadas** (-13.8%)
+- ✅ **21 commits realizados**
+- ✅ **14 áreas migradas/optimizadas**
 
 ### Calidad de Código
 - ✅ Código más DRY (Don't Repeat Yourself)
