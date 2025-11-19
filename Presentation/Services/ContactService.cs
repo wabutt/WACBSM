@@ -94,17 +94,40 @@ namespace Presentation.Services
         }
 
         /// <summary>
-        /// Export contacts to text file
+        /// Export contacts to text file (TAB-separated format matching WAButt format)
         /// </summary>
         public void ExportToTextFile(List<ContactModel> contacts, string filePath)
         {
             try
             {
-                var lines = contacts
-                    .Where(c => c.IsValid)
-                    .Select(c => $"{c.PhoneNumber},{c.Name}");
+                using (StreamWriter sw = new StreamWriter(filePath))
+                {
+                    for (int i = 0; i < contacts.Count; i++)
+                    {
+                        var contact = contacts[i];
 
-                File.WriteAllLines(filePath, lines);
+                        if (!contact.IsValid)
+                            continue;
+
+                        if (i > 0)
+                            sw.WriteLine();
+
+                        string phone = contact.PhoneNumber;
+
+                        // Add + prefix if phone is valid and doesn't have it
+                        if (phone.Replace(" ", "").Length > 9 &&
+                            !phone.StartsWith("+") &&
+                            ValidationHelper.IsDigitsOnly(phone))
+                        {
+                            phone = "+" + phone;
+                        }
+
+                        // TAB-separated: Phone\tName
+                        sw.Write(phone);
+                        sw.Write("\t");
+                        sw.Write(contact.Name ?? string.Empty);
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -114,7 +137,7 @@ namespace Presentation.Services
         }
 
         /// <summary>
-        /// Import contacts from text file (comma-separated)
+        /// Import contacts from text file (TAB-separated format matching WAButt format)
         /// </summary>
         public List<ContactModel> ImportFromTextFile(string filePath)
         {
@@ -125,23 +148,26 @@ namespace Presentation.Services
                 if (!File.Exists(filePath))
                     return contacts;
 
-                string[] lines = File.ReadAllLines(filePath);
-
-                foreach (string line in lines)
+                using (StreamReader sr = new StreamReader(filePath))
                 {
-                    if (string.IsNullOrWhiteSpace(line))
-                        continue;
-
-                    string[] parts = line.Split(',');
-
-                    if (parts.Length >= 1)
+                    while (!sr.EndOfStream)
                     {
-                        string phone = parts[0].Trim();
-                        string name = parts.Length > 1 ? parts[1].Trim() : string.Empty;
+                        string line = sr.ReadLine();
 
-                        if (!string.IsNullOrWhiteSpace(phone))
+                        if (string.IsNullOrWhiteSpace(line))
+                            continue;
+
+                        string[] parts = line.Split('\t');
+
+                        if (parts.Length >= 1)
                         {
-                            contacts.Add(new ContactModel(phone, name));
+                            string phone = parts[0].Trim();
+                            string name = parts.Length > 1 ? parts[1].Trim() : string.Empty;
+
+                            if (!string.IsNullOrWhiteSpace(phone))
+                            {
+                                contacts.Add(new ContactModel(phone, name));
+                            }
                         }
                     }
                 }

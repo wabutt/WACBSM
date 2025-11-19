@@ -74,19 +74,6 @@ namespace Presentation
         public static string chromesmsdefaultuserdata = "https://raw.githubusercontent.com/wabutt/itsmevsauce/master/Chrome%20SMS%20Profile.zip";
 
         // ---- LICENSE STUFF START ----
-
-        public class LicenseCheckResult
-        {
-            public bool valid { get; set; }
-            public string message { get; set; }
-            public string status { get; set; }   // ACTIVE, EXPIRED, SUSPENDED, MAX_DEVICES, NOT_FOUND, UNAUTHORIZED
-            public string plan { get; set; }
-            public string expiresAt { get; set; }   // ISO string o null
-            public int devicesUsed { get; set; }
-            public int maxDevices { get; set; }
-        }
-
-
         private string _licenseKey;
 
         public WAButtfrm()
@@ -162,19 +149,19 @@ namespace Presentation
                             return;
                         }
 
-                        // 3) Validar contra el backend
-                        var result = await ValidateAPIKeyAsync(user, _licenseKey);
+                        // 3) Validar contra el backend usando LicenseService
+                        var result = await _viewModel.LicenseService.ValidateAPIKeyAsync(_licenseKey);
 
                         // Si hubo error técnico (red / servidor) => result == null
                         if (result == null)
                         {
-                            // Ya se mostró MessageBox dentro de ValidateAPIKeyAsync
+                            // Ya se mostró MessageBox dentro de LicenseService
                             this.Close();
                             return;
                         }
 
                         // 4) Si la licencia ES válida → éxito
-                        if (result.valid)
+                        if (result.IsValid)
                         {
                             Console.WriteLine("Licencia válida para HWID: " + user.GetMachineGuid());
 
@@ -183,21 +170,14 @@ namespace Presentation
                             Properties.Settings.Default.Save();
 
                             // Construir texto para la ventana (título)
-                            string plan = string.IsNullOrWhiteSpace(result.plan)
+                            string plan = string.IsNullOrWhiteSpace(result.Plan)
                                 ? "SIN PLAN"
-                                : result.plan.ToUpper();
+                                : result.Plan.ToUpper();
 
                             string expText = "Sin vencimiento";
-                            if (!string.IsNullOrWhiteSpace(result.expiresAt))
+                            if (result.ExpiresAt.HasValue)
                             {
-                                if (DateTime.TryParse(result.expiresAt, out DateTime exp))
-                                {
-                                    expText = "Vence: " + exp.ToShortDateString();
-                                }
-                                else
-                                {
-                                    expText = "Vence: " + result.expiresAt;
-                                }
+                                expText = "Vence: " + result.ExpiresAt.Value.ToShortDateString();
                             }
 
                             this.Text = $"WAButt - Licencia: {plan} - {expText}";
@@ -210,7 +190,7 @@ namespace Presentation
                         // 5) La licencia NO es válida (incluye casos: borrada, expirada, suspendida, etc.)
                         //    Aquí damos contexto y opción de ingresar otra.
 
-                        string msg = result.message ?? "Licencia no válida.";
+                        string msg = result.Message ?? "Licencia no válida.";
 
                         // Puedes tunear este flag si quieres solo para ciertos mensajes:
                         bool ofrecerNuevaLicencia = true;
@@ -361,125 +341,6 @@ namespace Presentation
         }
 
 
-        public async Task<LicenseCheckResult> ValidateAPIKeyAsync(UserModel user, string licenseKey)
-        {
-            using (var http = new HttpClient())
-            {
-                http.Timeout = TimeSpan.FromSeconds(20);
-
-                // Limpia headers por si se reusa HttpClient en algún futuro
-                http.DefaultRequestHeaders.Clear();
-
-                // Debe coincidir con LICENSE_API_KEY del .env de Laravel
-                http.DefaultRequestHeaders.Add(
-                    "X-API-KEY",
-                    "afe3d05f072e9fe4ce3f243f685af78db67136e70605098709f0e7c2527e2449"
-                );
-
-                var payloadObj = new
-                {
-                    licenseKey = licenseKey,
-                    hwid = user.GetMachineGuid(),
-                    appVersion = Application.ProductVersion,
-                    machineName = Environment.MachineName
-                };
-
-                string json = JsonConvert.SerializeObject(payloadObj);
-                var content = new StringContent(json, Encoding.UTF8, "application/json");
-
-                HttpResponseMessage response;
-                try
-                {
-                    response = await http.PostAsync(
-                        "http://localhost:8080/api/license/check",  // 👈 cambia host/puerto en producción
-                        content
-                    );
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(
-                        "No se pudo contactar al servidor de licencias.\n" + ex.Message,
-                        "Error de red",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error
-                    );
-                    return null;
-                }
-
-                string responseJson = await response.Content.ReadAsStringAsync();
-
-                // Si el servidor responde con 4xx/5xx, intentamos mostrar algo más amigable
-                if (!response.IsSuccessStatusCode)
-                {
-                    try
-                    {
-                        // Por si el backend devuelve un JSON con 'message'
-                        var apiError = JsonConvert.DeserializeObject<LicenseCheckResult>(responseJson);
-
-                        if (apiError != null && !string.IsNullOrWhiteSpace(apiError.message))
-                        {
-                            MessageBox.Show(
-                                apiError.message,
-                                "Error de licencia",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Warning
-                            );
-                        }
-                        else
-                        {
-                            MessageBox.Show(
-                                "Error del servidor de licencias: " + (int)response.StatusCode,
-                                "Error",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Error
-                            );
-                        }
-                    }
-                    catch
-                    {
-                        MessageBox.Show(
-                            "Error del servidor de licencias: " + (int)response.StatusCode,
-                            "Error",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Error
-                        );
-                    }
-
-                    return null;
-                }
-
-                LicenseCheckResult result;
-                try
-                {
-                    result = JsonConvert.DeserializeObject<LicenseCheckResult>(responseJson);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(
-                        "Respuesta inválida del servidor de licencias.\n" + ex.Message,
-                        "Error",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error
-                    );
-                    return null;
-                }
-
-                if (result == null)
-                {
-                    MessageBox.Show(
-                        "Respuesta vacía del servidor de licencias.",
-                        "Error",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error
-                    );
-                    return null;
-                }
-
-                // 👇 OJO: aquí YA NO mostramos MessageBox para licencia inválida
-                // eso lo maneja el 'Load' según result.status (EXPIRED, SUSPENDED, etc.)
-                return result;
-            }
-        }
 
 
 
@@ -3094,93 +2955,27 @@ namespace Presentation
 
             if (contactsdgv.Rows.Count > 1)
             {
-
-
                 SaveFileDialog sfd = new SaveFileDialog
                 {
                     Filter = "Archivo de Texto (*.txt)|*.txt",
                     FileName = ""
                 };
-                bool fileError = false;
+
                 if (sfd.ShowDialog() == DialogResult.OK)
                 {
-                    if (File.Exists(sfd.FileName))
+                    try
                     {
-                        try
-                        {
-                            File.Delete(sfd.FileName);
-                        }
-                        catch (IOException ex)
-                        {
-                            fileError = true;
-                            MessageBox.Show("No fue posible escribir datos en el disco." + ex.Message);
-                        }
+                        // Convert DataGridView to contact list
+                        var contacts = _viewModel.ContactService.ConvertFromDataGridView(contactsdgv);
+
+                        // Export to text file using ContactService
+                        _viewModel.ContactService.ExportToTextFile(contacts, sfd.FileName);
+
+                        MessageBox.Show("Datos exportados correctamente!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
-                    if (!fileError)
+                    catch (Exception ex)
                     {
-                        try
-                        {
-
-                            string value = "";
-
-
-                            DataGridViewRow dr = new DataGridViewRow();
-                            StreamWriter swOut = new StreamWriter(sfd.FileName);
-
-
-
-                            //write DataGridView rows to csv
-                            for (int j = 0; j <= contactsdgv.Rows.Count - 2; j++)
-                            {
-                                if (j > 0)
-                                {
-                                    swOut.WriteLine();
-                                }
-
-                                dr = contactsdgv.Rows[j];
-
-                                for (int i = 0; i <= contactsdgv.Columns.Count - 2; i++)
-                                {
-                                    if (i > 0)
-                                    {
-                                        swOut.Write("\t");
-                                    }
-                                    if (i < 1)
-                                    {
-                                        if (Convert.ToString(dr.Cells[i].Value).Replace(" ", "").Length > 9)
-                                        {
-
-                                            if (Convert.ToString(dr.Cells[i].Value).StartsWith("+") == false && ValidationHelper.IsDigitsOnly(Convert.ToString(dr.Cells[i].Value)))
-                                            {
-                                                swOut.Write("+");
-                                            }
-
-
-
-                                        }
-
-                                    }
-
-                                    value = Convert.ToString(dr.Cells[i].Value);
-
-
-                                    //replace comma's with spaces
-                                    value = value.Replace('\t', ' ');
-                                    //replace embedded newlines with spaces
-                                    value = value.Replace(Environment.NewLine, " ");
-
-                                    swOut.Write(value);
-                                }
-                            }
-                            swOut.Close();
-                            MessageBox.Show("Datos exportados correctamente!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show("Error :" + ex.Message);
-                        }
+                        MessageBox.Show("Error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
             }
@@ -3211,47 +3006,23 @@ namespace Presentation
 
 
 
-                    StreamReader sr = new StreamReader(sfd.FileName);
-                    StringBuilder sb = new StringBuilder();
+                    // Import contacts from file using ContactService
+                    var contacts = _viewModel.ContactService.ImportFromTextFile(sfd.FileName);
 
-
-                    string s;
-
+                    // Clear and setup DataGridView
                     contactsdgv.Columns.Clear();
-
-
                     contactsdgv.Columns.Add("Column", "Numero o Grupo");
                     contactsdgv.Columns.Add("Column", "Nombre");
                     contactsdgv.Columns.Add("Column", "Enviado (S/N)");
 
-                    while (!sr.EndOfStream)
-                    {
-                        s = sr.ReadLine();
+                    // Load contacts to DataGridView
+                    _viewModel.ContactService.LoadToDataGridView(contactsdgv, contacts);
 
-                        string[] str = s.Split('\t');
-
-
-
-                        contactsdgv.Rows.Add(str[0].ToString(), str[1].ToString());
-
-
-                    }
-                    sr.Close();
-
-                    DataGridViewColumn column = contactsdgv.Columns[0];
-                    column.Width = 200;
-
-
-
-                    DataGridViewColumn column1 = contactsdgv.Columns[1];
-                    column1.Width = 350;
-
-
-
-
-                    DataGridViewColumn column2 = contactsdgv.Columns[2];
-                    column2.Width = 100;
-                    column2.ReadOnly = true;
+                    // Set column widths
+                    contactsdgv.Columns[0].Width = 200;
+                    contactsdgv.Columns[1].Width = 350;
+                    contactsdgv.Columns[2].Width = 100;
+                    contactsdgv.Columns[2].ReadOnly = true;
 
                     MessageBox.Show("Datos importados!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
