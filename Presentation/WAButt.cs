@@ -3707,97 +3707,29 @@ namespace Presentation
         }
         private void save2btn_Click(object sender, EventArgs e)
         {
-
-
             if (contacts2dgv.Rows.Count > 1)
             {
-
-
                 SaveFileDialog sfd = new SaveFileDialog
                 {
                     Filter = "Archivo de Texto (*.txt)|*.txt",
                     FileName = ""
                 };
-                bool fileError = false;
+
                 if (sfd.ShowDialog() == DialogResult.OK)
                 {
-                    if (File.Exists(sfd.FileName))
+                    try
                     {
-                        try
-                        {
-                            File.Delete(sfd.FileName);
-                        }
-                        catch (IOException ex)
-                        {
-                            fileError = true;
-                            MessageBox.Show("No fue posible escribir datos en el disco." + ex.Message);
-                        }
+                        // Convert DataGridView to contact list
+                        var contacts = _viewModel.ContactService.ConvertFromDataGridView(contacts2dgv);
+
+                        // Export to text file using ContactService
+                        _viewModel.ContactService.ExportToTextFile(contacts, sfd.FileName);
+
+                        MessageBox.Show("Datos exportados correctamente!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
-                    if (!fileError)
+                    catch (Exception ex)
                     {
-                        try
-                        {
-
-                            string value = "";
-
-
-                            DataGridViewRow dr = new DataGridViewRow();
-                            StreamWriter swOut = new StreamWriter(sfd.FileName);
-
-
-
-                            //write DataGridView rows to csv
-                            for (int j = 0; j <= contacts2dgv.Rows.Count - 2; j++)
-                            {
-                                if (j > 0)
-                                {
-                                    swOut.WriteLine();
-                                }
-
-                                dr = contacts2dgv.Rows[j];
-
-                                for (int i = 0; i <= contacts2dgv.Columns.Count - 2; i++)
-                                {
-                                    if (i > 0)
-                                    {
-                                        swOut.Write("\t");
-                                    }
-                                    if (i < 1)
-                                    {
-                                        if (Convert.ToString(dr.Cells[i].Value).Replace(" ", "").Length > 9)
-                                        {
-
-                                            if (Convert.ToString(dr.Cells[i].Value).StartsWith("+") == false && ValidationHelper.IsDigitsOnly(Convert.ToString(dr.Cells[i].Value)))
-                                            {
-                                                swOut.Write("+");
-                                            }
-
-
-
-                                        }
-
-                                    }
-
-                                    value = Convert.ToString(dr.Cells[i].Value);
-
-
-                                    //replace comma's with spaces
-                                    value = value.Replace('\t', ' ');
-                                    //replace embedded newlines with spaces
-                                    value = value.Replace(Environment.NewLine, " ");
-
-                                    swOut.Write(value);
-                                }
-                            }
-                            swOut.Close();
-                            MessageBox.Show("Datos exportados correctamente!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show("Error :" + ex.Message);
-                        }
+                        MessageBox.Show("Error: " + ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 }
             }
@@ -3805,7 +3737,6 @@ namespace Presentation
             {
                 MessageBox.Show("No hay datos a exportar", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
             }
-
         }
         private void open2btn_Click(object sender, EventArgs e)
         {
@@ -3823,47 +3754,23 @@ namespace Presentation
 
 
 
-                    StreamReader sr = new StreamReader(sfd.FileName);
-                    StringBuilder sb = new StringBuilder();
+                    // Import contacts from file using ContactService
+                    var contacts = _viewModel.ContactService.ImportFromTextFile(sfd.FileName);
 
-
-                    string s;
-
+                    // Clear and setup DataGridView
                     contacts2dgv.Columns.Clear();
-
-
                     contacts2dgv.Columns.Add("Column", "Numero o Grupo");
                     contacts2dgv.Columns.Add("Column", "Nombre");
                     contacts2dgv.Columns.Add("Column", "Enviado (S/N)");
 
-                    while (!sr.EndOfStream)
-                    {
-                        s = sr.ReadLine();
+                    // Load contacts to DataGridView
+                    _viewModel.ContactService.LoadToDataGridView(contacts2dgv, contacts);
 
-                        string[] str = s.Split('\t');
-
-
-
-                        contacts2dgv.Rows.Add(str[0].ToString(), str[1].ToString());
-
-
-                    }
-                    sr.Close();
-
-                    DataGridViewColumn column = contacts2dgv.Columns[0];
-                    column.Width = 200;
-
-
-
-                    DataGridViewColumn column1 = contacts2dgv.Columns[1];
-                    column1.Width = 350;
-
-
-
-
-                    DataGridViewColumn column2 = contacts2dgv.Columns[2];
-                    column2.Width = 100;
-                    column2.ReadOnly = true;
+                    // Set column widths
+                    contacts2dgv.Columns[0].Width = 200;
+                    contacts2dgv.Columns[1].Width = 350;
+                    contacts2dgv.Columns[2].Width = 100;
+                    contacts2dgv.Columns[2].ReadOnly = true;
 
                     MessageBox.Show("Datos importados!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
