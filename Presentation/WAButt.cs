@@ -710,7 +710,7 @@ namespace Presentation
             }
             else
             {
-                if (GetImageState(filePath) || GetVideoState(filePath))
+                if (FileHelper.IsImageFile(filePath) || FileHelper.IsVideoFile(filePath))
                 {
                     wa.ImageTextMessage(filePath, message);
                     action.SendKeys(".").Build().Perform();
@@ -1145,7 +1145,7 @@ namespace Presentation
         private async void connectwabtn_Click(object sender, EventArgs e)
         {
 
-            if (!CheckForInternetConnection())
+            if (!InternetHelper.CheckForInternetConnection())
             {
                 MessageBox.Show("No cuenta con acceso a internet.", "Error");
                 return;
@@ -1658,7 +1658,7 @@ namespace Presentation
 
         private async Task<bool> ValidatePreSendConditions()
         {
-            if (!CheckForInternetConnection())
+            if (!InternetHelper.CheckForInternetConnection())
             {
                 MessageBox.Show("No cuenta con acceso a internet, no puedes continuar.",
                     "Observación", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -1849,7 +1849,7 @@ namespace Presentation
 
         private async Task Excecutesendtask()
         {
-            if (!CheckForInternetConnection())
+            if (!InternetHelper.CheckForInternetConnection())
             {
                 MessageBox.Show("No cuenta con acceso a internet, no puedes continuar.", "Observación",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -1896,7 +1896,7 @@ namespace Presentation
             // Timings
             wa.preventblocktiming = preventblockcb.Checked ? 4000 : 0;
             eachmessagetiming = eachmessagetimingcb.Checked
-                ? Math.Max(0, SafeInt(eachmessagetimingtxt.Text)) * 1000
+                ? Math.Max(0, ValidationHelper.SafeInt(eachmessagetimingtxt.Text)) * 1000
                 : 0;
 
             // Prepara textos base (se respetan saltos con <br/> y sin normalizar teléfonos)
@@ -1919,7 +1919,7 @@ namespace Presentation
                 {
                     if (fila.IsNewRow) continue;
 
-                    if (!CheckForInternetConnection())
+                    if (!InternetHelper.CheckForInternetConnection())
                     {
                         StopForNoInternet();
                         break;
@@ -2031,8 +2031,7 @@ namespace Presentation
 
         /* ==================== Helpers ==================== */
 
-        // Evita cast/format exceptions
-        private int SafeInt(string s) => int.TryParse(s, out var v) ? v : 0;
+        // Migrated to ValidationHelper.SafeInt()
 
         // Habilita/deshabilita controles durante el envío
         private void ToggleUiSendingState(bool isSending)
@@ -2055,7 +2054,7 @@ namespace Presentation
         {
             if (string.IsNullOrWhiteSpace(severalpausetxt.Text)) return;
 
-            int threshold = SafeInt(severalpausetxt.Text);
+            int threshold = ValidationHelper.SafeInt(severalpausetxt.Text);
             if (threshold <= 0) return;
 
             if (rowIndex == threshold && !severalpausetoken.IsCancellationRequested)
@@ -2190,12 +2189,12 @@ namespace Presentation
                         }
                         else
                         {
-                            if (GetImageState(filename))
+                            if (FileHelper.IsImageFile(filename))
                             {
                                 wa.ImageTextMessage(filename, message);
                                 Task.Delay(1000 + wa.preventblocktiming).Wait();
                             }
-                            else if (GetVideoState(filename))
+                            else if (FileHelper.IsVideoFile(filename))
                             {
                                 wa.VideoTextMessage(filename, message);
                                 action.SendKeys(".").Build().Perform();
@@ -2323,7 +2322,7 @@ namespace Presentation
         private async Task Excecutesendtask2()
         {
 
-            if (CheckForInternetConnection())
+            if (InternetHelper.CheckForInternetConnection())
             {
 
                 //condicionales y token de cancellation
@@ -2426,7 +2425,7 @@ namespace Presentation
 
 
 
-                                    if (CheckForInternetConnection())
+                                    if (InternetHelper.CheckForInternetConnection())
                                     {
 
                                         if (preventblock2cb.Checked == true)
@@ -3151,7 +3150,7 @@ namespace Presentation
                                         if (Convert.ToString(dr.Cells[i].Value).Replace(" ", "").Length > 9)
                                         {
 
-                                            if (Convert.ToString(dr.Cells[i].Value).StartsWith("+") == false && IsDigitsOnly(Convert.ToString(dr.Cells[i].Value)))
+                                            if (Convert.ToString(dr.Cells[i].Value).StartsWith("+") == false && ValidationHelper.IsDigitsOnly(Convert.ToString(dr.Cells[i].Value)))
                                             {
                                                 swOut.Write("+");
                                             }
@@ -3366,7 +3365,7 @@ namespace Presentation
 
                     cancellationToken.Token.ThrowIfCancellationRequested();
 
-                    if (!CheckForInternetConnection())
+                    if (!InternetHelper.CheckForInternetConnection())
                     {
                         StopSendingDueToNoInternet();
                         break;
@@ -3540,7 +3539,7 @@ namespace Presentation
         {
             try
             {
-                if (!CheckForInternetConnection())
+                if (!InternetHelper.CheckForInternetConnection())
                 {
                     MessageBox.Show("No cuenta con acceso a internet.", "Error",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -3573,19 +3572,7 @@ namespace Presentation
                 logoutbtn.Enabled = true;
             }
         }
-        public static bool CheckForInternetConnection()
-        {
-            try
-            {
-                using (var client = new WebClient())
-                using (client.OpenRead("http://google.com/generate_204"))
-                    return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
+        // Migrated to InternetHelper.CheckForInternetConnection()
         private void manymessagescb_Click(object sender, EventArgs e)
         {
 
@@ -3627,10 +3614,7 @@ namespace Presentation
         {
             // wa.GetContactsFromGroup();
         }
-        private bool IsDigitsOnly(string str)
-        {
-            return str.All(c => char.IsDigit(c));
-        }
+        // Migrated to ValidationHelper.IsDigitsOnly()
         private void severalpausetxt_KeyPress(object sender, KeyPressEventArgs e)
         {
             InputNumbers(sender, e);
@@ -3891,7 +3875,7 @@ namespace Presentation
         }
         private async void connectgoobtn_Click(object sender, EventArgs e)
         {
-            if (!CheckForInternetConnection())
+            if (!InternetHelper.CheckForInternetConnection())
             {
                 MessageBox.Show("No cuenta con acceso a internet.", "Error");
                 return;
@@ -4025,7 +4009,7 @@ namespace Presentation
                                         if (Convert.ToString(dr.Cells[i].Value).Replace(" ", "").Length > 9)
                                         {
 
-                                            if (Convert.ToString(dr.Cells[i].Value).StartsWith("+") == false && IsDigitsOnly(Convert.ToString(dr.Cells[i].Value)))
+                                            if (Convert.ToString(dr.Cells[i].Value).StartsWith("+") == false && ValidationHelper.IsDigitsOnly(Convert.ToString(dr.Cells[i].Value)))
                                             {
                                                 swOut.Write("+");
                                             }
@@ -4515,21 +4499,7 @@ namespace Presentation
                    !string.IsNullOrWhiteSpace(m5txt.Text);
         }
 
-        private string GetExtension(string path)
-        {
-            return Path.GetExtension(path);
-        }
-        private bool GetImageState(string path)
-        {
-            string ext = Path.GetExtension(path).ToLower();
-            return ext == ".svg" || ext == ".png" || ext == ".jpg" ||
-                   ext == ".jpeg" || ext == ".gif" || ext == ".webp";
-        }
-        private bool GetVideoState(string path)
-        {
-            string ext = Path.GetExtension(path).ToLower();
-            return ext == ".mp4" || ext == ".mov" || ext == ".m4v";
-        }
+        // Migrated to FileHelper.GetExtension(), IsImageFile(), IsVideoFile()
 
         private void eliminarDuplicadosToolStripMenuItem_Click(object sender, EventArgs e)
         {
