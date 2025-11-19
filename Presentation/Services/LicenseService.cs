@@ -30,12 +30,13 @@ namespace Presentation.Services
             try
             {
                 UserModel user = new UserModel();
+                string machineGuid = user.GetMachineGuid();
 
                 var payload = new
                 {
                     key = licenseKey,
-                    deviceId = user.Deviceid,
-                    machineId = user.Machineid
+                    deviceId = machineGuid,
+                    machineId = machineGuid
                 };
 
                 string jsonPayload = JsonConvert.SerializeObject(payload);
