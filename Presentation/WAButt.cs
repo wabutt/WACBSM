@@ -1017,13 +1017,12 @@ namespace Presentation
 
 
         }
-        private void exportDgvToGmail()
+
+        private void ExportDgvToGmailCore(DataGridView grid)
         {
             // Ajusta estos índices si tus columnas están en otro orden:
             const int PhoneColIndex = 0;     // Columna con el teléfono
             const int FirstNameColIndex = 1; // Columna con el nombre
-
-            var grid = contactsdgv;
 
             if (grid == null || grid.Rows.Cast<DataGridViewRow>().All(r => r.IsNewRow))
             {
@@ -1084,6 +1083,11 @@ namespace Presentation
             }
         }
 
+        private void exportDgvToGmail()
+        {
+            ExportDgvToGmailCore(contactsdgv);
+        }
+
         // ---- Helper ----
         // No alteramos el contenido; solo hacemos el escape CSV cuando hace falta.
         private static string Csv(string value)
@@ -1097,163 +1101,11 @@ namespace Presentation
         }
         private void exportDgvToGmail2()
         {
-
-            // Ajusta estos índices si tus columnas están en otro orden:
-            const int PhoneColIndex = 0;     // Teléfono
-            const int FirstNameColIndex = 1; // Nombre
-
-            var grid = contacts2dgv;
-
-            if (grid == null || grid.Rows.Cast<DataGridViewRow>().All(r => r.IsNewRow))
-            {
-                MessageBox.Show("No hay datos a exportar", "Observación",
-                    MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-                return;
-            }
-
-            using (var sfd = new SaveFileDialog
-            {
-                Filter = "CSV (*.csv)|*.csv",
-                FileName = "contactos.csv",
-                AddExtension = true,
-                OverwritePrompt = true
-            })
-            {
-                if (sfd.ShowDialog() != DialogResult.OK)
-                    return;
-
-                try
-                {
-                    // UTF-8 con BOM para acentos/ñ correctos en Excel y Gmail
-                    using (var sw = new StreamWriter(sfd.FileName, false, new UTF8Encoding(true)))
-                    {
-                        // Encabezados reconocidos por Google Contacts
-                        sw.WriteLine("Name,Given Name,Phone 1 - Type,Phone 1 - Value");
-
-                        foreach (DataGridViewRow row in grid.Rows)
-                        {
-                            if (row.IsNewRow) continue;
-
-                            // NO se normaliza: se toma el teléfono tal cual está en la celda
-                            string firstName = Convert.ToString(row.Cells[FirstNameColIndex].Value) ?? string.Empty;
-                            string phoneRaw = Convert.ToString(row.Cells[PhoneColIndex].Value) ?? string.Empty;
-
-                            string name = firstName;     // si solo tienes nombre, úsalo como Name
-                            string phoneType = "Mobile"; // cambia a Home/Work si corresponde
-
-                            sw.WriteLine($"{Csv(name)},{Csv(firstName)},{Csv(phoneType)},{Csv(phoneRaw)}");
-                        }
-                    }
-
-                    MessageBox.Show("Datos exportados correctamente!", "Observación",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                catch (IOException ex)
-                {
-                    MessageBox.Show("No fue posible escribir datos en el disco. " + ex.Message,
-                        "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("Error: " + ex.Message,
-                        "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
-
-
-
-
+            ExportDgvToGmailCore(contacts2dgv);
         }
         private void ImportGmailToDgv()
         {
-            var ofd = new OpenFileDialog
-            {
-                Filter = "CSV (*.csv)|*.csv",
-                FileName = ""
-            };
-
-            if (ofd.ShowDialog() != DialogResult.OK) return;
-            if (!File.Exists(ofd.FileName)) return;
-
-            try
-            {
-                // Muestra la pestaña de la lista
-                maintab.SelectedTab = contactlisttab;
-
-                // Detectar delimitador en el header (',' o ';')
-                var delimiter = DetectDelimiter(ofd.FileName);
-
-                var cfg = new CsvConfiguration(CultureInfo.InvariantCulture)
-                {
-                    HasHeaderRecord = true,
-                    Delimiter = delimiter,
-                    IgnoreBlankLines = true,
-                    TrimOptions = TrimOptions.Trim,
-                    BadDataFound = null,
-                    MissingFieldFound = null,
-                    HeaderValidated = null
-                };
-
-                using (var sr = new StreamReader(ofd.FileName, Encoding.UTF8, true))
-                using (var csv = new CsvReader(sr, cfg))
-                {
-                    // Leer encabezados
-                    csv.Read();
-                    csv.ReadHeader();
-
-                    // 🔧 Cabeceras según la versión de CsvHelper
-                    var headers = csv.Context.Reader.HeaderRecord?.ToList() ?? new List<string>();
-
-                    // Buscar columnas por posibles nombres
-                    string phoneCol = FirstExisting(headers,
-                        "Phone 1 - Value", "Primary Phone", "Mobile Phone", "Phone",
-                        "Teléfono 1 - Valor", "Teléfono principal");
-
-                    string nameCol = FirstExisting(headers,
-                        "First Name", "Given Name", "Name", "Nombre");
-
-                    // Validaciones mínimas
-                    if (string.IsNullOrEmpty(phoneCol) && string.IsNullOrEmpty(nameCol))
-                        throw new InvalidOperationException("No se encontraron columnas de teléfono ni nombre en el CSV.");
-
-                    // Preparar el DataGridView
-                    contactsdgv.SuspendLayout();
-                    contactsdgv.Columns.Clear();
-                    contactsdgv.Rows.Clear();
-
-                    contactsdgv.Columns.Add("colPhoneOrGroup", "Numero o Grupo");
-                    contactsdgv.Columns.Add("colName", "Nombre");
-                    var colSent = contactsdgv.Columns.Add("colSent", "Enviado (S/N)");
-                    contactsdgv.Columns[colSent].ReadOnly = true;
-
-                    contactsdgv.Columns[0].Width = 200;
-                    contactsdgv.Columns[1].Width = 350;
-                    contactsdgv.Columns[2].Width = 100;
-
-                    // Leer filas
-                    while (csv.Read())
-                    {
-                        string phone = phoneCol != null ? (csv.GetField(phoneCol) ?? string.Empty) : string.Empty;
-                        string first = nameCol != null ? (csv.GetField(nameCol) ?? string.Empty) : string.Empty;
-
-                        // Si no hay ningún dato útil, saltamos
-                        if (string.IsNullOrWhiteSpace(phone) && string.IsNullOrWhiteSpace(first))
-                            continue;
-
-                        // Se agregan tal cual
-                        contactsdgv.Rows.Add(phone, first, string.Empty);
-                    }
-
-                    contactsdgv.ResumeLayout();
-                    MessageBox.Show("Datos importados!", "Observación",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "Error",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            ImportGmailToDgvCore(contactsdgv, maintab, contactlisttab);
         }
 
 
@@ -1311,22 +1163,24 @@ namespace Presentation
             }
             return sb.ToString();
         }
-        private void ImportGmailToDgv2()
+
+        private void ImportGmailToDgvCore(DataGridView grid, TabControl tabControl, TabPage tabPage)
         {
             var ofd = new OpenFileDialog
             {
                 Filter = "CSV (*.csv)|*.csv",
                 FileName = ""
             };
+
             if (ofd.ShowDialog() != DialogResult.OK) return;
             if (!File.Exists(ofd.FileName)) return;
 
             try
             {
-                // Mostrar la pestaña de la lista 2
-                main2tab.SelectedTab = contactlist2tab;
+                // Muestra la pestaña de la lista
+                tabControl.SelectedTab = tabPage;
 
-                // Detectar delimitador del archivo
+                // Detectar delimitador en el header (',' o ';')
                 var delimiter = DetectDelimiter(ofd.FileName);
 
                 var cfg = new CsvConfiguration(CultureInfo.InvariantCulture)
@@ -1343,13 +1197,14 @@ namespace Presentation
                 using (var sr = new StreamReader(ofd.FileName, Encoding.UTF8, true))
                 using (var csv = new CsvReader(sr, cfg))
                 {
-                    if (!csv.Read() || !csv.ReadHeader())
-                        throw new InvalidOperationException("El archivo CSV no contiene encabezados.");
+                    // Leer encabezados
+                    csv.Read();
+                    csv.ReadHeader();
 
-                    // ✅ Cabeceras correctas según tu versión de CsvHelper
+                    // Cabeceras según la versión de CsvHelper
                     var headers = csv.Context.Reader.HeaderRecord?.ToList() ?? new List<string>();
 
-                    // Columnas posibles (en/es)
+                    // Buscar columnas por posibles nombres
                     string phoneCol = FirstExisting(headers,
                         "Phone 1 - Value", "Primary Phone", "Mobile Phone", "Phone",
                         "Teléfono 1 - Valor", "Teléfono principal");
@@ -1357,36 +1212,39 @@ namespace Presentation
                     string nameCol = FirstExisting(headers,
                         "First Name", "Given Name", "Name", "Nombre");
 
+                    // Validaciones mínimas
                     if (string.IsNullOrEmpty(phoneCol) && string.IsNullOrEmpty(nameCol))
                         throw new InvalidOperationException("No se encontraron columnas de teléfono ni nombre en el CSV.");
 
-                    // Preparar el DGV destino
-                    contacts2dgv.SuspendLayout();
-                    contacts2dgv.Columns.Clear();
-                    contacts2dgv.Rows.Clear();
+                    // Preparar el DataGridView
+                    grid.SuspendLayout();
+                    grid.Columns.Clear();
+                    grid.Rows.Clear();
 
-                    contacts2dgv.Columns.Add("colPhoneOrGroup", "Numero o Grupo");
-                    contacts2dgv.Columns.Add("colName", "Nombre");
-                    var sentIdx = contacts2dgv.Columns.Add("colSent", "Enviado (S/N)");
-                    contacts2dgv.Columns[sentIdx].ReadOnly = true;
+                    grid.Columns.Add("colPhoneOrGroup", "Numero o Grupo");
+                    grid.Columns.Add("colName", "Nombre");
+                    var colSent = grid.Columns.Add("colSent", "Enviado (S/N)");
+                    grid.Columns[colSent].ReadOnly = true;
 
-                    contacts2dgv.Columns[0].Width = 200;
-                    contacts2dgv.Columns[1].Width = 350;
-                    contacts2dgv.Columns[2].Width = 100;
+                    grid.Columns[0].Width = 200;
+                    grid.Columns[1].Width = 350;
+                    grid.Columns[2].Width = 100;
 
-                    // Leer filas (sin normalizar teléfonos)
+                    // Leer filas
                     while (csv.Read())
                     {
                         string phone = phoneCol != null ? (csv.GetField(phoneCol) ?? string.Empty) : string.Empty;
-                        string name = nameCol != null ? (csv.GetField(nameCol) ?? string.Empty) : string.Empty;
+                        string first = nameCol != null ? (csv.GetField(nameCol) ?? string.Empty) : string.Empty;
 
-                        if (string.IsNullOrWhiteSpace(phone) && string.IsNullOrWhiteSpace(name))
+                        // Si no hay ningún dato útil, saltamos
+                        if (string.IsNullOrWhiteSpace(phone) && string.IsNullOrWhiteSpace(first))
                             continue;
 
-                        contacts2dgv.Rows.Add(phone, name, string.Empty);
+                        // Se agregan tal cual
+                        grid.Rows.Add(phone, first, string.Empty);
                     }
 
-                    contacts2dgv.ResumeLayout();
+                    grid.ResumeLayout();
                     MessageBox.Show("Datos importados!", "Observación",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
@@ -1396,6 +1254,11 @@ namespace Presentation
                 MessageBox.Show(ex.Message, "Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+
+        private void ImportGmailToDgv2()
+        {
+            ImportGmailToDgvCore(contacts2dgv, main2tab, contactlist2tab);
         }
 
 
