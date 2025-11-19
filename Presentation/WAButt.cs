@@ -2779,6 +2779,19 @@ namespace Presentation
 
         }
 
+        private void SetupContactGridColumns(DataGridView grid)
+        {
+            grid.Columns.Clear();
+            grid.Columns.Add("Column", "Numero o Grupo");
+            grid.Columns.Add("Column", "Nombre");
+            grid.Columns.Add("Column", "Enviado (S/N)");
+
+            grid.Columns[0].Width = 200;
+            grid.Columns[1].Width = 350;
+            grid.Columns[2].Width = 100;
+            grid.Columns[2].ReadOnly = true;
+        }
+
         private void openbtn_Click(object sender, EventArgs e)
         {
 
@@ -2799,20 +2812,11 @@ namespace Presentation
                     // Import contacts from file using ContactService
                     var contacts = _viewModel.ContactService.ImportFromTextFile(sfd.FileName);
 
-                    // Clear and setup DataGridView
-                    contactsdgv.Columns.Clear();
-                    contactsdgv.Columns.Add("Column", "Numero o Grupo");
-                    contactsdgv.Columns.Add("Column", "Nombre");
-                    contactsdgv.Columns.Add("Column", "Enviado (S/N)");
+                    // Clear and setup DataGridView using helper
+                    SetupContactGridColumns(contactsdgv);
 
                     // Load contacts to DataGridView
                     _viewModel.ContactService.LoadToDataGridView(contactsdgv, contacts);
-
-                    // Set column widths
-                    contactsdgv.Columns[0].Width = 200;
-                    contactsdgv.Columns[1].Width = 350;
-                    contactsdgv.Columns[2].Width = 100;
-                    contactsdgv.Columns[2].ReadOnly = true;
 
                     MessageBox.Show("Datos importados!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
@@ -3493,20 +3497,11 @@ namespace Presentation
                     // Import contacts from file using ContactService
                     var contacts = _viewModel.ContactService.ImportFromTextFile(sfd.FileName);
 
-                    // Clear and setup DataGridView
-                    contacts2dgv.Columns.Clear();
-                    contacts2dgv.Columns.Add("Column", "Numero o Grupo");
-                    contacts2dgv.Columns.Add("Column", "Nombre");
-                    contacts2dgv.Columns.Add("Column", "Enviado (S/N)");
+                    // Clear and setup DataGridView using helper
+                    SetupContactGridColumns(contacts2dgv);
 
                     // Load contacts to DataGridView
                     _viewModel.ContactService.LoadToDataGridView(contacts2dgv, contacts);
-
-                    // Set column widths
-                    contacts2dgv.Columns[0].Width = 200;
-                    contacts2dgv.Columns[1].Width = 350;
-                    contacts2dgv.Columns[2].Width = 100;
-                    contacts2dgv.Columns[2].ReadOnly = true;
 
                     MessageBox.Show("Datos importados!", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
