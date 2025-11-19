@@ -699,7 +699,8 @@ namespace Presentation
                 {
                     try
                     {
-                        ReadJsonContacts("Contacts.json");
+                        var contacts = _viewModel.ContactService.LoadContactsFromJson(isSMS: false);
+                        _viewModel.ContactService.LoadToDataGridView(contactsdgv, contacts);
                     }
                     catch (Exception ex)
                     {
@@ -724,7 +725,8 @@ namespace Presentation
                 {
                     try
                     {
-                        ReadJson2Contacts("Contacts2.json");
+                        var contacts = _viewModel.ContactService.LoadContactsFromJson(isSMS: true);
+                        _viewModel.ContactService.LoadToDataGridView(contacts2dgv, contacts);
                     }
                     catch (Exception ex)
                     {
@@ -2774,8 +2776,13 @@ namespace Presentation
 
         private void Storecontaacts()
         {
-            ToJson(contactsdgv, "Contacts.json");
-            ToJson(contacts2dgv, "Contacts2.json");
+            // Convert and save WhatsApp contacts
+            var contacts = _viewModel.ContactService.ConvertFromDataGridView(contactsdgv);
+            _viewModel.ContactService.SaveContactsToJson(contacts, isSMS: false);
+
+            // Convert and save SMS contacts
+            var contacts2 = _viewModel.ContactService.ConvertFromDataGridView(contacts2dgv);
+            _viewModel.ContactService.SaveContactsToJson(contacts2, isSMS: true);
         }
 
         private void Storemessages()
@@ -2839,62 +2846,6 @@ namespace Presentation
                 sms5txt.Text = File.ReadAllText(Path.Combine(basePath, "sms5.txt"));
         }
 
-        private void ToJson(DataGridView dgv, string filename)
-        {
-            DataTable dt = new DataTable();
-            dt.Columns.Add("number", typeof(string));
-            dt.Columns.Add("name", typeof(string));
-
-            foreach (DataGridViewRow item in dgv.Rows)
-            {
-                if (!string.IsNullOrEmpty(Convert.ToString(item.Cells[0].Value)))
-                {
-                    DataRow row = dt.NewRow();
-                    row["number"] = Convert.ToString(item.Cells[0].Value);
-                    row["name"] = Convert.ToString(item.Cells[1].Value);
-                    dt.Rows.Add(row);
-                }
-            }
-
-            string json = JsonConvert.SerializeObject(dt);
-            WriteJSONToFile(json, filename);
-        }
-        public void ReadJsonContacts(string filename)
-        {
-            string path = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                "tempfilesWAButt", filename
-            );
-
-            if (File.Exists(path))
-            {
-                string json = File.ReadAllText(path);
-                DataTable dt = JsonConvert.DeserializeObject<DataTable>(json);
-
-                foreach (DataRow item in dt.Rows)
-                {
-                    contactsdgv.Rows.Add(item[0], item[1]);
-                }
-            }
-        }
-        public void ReadJson2Contacts(string filename)
-        {
-            string path = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                "tempfilesWAButt", filename
-            );
-
-            if (File.Exists(path))
-            {
-                string json = File.ReadAllText(path);
-                DataTable dt = JsonConvert.DeserializeObject<DataTable>(json);
-
-                foreach (DataRow item in dt.Rows)
-                {
-                    contacts2dgv.Rows.Add(item[0], item[1]);
-                }
-            }
-        }
         private string DecodeEncodedNonAsciiCharacters(string value)
         {
             return Regex.Replace(
