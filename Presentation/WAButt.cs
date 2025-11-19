@@ -2584,20 +2584,18 @@ namespace Presentation
 
         }
         #endregion
-        private void pastedatabtn_Click(object sender, EventArgs e)
+        private void PasteDataCore(DataGridView grid, TabControl tabControl, TabPage tabPage)
         {
-
-            maintab.SelectedTab = contactlisttab;
+            tabControl.SelectedTab = tabPage;
             try
             {
-                contactsdgv.Rows.Clear();
-                contactsdgv.Refresh();
+                grid.Rows.Clear();
+                grid.Refresh();
 
                 string s = Clipboard.GetText();
-
                 string[] lines = s.Replace("\n", "").Split('\r');
 
-                contactsdgv.Rows.Add(lines.Length - 1);
+                grid.Rows.Add(lines.Length - 1);
                 string[] fields;
                 int row = 0;
                 int col = 0;
@@ -2607,8 +2605,7 @@ namespace Presentation
                     fields = item.Split('\t');
                     foreach (string f in fields)
                     {
-
-                        contactsdgv[col, row].Value = f;
+                        grid[col, row].Value = f;
                         col++;
                     }
                     row++;
@@ -2617,12 +2614,14 @@ namespace Presentation
             }
             catch (Exception)
             {
-                MessageBox.Show("pegar 2 COLUMNAS (NUMERO, NOMBRE DE CONTACTO) de EXCEL", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                MessageBox.Show("Solo se pueden pegar 2 COLUMNAS (NUMERO, NOMBRE DE CONTACTO) de EXCEL",
+                    "Observación", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
             }
+        }
 
-
-
-
+        private void pastedatabtn_Click(object sender, EventArgs e)
+        {
+            PasteDataCore(contactsdgv, maintab, contactlisttab);
         }
 
         private void Storecontaacts()
@@ -3440,38 +3439,7 @@ namespace Presentation
         }
         private void pastedata2btn_Click(object sender, EventArgs e)
         {
-            main2tab.SelectedTab = contactlist2tab;
-            try
-            {
-                contacts2dgv.Rows.Clear();
-                contacts2dgv.Refresh();
-
-                string s = Clipboard.GetText();
-
-                string[] lines = s.Replace("\n", "").Split('\r');
-
-                contacts2dgv.Rows.Add(lines.Length - 1);
-                string[] fields;
-                int row = 0;
-                int col = 0;
-
-                foreach (string item in lines)
-                {
-                    fields = item.Split('\t');
-                    foreach (string f in fields)
-                    {
-
-                        contacts2dgv[col, row].Value = f;
-                        col++;
-                    }
-                    row++;
-                    col = 0;
-                }
-            }
-            catch (Exception)
-            {
-                MessageBox.Show("Solo se pueden pegar 2 COLUMNAS (NUMERO, NOMBRE DE CONTACTO) de EXCEL", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-            }
+            PasteDataCore(contacts2dgv, main2tab, contactlist2tab);
         }
         private void save2btn_Click(object sender, EventArgs e)
         {
