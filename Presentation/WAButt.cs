@@ -752,20 +752,23 @@ namespace Presentation
         private void WABotfrm_FormClosing(object sender, FormClosingEventArgs e)
         {
 
-
-            if (MessageBox.Show("¿Estás seguro de salir?", "Confirmación", 
+            if (apptab.Visible)
+            {
+                if (MessageBox.Show("¿Estás seguro de salir?", "Confirmación",
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-            {
-                Storecontaacts();
-                Storemessages();
-                StoreSettings();
-                wa.CloseWDriver();
-                wa.CloseWDriver2();
+                {
+                    Storecontaacts();
+                    Storemessages();
+                    StoreSettings();
+                    wa.CloseWDriver();
+                    wa.CloseWDriver2();
+                }
+                else
+                {
+                    e.Cancel = true;
+                }
             }
-            else
-            {
-                e.Cancel = true;
-            }
+            
 
 
 
@@ -894,6 +897,8 @@ namespace Presentation
         {
             var ofd = new OpenFileDialog();
             ofd.Filter = "Archivos Personalizados " +
+
+
                 "(*.tif;*.pjp;*xbm;*jxl;*.svgz;*.jpg;*.jpeg;*.ico;*.tiff;*.gif;*.svg;*.jfif;*.webp;*.png;*.bmp;*.pjpeg;*.avif;*.m4v;*.mp4;*.3gpp;*.mov) | " +
                 "*.tif;*.pjp;*xbm;*jxl;*.svgz;*.jpg;*.jpeg;*.ico;*.tiff;*.gif;*.svg;*.jfif;*.webp;*.png;*.bmp;*.pjpeg;*.avif;*.m4v;*.mp4;*.3gpp;*.mov";
 
@@ -2329,7 +2334,7 @@ namespace Presentation
                                                     {
                                                         try
                                                         {
-                                                            pausetimingaction(pausetiming2, pauseToken2.Token);
+                                                            pausetimingaction(pausetiming2, pauseToken2.Token).Wait();
                                                             pausetiming2 = 0;
                                                         }
                                                         catch (Exception ex)
