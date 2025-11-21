@@ -14,7 +14,7 @@ namespace Presentation.Services
     /// </summary>
     public class LicenseService
     {
-        private const string API_BASE_URL = "http://localhost:8080/api/license/check";
+        private const string API_BASE_URL = "https://licencias.ntsoporte.com/api/license/check";
         private const string API_KEY = "afe3d05f072e9fe4ce3f243f685af78db67136e70605098709f0e7c2527e2449";
         private readonly HttpClient _httpClient;
 
