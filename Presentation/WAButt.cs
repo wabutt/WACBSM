@@ -1392,12 +1392,13 @@ namespace Presentation
                 return false;
             }
 
-            if (!wa.IfConnected(By.XPath("/html/body/div[1]/div/div/div[1]/div/div[3]/div/div[4]/header/header/div/div/h1/span")))
+            if (!wa.IfConnected(By.XPath("//div[@contenteditable='true']")))
             {
-                MessageBox.Show("Debe escanear el codigo QR para empezar a enviar",
-                    "Observación", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
+                MessageBox.Show("Debe escanear el código QR para empezar a enviar", "Observación",
+                    MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 return false;
             }
+
 
             return true;
         }/*
@@ -1557,7 +1558,7 @@ namespace Presentation
             }
 
         }
-
+        /*
         private async Task Excecutesendtask()
         {
             if (!InternetHelper.CheckForInternetConnection())
@@ -1584,12 +1585,13 @@ namespace Presentation
             }
 
             // Verifica sesión WA
-            if (!wa.IfConnected(By.XPath("//header/div[2]/div[1]/span[1]/div[2]/div[1]/span[1]")))
+            if (!wa.IfConnected(By.XPath("//div[@contenteditable='true']")))
             {
                 MessageBox.Show("Debe escanear el código QR para empezar a enviar", "Observación",
                     MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
                 return;
             }
+
 
             // ---- Setup UI ----
             ToggleUiSendingState(isSending: true);
@@ -1739,7 +1741,7 @@ namespace Presentation
                 contactsdgv.AllowUserToDeleteRows = true;
             }
         }
-
+        */
         /* ==================== Helpers ==================== */
 
         // Migrated to ValidationHelper.SafeInt()

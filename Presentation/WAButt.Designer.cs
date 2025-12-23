@@ -251,18 +251,19 @@
             // 
             // cmsupload
             // 
+            this.cmsupload.ImageScalingSize = new System.Drawing.Size(32, 32);
             this.cmsupload.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.imagenYVideoToolStripMenuItem,
             this.audioToolStripMenuItem,
             this.documentoToolStripMenuItem});
             this.cmsupload.Name = "cmsupload";
-            this.cmsupload.Size = new System.Drawing.Size(158, 70);
+            this.cmsupload.Size = new System.Drawing.Size(277, 124);
             // 
             // imagenYVideoToolStripMenuItem
             // 
             this.imagenYVideoToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("imagenYVideoToolStripMenuItem.Image")));
             this.imagenYVideoToolStripMenuItem.Name = "imagenYVideoToolStripMenuItem";
-            this.imagenYVideoToolStripMenuItem.Size = new System.Drawing.Size(157, 22);
+            this.imagenYVideoToolStripMenuItem.Size = new System.Drawing.Size(276, 40);
             this.imagenYVideoToolStripMenuItem.Text = "Imagen o Video";
             this.imagenYVideoToolStripMenuItem.Click += new System.EventHandler(this.imagenYVideoToolStripMenuItem_Click);
             // 
@@ -270,7 +271,7 @@
             // 
             this.audioToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("audioToolStripMenuItem.Image")));
             this.audioToolStripMenuItem.Name = "audioToolStripMenuItem";
-            this.audioToolStripMenuItem.Size = new System.Drawing.Size(157, 22);
+            this.audioToolStripMenuItem.Size = new System.Drawing.Size(276, 40);
             this.audioToolStripMenuItem.Text = "Audio";
             this.audioToolStripMenuItem.Click += new System.EventHandler(this.audioToolStripMenuItem_Click);
             // 
@@ -278,68 +279,70 @@
             // 
             this.documentoToolStripMenuItem.Image = ((System.Drawing.Image)(resources.GetObject("documentoToolStripMenuItem.Image")));
             this.documentoToolStripMenuItem.Name = "documentoToolStripMenuItem";
-            this.documentoToolStripMenuItem.Size = new System.Drawing.Size(157, 22);
+            this.documentoToolStripMenuItem.Size = new System.Drawing.Size(276, 40);
             this.documentoToolStripMenuItem.Text = "Documento";
             this.documentoToolStripMenuItem.Click += new System.EventHandler(this.documentoToolStripMenuItem_Click);
             // 
             // cmsgmail
             // 
+            this.cmsgmail.ImageScalingSize = new System.Drawing.Size(32, 32);
             this.cmsgmail.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.importarDatosToolStripMenuItem,
             this.expotarDatosToolStripMenuItem});
             this.cmsgmail.Name = "cmsgmail";
-            this.cmsgmail.Size = new System.Drawing.Size(154, 48);
+            this.cmsgmail.Size = new System.Drawing.Size(250, 80);
             this.cmsgmail.Opening += new System.ComponentModel.CancelEventHandler(this.cmsgmail_Opening);
             // 
             // importarDatosToolStripMenuItem
             // 
             this.importarDatosToolStripMenuItem.Name = "importarDatosToolStripMenuItem";
-            this.importarDatosToolStripMenuItem.Size = new System.Drawing.Size(153, 22);
+            this.importarDatosToolStripMenuItem.Size = new System.Drawing.Size(249, 38);
             this.importarDatosToolStripMenuItem.Text = "Importar Datos";
             this.importarDatosToolStripMenuItem.Click += new System.EventHandler(this.importarDatosToolStripMenuItem_Click);
             // 
             // expotarDatosToolStripMenuItem
             // 
             this.expotarDatosToolStripMenuItem.Name = "expotarDatosToolStripMenuItem";
-            this.expotarDatosToolStripMenuItem.Size = new System.Drawing.Size(153, 22);
+            this.expotarDatosToolStripMenuItem.Size = new System.Drawing.Size(249, 38);
             this.expotarDatosToolStripMenuItem.Text = "Expotar Datos";
             this.expotarDatosToolStripMenuItem.Click += new System.EventHandler(this.expotarDatosToolStripMenuItem_Click);
             // 
             // cmspause
             // 
+            this.cmspause.ImageScalingSize = new System.Drawing.Size(32, 32);
             this.cmspause.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.minutosToolStripMenuItem,
             this.minutosToolStripMenuItem1,
             this.horaToolStripMenuItem,
             this.horaToolStripMenuItem1});
             this.cmspause.Name = "cmspause";
-            this.cmspause.Size = new System.Drawing.Size(134, 92);
+            this.cmspause.Size = new System.Drawing.Size(212, 156);
             // 
             // minutosToolStripMenuItem
             // 
             this.minutosToolStripMenuItem.Name = "minutosToolStripMenuItem";
-            this.minutosToolStripMenuItem.Size = new System.Drawing.Size(133, 22);
+            this.minutosToolStripMenuItem.Size = new System.Drawing.Size(211, 38);
             this.minutosToolStripMenuItem.Text = "5 Minutos";
             this.minutosToolStripMenuItem.Click += new System.EventHandler(this.minutosToolStripMenuItem_Click);
             // 
             // minutosToolStripMenuItem1
             // 
             this.minutosToolStripMenuItem1.Name = "minutosToolStripMenuItem1";
-            this.minutosToolStripMenuItem1.Size = new System.Drawing.Size(133, 22);
+            this.minutosToolStripMenuItem1.Size = new System.Drawing.Size(211, 38);
             this.minutosToolStripMenuItem1.Text = "30 Minutos";
             this.minutosToolStripMenuItem1.Click += new System.EventHandler(this.minutosToolStripMenuItem1_Click);
             // 
             // horaToolStripMenuItem
             // 
             this.horaToolStripMenuItem.Name = "horaToolStripMenuItem";
-            this.horaToolStripMenuItem.Size = new System.Drawing.Size(133, 22);
+            this.horaToolStripMenuItem.Size = new System.Drawing.Size(211, 38);
             this.horaToolStripMenuItem.Text = "1 Hora";
             this.horaToolStripMenuItem.Click += new System.EventHandler(this.horaToolStripMenuItem_Click);
             // 
             // horaToolStripMenuItem1
             // 
             this.horaToolStripMenuItem1.Name = "horaToolStripMenuItem1";
-            this.horaToolStripMenuItem1.Size = new System.Drawing.Size(133, 22);
+            this.horaToolStripMenuItem1.Size = new System.Drawing.Size(211, 38);
             this.horaToolStripMenuItem1.Text = "2 Hora";
             this.horaToolStripMenuItem1.Click += new System.EventHandler(this.horaToolStripMenuItem1_Click);
             // 
@@ -349,66 +352,69 @@
             // 
             // cmsgmail2
             // 
+            this.cmsgmail2.ImageScalingSize = new System.Drawing.Size(32, 32);
             this.cmsgmail2.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.importarDatosToolStripMenuItem1,
             this.exportarDatosToolStripMenuItem});
             this.cmsgmail2.Name = "cmsgmail2";
-            this.cmsgmail2.Size = new System.Drawing.Size(154, 48);
+            this.cmsgmail2.Size = new System.Drawing.Size(250, 80);
             // 
             // importarDatosToolStripMenuItem1
             // 
             this.importarDatosToolStripMenuItem1.Name = "importarDatosToolStripMenuItem1";
-            this.importarDatosToolStripMenuItem1.Size = new System.Drawing.Size(153, 22);
+            this.importarDatosToolStripMenuItem1.Size = new System.Drawing.Size(249, 38);
             this.importarDatosToolStripMenuItem1.Text = "Importar Datos";
             this.importarDatosToolStripMenuItem1.Click += new System.EventHandler(this.importarDatosToolStripMenuItem1_Click);
             // 
             // exportarDatosToolStripMenuItem
             // 
             this.exportarDatosToolStripMenuItem.Name = "exportarDatosToolStripMenuItem";
-            this.exportarDatosToolStripMenuItem.Size = new System.Drawing.Size(153, 22);
+            this.exportarDatosToolStripMenuItem.Size = new System.Drawing.Size(249, 38);
             this.exportarDatosToolStripMenuItem.Text = "Exportar Datos";
             this.exportarDatosToolStripMenuItem.Click += new System.EventHandler(this.exportarDatosToolStripMenuItem_Click);
             // 
             // cmspause2
             // 
+            this.cmspause2.ImageScalingSize = new System.Drawing.Size(32, 32);
             this.cmspause2.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.toolStripMenuItem1,
             this.toolStripMenuItem2,
             this.toolStripMenuItem3,
             this.toolStripMenuItem4});
             this.cmspause2.Name = "cmspause";
-            this.cmspause2.Size = new System.Drawing.Size(134, 92);
+            this.cmspause2.Size = new System.Drawing.Size(212, 156);
             // 
             // toolStripMenuItem1
             // 
             this.toolStripMenuItem1.Name = "toolStripMenuItem1";
-            this.toolStripMenuItem1.Size = new System.Drawing.Size(133, 22);
+            this.toolStripMenuItem1.Size = new System.Drawing.Size(211, 38);
             this.toolStripMenuItem1.Text = "5 Minutos";
             this.toolStripMenuItem1.Click += new System.EventHandler(this.toolStripMenuItem1_Click);
             // 
             // toolStripMenuItem2
             // 
             this.toolStripMenuItem2.Name = "toolStripMenuItem2";
-            this.toolStripMenuItem2.Size = new System.Drawing.Size(133, 22);
+            this.toolStripMenuItem2.Size = new System.Drawing.Size(211, 38);
             this.toolStripMenuItem2.Text = "30 Minutos";
             this.toolStripMenuItem2.Click += new System.EventHandler(this.toolStripMenuItem2_Click);
             // 
             // toolStripMenuItem3
             // 
             this.toolStripMenuItem3.Name = "toolStripMenuItem3";
-            this.toolStripMenuItem3.Size = new System.Drawing.Size(133, 22);
+            this.toolStripMenuItem3.Size = new System.Drawing.Size(211, 38);
             this.toolStripMenuItem3.Text = "1 Hora";
             this.toolStripMenuItem3.Click += new System.EventHandler(this.toolStripMenuItem3_Click);
             // 
             // toolStripMenuItem4
             // 
             this.toolStripMenuItem4.Name = "toolStripMenuItem4";
-            this.toolStripMenuItem4.Size = new System.Drawing.Size(133, 22);
+            this.toolStripMenuItem4.Size = new System.Drawing.Size(211, 38);
             this.toolStripMenuItem4.Text = "2 Hora";
             this.toolStripMenuItem4.Click += new System.EventHandler(this.toolStripMenuItem4_Click);
             // 
             // copycms
             // 
+            this.copycms.ImageScalingSize = new System.Drawing.Size(32, 32);
             this.copycms.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.copiarToolStripMenuItem,
             this.pegarToolStripMenuItem,
@@ -416,45 +422,46 @@
             this.eliminarFilasVaciasToolStripMenuItem,
             this.limpiarToolStripMenuItem});
             this.copycms.Name = "copyrowcms";
-            this.copycms.Size = new System.Drawing.Size(180, 114);
+            this.copycms.Size = new System.Drawing.Size(301, 194);
             // 
             // copiarToolStripMenuItem
             // 
             this.copiarToolStripMenuItem.Name = "copiarToolStripMenuItem";
-            this.copiarToolStripMenuItem.Size = new System.Drawing.Size(179, 22);
+            this.copiarToolStripMenuItem.Size = new System.Drawing.Size(300, 38);
             this.copiarToolStripMenuItem.Text = "Copiar";
             this.copiarToolStripMenuItem.Click += new System.EventHandler(this.copiarToolStripMenuItem_Click);
             // 
             // pegarToolStripMenuItem
             // 
             this.pegarToolStripMenuItem.Name = "pegarToolStripMenuItem";
-            this.pegarToolStripMenuItem.Size = new System.Drawing.Size(179, 22);
+            this.pegarToolStripMenuItem.Size = new System.Drawing.Size(300, 38);
             this.pegarToolStripMenuItem.Text = "Pegar";
             this.pegarToolStripMenuItem.Click += new System.EventHandler(this.pegarToolStripMenuItem_Click);
             // 
             // eliminarDuplicadosToolStripMenuItem
             // 
             this.eliminarDuplicadosToolStripMenuItem.Name = "eliminarDuplicadosToolStripMenuItem";
-            this.eliminarDuplicadosToolStripMenuItem.Size = new System.Drawing.Size(179, 22);
+            this.eliminarDuplicadosToolStripMenuItem.Size = new System.Drawing.Size(300, 38);
             this.eliminarDuplicadosToolStripMenuItem.Text = "Eliminar Duplicados";
             this.eliminarDuplicadosToolStripMenuItem.Click += new System.EventHandler(this.eliminarDuplicadosToolStripMenuItem_Click);
             // 
             // eliminarFilasVaciasToolStripMenuItem
             // 
             this.eliminarFilasVaciasToolStripMenuItem.Name = "eliminarFilasVaciasToolStripMenuItem";
-            this.eliminarFilasVaciasToolStripMenuItem.Size = new System.Drawing.Size(179, 22);
+            this.eliminarFilasVaciasToolStripMenuItem.Size = new System.Drawing.Size(300, 38);
             this.eliminarFilasVaciasToolStripMenuItem.Text = "Eliminar Filas Vacias";
             this.eliminarFilasVaciasToolStripMenuItem.Click += new System.EventHandler(this.eliminarFilasVaciasToolStripMenuItem_Click);
             // 
             // limpiarToolStripMenuItem
             // 
             this.limpiarToolStripMenuItem.Name = "limpiarToolStripMenuItem";
-            this.limpiarToolStripMenuItem.Size = new System.Drawing.Size(179, 22);
+            this.limpiarToolStripMenuItem.Size = new System.Drawing.Size(300, 38);
             this.limpiarToolStripMenuItem.Text = "Limpiar";
             this.limpiarToolStripMenuItem.Click += new System.EventHandler(this.limpiarToolStripMenuItem_Click);
             // 
             // copy2cms
             // 
+            this.copy2cms.ImageScalingSize = new System.Drawing.Size(32, 32);
             this.copy2cms.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.toolStripMenuItem5,
             this.toolStripMenuItem6,
@@ -462,40 +469,40 @@
             this.toolStripMenuItem8,
             this.toolStripMenuItem9});
             this.copy2cms.Name = "copyrowcms";
-            this.copy2cms.Size = new System.Drawing.Size(180, 114);
+            this.copy2cms.Size = new System.Drawing.Size(301, 194);
             // 
             // toolStripMenuItem5
             // 
             this.toolStripMenuItem5.Name = "toolStripMenuItem5";
-            this.toolStripMenuItem5.Size = new System.Drawing.Size(179, 22);
+            this.toolStripMenuItem5.Size = new System.Drawing.Size(300, 38);
             this.toolStripMenuItem5.Text = "Copiar";
             this.toolStripMenuItem5.Click += new System.EventHandler(this.toolStripMenuItem5_Click);
             // 
             // toolStripMenuItem6
             // 
             this.toolStripMenuItem6.Name = "toolStripMenuItem6";
-            this.toolStripMenuItem6.Size = new System.Drawing.Size(179, 22);
+            this.toolStripMenuItem6.Size = new System.Drawing.Size(300, 38);
             this.toolStripMenuItem6.Text = "Pegar";
             this.toolStripMenuItem6.Click += new System.EventHandler(this.toolStripMenuItem6_Click);
             // 
             // toolStripMenuItem7
             // 
             this.toolStripMenuItem7.Name = "toolStripMenuItem7";
-            this.toolStripMenuItem7.Size = new System.Drawing.Size(179, 22);
+            this.toolStripMenuItem7.Size = new System.Drawing.Size(300, 38);
             this.toolStripMenuItem7.Text = "Eliminar Duplicados";
             this.toolStripMenuItem7.Click += new System.EventHandler(this.toolStripMenuItem7_Click);
             // 
             // toolStripMenuItem8
             // 
             this.toolStripMenuItem8.Name = "toolStripMenuItem8";
-            this.toolStripMenuItem8.Size = new System.Drawing.Size(179, 22);
+            this.toolStripMenuItem8.Size = new System.Drawing.Size(300, 38);
             this.toolStripMenuItem8.Text = "Eliminar Filas Vacias";
             this.toolStripMenuItem8.Click += new System.EventHandler(this.toolStripMenuItem8_Click);
             // 
             // toolStripMenuItem9
             // 
             this.toolStripMenuItem9.Name = "toolStripMenuItem9";
-            this.toolStripMenuItem9.Size = new System.Drawing.Size(179, 22);
+            this.toolStripMenuItem9.Size = new System.Drawing.Size(300, 38);
             this.toolStripMenuItem9.Text = "Limpiar";
             this.toolStripMenuItem9.Click += new System.EventHandler(this.toolStripMenuItem9_Click);
             // 
@@ -529,10 +536,10 @@
             this.wabottab.Controls.Add(this.severalpausetxt);
             this.wabottab.Controls.Add(this.severalpauselbl);
             this.wabottab.Controls.Add(this.maintab);
-            this.wabottab.Location = new System.Drawing.Point(4, 22);
+            this.wabottab.Location = new System.Drawing.Point(8, 41);
             this.wabottab.Name = "wabottab";
             this.wabottab.Padding = new System.Windows.Forms.Padding(3);
-            this.wabottab.Size = new System.Drawing.Size(962, 644);
+            this.wabottab.Size = new System.Drawing.Size(954, 621);
             this.wabottab.TabIndex = 1;
             this.wabottab.Text = " wabottab";
             // 
@@ -544,7 +551,7 @@
             this.label12.ForeColor = System.Drawing.Color.Black;
             this.label12.Location = new System.Drawing.Point(483, 62);
             this.label12.Name = "label12";
-            this.label12.Size = new System.Drawing.Size(146, 15);
+            this.label12.Size = new System.Drawing.Size(291, 32);
             this.label12.TabIndex = 39;
             this.label12.Text = "Exp. Imp. Contactos Gmail";
             // 
@@ -556,7 +563,7 @@
             this.extractlbl.ForeColor = System.Drawing.Color.Black;
             this.extractlbl.Location = new System.Drawing.Point(641, 62);
             this.extractlbl.Name = "extractlbl";
-            this.extractlbl.Size = new System.Drawing.Size(109, 15);
+            this.extractlbl.Size = new System.Drawing.Size(221, 32);
             this.extractlbl.TabIndex = 38;
             this.extractlbl.Text = "Extraer num. Grupo";
             // 
@@ -568,7 +575,7 @@
             this.label11.ForeColor = System.Drawing.Color.Black;
             this.label11.Location = new System.Drawing.Point(421, 62);
             this.label11.Name = "label11";
-            this.label11.Size = new System.Drawing.Size(42, 15);
+            this.label11.Size = new System.Drawing.Size(84, 32);
             this.label11.TabIndex = 38;
             this.label11.Text = "Emojis";
             // 
@@ -580,7 +587,7 @@
             this.label10.ForeColor = System.Drawing.Color.Black;
             this.label10.Location = new System.Drawing.Point(272, 62);
             this.label10.Name = "label10";
-            this.label10.Size = new System.Drawing.Size(129, 15);
+            this.label10.Size = new System.Drawing.Size(258, 32);
             this.label10.TabIndex = 37;
             this.label10.Text = "Importar Contactos .txt";
             // 
@@ -592,7 +599,7 @@
             this.label9.ForeColor = System.Drawing.Color.Black;
             this.label9.Location = new System.Drawing.Point(133, 62);
             this.label9.Name = "label9";
-            this.label9.Size = new System.Drawing.Size(126, 15);
+            this.label9.Size = new System.Drawing.Size(254, 32);
             this.label9.TabIndex = 36;
             this.label9.Text = "Exportar Contactos .txt";
             // 
@@ -604,7 +611,7 @@
             this.label8.ForeColor = System.Drawing.Color.Black;
             this.label8.Location = new System.Drawing.Point(21, 62);
             this.label8.Name = "label8";
-            this.label8.Size = new System.Drawing.Size(99, 15);
+            this.label8.Size = new System.Drawing.Size(202, 32);
             this.label8.TabIndex = 35;
             this.label8.Text = "Pegar Datos Excel";
             // 
@@ -740,7 +747,7 @@
             this.severalpausetxt.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.severalpausetxt.Location = new System.Drawing.Point(803, 20);
             this.severalpausetxt.Name = "severalpausetxt";
-            this.severalpausetxt.Size = new System.Drawing.Size(56, 25);
+            this.severalpausetxt.Size = new System.Drawing.Size(56, 42);
             this.severalpausetxt.TabIndex = 24;
             this.severalpausetxt.Text = "300";
             this.severalpausetxt.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.severalpausetxt_KeyPress);
@@ -752,7 +759,7 @@
             this.severalpauselbl.ForeColor = System.Drawing.Color.Black;
             this.severalpauselbl.Location = new System.Drawing.Point(765, 62);
             this.severalpauselbl.Name = "severalpauselbl";
-            this.severalpauselbl.Size = new System.Drawing.Size(130, 15);
+            this.severalpauselbl.Size = new System.Drawing.Size(264, 32);
             this.severalpauselbl.TabIndex = 23;
             this.severalpauselbl.Text = "# Mensajes para Pausar";
             // 
@@ -780,10 +787,10 @@
             // 
             this.contactlisttab.BackColor = System.Drawing.Color.White;
             this.contactlisttab.Controls.Add(this.contactsdgv);
-            this.contactlisttab.Location = new System.Drawing.Point(4, 20);
+            this.contactlisttab.Location = new System.Drawing.Point(8, 24);
             this.contactlisttab.Name = "contactlisttab";
             this.contactlisttab.Padding = new System.Windows.Forms.Padding(3);
-            this.contactlisttab.Size = new System.Drawing.Size(919, 514);
+            this.contactlisttab.Size = new System.Drawing.Size(911, 506);
             this.contactlisttab.TabIndex = 0;
             this.contactlisttab.Text = "Contactos WhatsApp";
             // 
@@ -819,7 +826,7 @@
             dataGridViewCellStyle2.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
             this.contactsdgv.RowsDefaultCellStyle = dataGridViewCellStyle2;
             this.contactsdgv.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.contactsdgv.Size = new System.Drawing.Size(919, 514);
+            this.contactsdgv.Size = new System.Drawing.Size(911, 506);
             this.contactsdgv.TabIndex = 1;
             this.contactsdgv.MouseClick += new System.Windows.Forms.MouseEventHandler(this.contactsdgv_MouseClick);
             // 
@@ -828,6 +835,7 @@
             this.numbercol.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
             this.numbercol.Frozen = true;
             this.numbercol.HeaderText = "Numero o Grupo";
+            this.numbercol.MinimumWidth = 10;
             this.numbercol.Name = "numbercol";
             this.numbercol.Width = 200;
             // 
@@ -836,6 +844,7 @@
             this.namecol.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
             this.namecol.Frozen = true;
             this.namecol.HeaderText = "Nombre";
+            this.namecol.MinimumWidth = 10;
             this.namecol.Name = "namecol";
             this.namecol.Width = 350;
             // 
@@ -844,8 +853,10 @@
             this.statecol.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
             this.statecol.Frozen = true;
             this.statecol.HeaderText = "Enviado(S/N)";
+            this.statecol.MinimumWidth = 10;
             this.statecol.Name = "statecol";
             this.statecol.ReadOnly = true;
+            this.statecol.Width = 200;
             // 
             // messagewatab
             // 
@@ -875,10 +886,10 @@
             this.messagewatab.Controls.Add(this.sendonlyattachcb);
             this.messagewatab.Controls.Add(this.preventblockcb);
             this.messagewatab.Controls.Add(this.eachmessagetimingcb);
-            this.messagewatab.Location = new System.Drawing.Point(4, 20);
+            this.messagewatab.Location = new System.Drawing.Point(8, 24);
             this.messagewatab.Name = "messagewatab";
             this.messagewatab.Padding = new System.Windows.Forms.Padding(3);
-            this.messagewatab.Size = new System.Drawing.Size(919, 514);
+            this.messagewatab.Size = new System.Drawing.Size(911, 506);
             this.messagewatab.TabIndex = 1;
             this.messagewatab.Text = "Mensajes WhatsApp";
             // 
@@ -886,7 +897,7 @@
             // 
             this.qqqqtxt.Location = new System.Drawing.Point(246, 94);
             this.qqqqtxt.Name = "qqqqtxt";
-            this.qqqqtxt.Size = new System.Drawing.Size(100, 23);
+            this.qqqqtxt.Size = new System.Drawing.Size(100, 39);
             this.qqqqtxt.TabIndex = 44;
             // 
             // selectgmbtn
@@ -925,7 +936,7 @@
             this.manymessagescb.ForeColor = System.Drawing.Color.Black;
             this.manymessagescb.Location = new System.Drawing.Point(17, 119);
             this.manymessagescb.Name = "manymessagescb";
-            this.manymessagescb.Size = new System.Drawing.Size(241, 21);
+            this.manymessagescb.Size = new System.Drawing.Size(463, 40);
             this.manymessagescb.TabIndex = 34;
             this.manymessagescb.Text = "Enviar Varios textos en un solo envio";
             this.manymessagescb.UseVisualStyleBackColor = false;
@@ -1011,7 +1022,7 @@
             this.label17.ForeColor = System.Drawing.Color.Black;
             this.label17.Location = new System.Drawing.Point(20, 5);
             this.label17.Name = "label17";
-            this.label17.Size = new System.Drawing.Size(86, 17);
+            this.label17.Size = new System.Drawing.Size(164, 36);
             this.label17.TabIndex = 38;
             this.label17.Text = "Total a Enviar";
             // 
@@ -1030,7 +1041,7 @@
             this.label14.ForeColor = System.Drawing.Color.Black;
             this.label14.Location = new System.Drawing.Point(289, 5);
             this.label14.Name = "label14";
-            this.label14.Size = new System.Drawing.Size(60, 17);
+            this.label14.Size = new System.Drawing.Size(115, 36);
             this.label14.TabIndex = 35;
             this.label14.Text = "Enviados";
             // 
@@ -1057,7 +1068,7 @@
             this.label13.ForeColor = System.Drawing.Color.Black;
             this.label13.Location = new System.Drawing.Point(150, 5);
             this.label13.Name = "label13";
-            this.label13.Size = new System.Drawing.Size(82, 17);
+            this.label13.Size = new System.Drawing.Size(156, 36);
             this.label13.TabIndex = 0;
             this.label13.Text = "No Enviados";
             // 
@@ -1105,7 +1116,7 @@
             this.senddatetimecb.ForeColor = System.Drawing.Color.Black;
             this.senddatetimecb.Location = new System.Drawing.Point(17, 96);
             this.senddatetimecb.Name = "senddatetimecb";
-            this.senddatetimecb.Size = new System.Drawing.Size(142, 21);
+            this.senddatetimecb.Size = new System.Drawing.Size(271, 40);
             this.senddatetimecb.TabIndex = 9;
             this.senddatetimecb.Text = "Enviar Fecha y Hora";
             this.senddatetimecb.UseVisualStyleBackColor = false;
@@ -1116,7 +1127,7 @@
             this.label4.ForeColor = System.Drawing.Color.White;
             this.label4.Location = new System.Drawing.Point(14, 352);
             this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(54, 15);
+            this.label4.Size = new System.Drawing.Size(109, 32);
             this.label4.TabIndex = 27;
             this.label4.Text = "Progreso";
             // 
@@ -1128,7 +1139,7 @@
             this.sendfullnamecb.ForeColor = System.Drawing.Color.Black;
             this.sendfullnamecb.Location = new System.Drawing.Point(17, 25);
             this.sendfullnamecb.Name = "sendfullnamecb";
-            this.sendfullnamecb.Size = new System.Drawing.Size(176, 21);
+            this.sendfullnamecb.Size = new System.Drawing.Size(335, 40);
             this.sendfullnamecb.TabIndex = 0;
             this.sendfullnamecb.Text = "Enviar Nombre Completo";
             this.sendfullnamecb.UseVisualStyleBackColor = false;
@@ -1155,7 +1166,7 @@
             this.label3.ForeColor = System.Drawing.Color.Black;
             this.label3.Location = new System.Drawing.Point(14, 177);
             this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(53, 17);
+            this.label3.Size = new System.Drawing.Size(107, 36);
             this.label3.TabIndex = 6;
             this.label3.Text = "Adjunto";
             // 
@@ -1182,7 +1193,7 @@
             this.loadmessagelbl.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(240)))), ((int)(((byte)(38)))), ((int)(((byte)(99)))));
             this.loadmessagelbl.Location = new System.Drawing.Point(15, 395);
             this.loadmessagelbl.Name = "loadmessagelbl";
-            this.loadmessagelbl.Size = new System.Drawing.Size(136, 17);
+            this.loadmessagelbl.Size = new System.Drawing.Size(270, 36);
             this.loadmessagelbl.TabIndex = 22;
             this.loadmessagelbl.Text = "Estado: No Conectado";
             // 
@@ -1193,7 +1204,7 @@
             this.label2.ForeColor = System.Drawing.Color.Black;
             this.label2.Location = new System.Drawing.Point(299, 53);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(66, 17);
+            this.label2.Size = new System.Drawing.Size(129, 36);
             this.label2.TabIndex = 8;
             this.label2.Text = "Segundos";
             // 
@@ -1203,7 +1214,7 @@
             this.filenametxt.Font = new System.Drawing.Font("Segoe UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.filenametxt.Location = new System.Drawing.Point(17, 198);
             this.filenametxt.Name = "filenametxt";
-            this.filenametxt.Size = new System.Drawing.Size(296, 23);
+            this.filenametxt.Size = new System.Drawing.Size(296, 39);
             this.filenametxt.TabIndex = 7;
             // 
             // mtab
@@ -1234,10 +1245,10 @@
             this.m1tab.BackColor = System.Drawing.Color.White;
             this.m1tab.Controls.Add(this.m1txt);
             this.m1tab.Controls.Add(this.label16);
-            this.m1tab.Location = new System.Drawing.Point(4, 20);
+            this.m1tab.Location = new System.Drawing.Point(8, 24);
             this.m1tab.Name = "m1tab";
             this.m1tab.Padding = new System.Windows.Forms.Padding(3);
-            this.m1tab.Size = new System.Drawing.Size(471, 468);
+            this.m1tab.Size = new System.Drawing.Size(463, 460);
             this.m1tab.TabIndex = 0;
             this.m1tab.Text = "Mensaje 1";
             // 
@@ -1261,7 +1272,7 @@
             this.label16.ForeColor = System.Drawing.Color.Black;
             this.label16.Location = new System.Drawing.Point(3, 6);
             this.label16.Name = "label16";
-            this.label16.Size = new System.Drawing.Size(69, 18);
+            this.label16.Size = new System.Drawing.Size(141, 37);
             this.label16.TabIndex = 4;
             this.label16.Text = "Contenido";
             // 
@@ -1270,10 +1281,10 @@
             this.m2tab.BackColor = System.Drawing.Color.White;
             this.m2tab.Controls.Add(this.label20);
             this.m2tab.Controls.Add(this.m2txt);
-            this.m2tab.Location = new System.Drawing.Point(4, 20);
+            this.m2tab.Location = new System.Drawing.Point(8, 24);
             this.m2tab.Name = "m2tab";
             this.m2tab.Padding = new System.Windows.Forms.Padding(3);
-            this.m2tab.Size = new System.Drawing.Size(471, 468);
+            this.m2tab.Size = new System.Drawing.Size(463, 460);
             this.m2tab.TabIndex = 1;
             this.m2tab.Text = "Mensaje 2";
             // 
@@ -1284,7 +1295,7 @@
             this.label20.ForeColor = System.Drawing.Color.Black;
             this.label20.Location = new System.Drawing.Point(3, 6);
             this.label20.Name = "label20";
-            this.label20.Size = new System.Drawing.Size(69, 18);
+            this.label20.Size = new System.Drawing.Size(141, 37);
             this.label20.TabIndex = 10;
             this.label20.Text = "Contenido";
             // 
@@ -1306,9 +1317,9 @@
             this.m3tab.BackColor = System.Drawing.Color.White;
             this.m3tab.Controls.Add(this.label23);
             this.m3tab.Controls.Add(this.m3txt);
-            this.m3tab.Location = new System.Drawing.Point(4, 20);
+            this.m3tab.Location = new System.Drawing.Point(8, 24);
             this.m3tab.Name = "m3tab";
-            this.m3tab.Size = new System.Drawing.Size(471, 468);
+            this.m3tab.Size = new System.Drawing.Size(463, 460);
             this.m3tab.TabIndex = 2;
             this.m3tab.Text = "Mensaje 3";
             // 
@@ -1319,7 +1330,7 @@
             this.label23.ForeColor = System.Drawing.Color.Black;
             this.label23.Location = new System.Drawing.Point(3, 6);
             this.label23.Name = "label23";
-            this.label23.Size = new System.Drawing.Size(69, 18);
+            this.label23.Size = new System.Drawing.Size(141, 37);
             this.label23.TabIndex = 10;
             this.label23.Text = "Contenido";
             // 
@@ -1341,9 +1352,9 @@
             this.m4tab.BackColor = System.Drawing.Color.White;
             this.m4tab.Controls.Add(this.label26);
             this.m4tab.Controls.Add(this.m4txt);
-            this.m4tab.Location = new System.Drawing.Point(4, 20);
+            this.m4tab.Location = new System.Drawing.Point(8, 24);
             this.m4tab.Name = "m4tab";
-            this.m4tab.Size = new System.Drawing.Size(471, 468);
+            this.m4tab.Size = new System.Drawing.Size(463, 460);
             this.m4tab.TabIndex = 3;
             this.m4tab.Text = "Mensaje 4";
             // 
@@ -1354,7 +1365,7 @@
             this.label26.ForeColor = System.Drawing.Color.Black;
             this.label26.Location = new System.Drawing.Point(3, 6);
             this.label26.Name = "label26";
-            this.label26.Size = new System.Drawing.Size(69, 18);
+            this.label26.Size = new System.Drawing.Size(141, 37);
             this.label26.TabIndex = 10;
             this.label26.Text = "Contenido";
             // 
@@ -1376,9 +1387,9 @@
             this.m5tab.BackColor = System.Drawing.Color.White;
             this.m5tab.Controls.Add(this.label29);
             this.m5tab.Controls.Add(this.m5txt);
-            this.m5tab.Location = new System.Drawing.Point(4, 20);
+            this.m5tab.Location = new System.Drawing.Point(8, 24);
             this.m5tab.Name = "m5tab";
-            this.m5tab.Size = new System.Drawing.Size(471, 468);
+            this.m5tab.Size = new System.Drawing.Size(463, 460);
             this.m5tab.TabIndex = 4;
             this.m5tab.Text = "Mensaje 5";
             // 
@@ -1389,7 +1400,7 @@
             this.label29.ForeColor = System.Drawing.Color.Black;
             this.label29.Location = new System.Drawing.Point(3, 6);
             this.label29.Name = "label29";
-            this.label29.Size = new System.Drawing.Size(69, 18);
+            this.label29.Size = new System.Drawing.Size(141, 37);
             this.label29.TabIndex = 10;
             this.label29.Text = "Contenido";
             // 
@@ -1422,7 +1433,7 @@
             this.eachmessagetimingtxt.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.eachmessagetimingtxt.Location = new System.Drawing.Point(246, 49);
             this.eachmessagetimingtxt.Name = "eachmessagetimingtxt";
-            this.eachmessagetimingtxt.Size = new System.Drawing.Size(44, 25);
+            this.eachmessagetimingtxt.Size = new System.Drawing.Size(44, 42);
             this.eachmessagetimingtxt.TabIndex = 7;
             this.eachmessagetimingtxt.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.eachmessagetimingtxt_KeyPress);
             // 
@@ -1445,7 +1456,7 @@
             this.sendonlyattachcb.ForeColor = System.Drawing.Color.Black;
             this.sendonlyattachcb.Location = new System.Drawing.Point(246, 25);
             this.sendonlyattachcb.Name = "sendonlyattachcb";
-            this.sendonlyattachcb.Size = new System.Drawing.Size(140, 21);
+            this.sendonlyattachcb.Size = new System.Drawing.Size(268, 40);
             this.sendonlyattachcb.TabIndex = 1;
             this.sendonlyattachcb.Text = "Enviar solo Adjunto";
             this.sendonlyattachcb.UseVisualStyleBackColor = true;
@@ -1458,7 +1469,7 @@
             this.preventblockcb.ForeColor = System.Drawing.Color.Black;
             this.preventblockcb.Location = new System.Drawing.Point(17, 73);
             this.preventblockcb.Name = "preventblockcb";
-            this.preventblockcb.Size = new System.Drawing.Size(173, 21);
+            this.preventblockcb.Size = new System.Drawing.Size(332, 40);
             this.preventblockcb.TabIndex = 4;
             this.preventblockcb.Text = "Evitar bloqueo de cuenta";
             this.preventblockcb.UseVisualStyleBackColor = false;
@@ -1471,7 +1482,7 @@
             this.eachmessagetimingcb.ForeColor = System.Drawing.Color.Black;
             this.eachmessagetimingcb.Location = new System.Drawing.Point(17, 49);
             this.eachmessagetimingcb.Name = "eachmessagetimingcb";
-            this.eachmessagetimingcb.Size = new System.Drawing.Size(201, 21);
+            this.eachmessagetimingcb.Size = new System.Drawing.Size(384, 40);
             this.eachmessagetimingcb.TabIndex = 3;
             this.eachmessagetimingcb.Text = "Hacer pausa entre cada envio";
             this.eachmessagetimingcb.UseVisualStyleBackColor = false;
@@ -1491,9 +1502,9 @@
             this.smsbottab.Controls.Add(this.severalpause2txt);
             this.smsbottab.Controls.Add(this.label33);
             this.smsbottab.Controls.Add(this.main2tab);
-            this.smsbottab.Location = new System.Drawing.Point(4, 22);
+            this.smsbottab.Location = new System.Drawing.Point(8, 41);
             this.smsbottab.Name = "smsbottab";
-            this.smsbottab.Size = new System.Drawing.Size(962, 644);
+            this.smsbottab.Size = new System.Drawing.Size(954, 621);
             this.smsbottab.TabIndex = 2;
             this.smsbottab.Text = "smsbottab";
             this.smsbottab.UseVisualStyleBackColor = true;
@@ -1506,7 +1517,7 @@
             this.label1.ForeColor = System.Drawing.Color.Black;
             this.label1.Location = new System.Drawing.Point(456, 62);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(163, 16);
+            this.label1.Size = new System.Drawing.Size(316, 30);
             this.label1.TabIndex = 57;
             this.label1.Text = "Exp. Imp. Contactos Gmail";
             // 
@@ -1518,7 +1529,7 @@
             this.label6.ForeColor = System.Drawing.Color.Black;
             this.label6.Location = new System.Drawing.Point(403, 62);
             this.label6.Name = "label6";
-            this.label6.Size = new System.Drawing.Size(49, 16);
+            this.label6.Size = new System.Drawing.Size(91, 30);
             this.label6.TabIndex = 56;
             this.label6.Text = "Emojis";
             // 
@@ -1530,7 +1541,7 @@
             this.label7.ForeColor = System.Drawing.Color.Black;
             this.label7.Location = new System.Drawing.Point(265, 62);
             this.label7.Name = "label7";
-            this.label7.Size = new System.Drawing.Size(138, 16);
+            this.label7.Size = new System.Drawing.Size(270, 30);
             this.label7.TabIndex = 54;
             this.label7.Text = "Importar Contactos .txt";
             // 
@@ -1542,7 +1553,7 @@
             this.label31.ForeColor = System.Drawing.Color.Black;
             this.label31.Location = new System.Drawing.Point(130, 62);
             this.label31.Name = "label31";
-            this.label31.Size = new System.Drawing.Size(139, 16);
+            this.label31.Size = new System.Drawing.Size(271, 30);
             this.label31.TabIndex = 53;
             this.label31.Text = "Exportar Contactos .txt";
             // 
@@ -1554,7 +1565,7 @@
             this.label32.ForeColor = System.Drawing.Color.Black;
             this.label32.Location = new System.Drawing.Point(21, 62);
             this.label32.Name = "label32";
-            this.label32.Size = new System.Drawing.Size(120, 16);
+            this.label32.Size = new System.Drawing.Size(224, 30);
             this.label32.TabIndex = 52;
             this.label32.Text = "Pegar Datos Excel";
             // 
@@ -1669,7 +1680,7 @@
             this.severalpause2txt.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.severalpause2txt.Location = new System.Drawing.Point(640, 20);
             this.severalpause2txt.Name = "severalpause2txt";
-            this.severalpause2txt.Size = new System.Drawing.Size(56, 23);
+            this.severalpause2txt.Size = new System.Drawing.Size(56, 38);
             this.severalpause2txt.TabIndex = 45;
             this.severalpause2txt.Text = "300";
             // 
@@ -1680,7 +1691,7 @@
             this.label33.ForeColor = System.Drawing.Color.Black;
             this.label33.Location = new System.Drawing.Point(605, 62);
             this.label33.Name = "label33";
-            this.label33.Size = new System.Drawing.Size(154, 16);
+            this.label33.Size = new System.Drawing.Size(290, 30);
             this.label33.TabIndex = 44;
             this.label33.Text = "# Mensajes para Pausar";
             // 
@@ -1708,9 +1719,9 @@
             // 
             this.contactlist2tab.BackColor = System.Drawing.Color.White;
             this.contactlist2tab.Controls.Add(this.contacts2dgv);
-            this.contactlist2tab.Location = new System.Drawing.Point(4, 20);
+            this.contactlist2tab.Location = new System.Drawing.Point(8, 24);
             this.contactlist2tab.Name = "contactlist2tab";
-            this.contactlist2tab.Size = new System.Drawing.Size(919, 514);
+            this.contactlist2tab.Size = new System.Drawing.Size(911, 506);
             this.contactlist2tab.TabIndex = 3;
             this.contactlist2tab.Text = "Contactos SMS";
             // 
@@ -1746,7 +1757,7 @@
             dataGridViewCellStyle4.Alignment = System.Windows.Forms.DataGridViewContentAlignment.MiddleCenter;
             this.contacts2dgv.RowsDefaultCellStyle = dataGridViewCellStyle4;
             this.contacts2dgv.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;
-            this.contacts2dgv.Size = new System.Drawing.Size(919, 514);
+            this.contacts2dgv.Size = new System.Drawing.Size(911, 506);
             this.contacts2dgv.TabIndex = 5;
             this.contacts2dgv.MouseClick += new System.Windows.Forms.MouseEventHandler(this.contacts2dgv_MouseClick);
             // 
@@ -1755,6 +1766,7 @@
             this.dataGridViewTextBoxColumn7.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
             this.dataGridViewTextBoxColumn7.Frozen = true;
             this.dataGridViewTextBoxColumn7.HeaderText = "Numero o Grupo";
+            this.dataGridViewTextBoxColumn7.MinimumWidth = 10;
             this.dataGridViewTextBoxColumn7.Name = "dataGridViewTextBoxColumn7";
             this.dataGridViewTextBoxColumn7.Width = 200;
             // 
@@ -1763,6 +1775,7 @@
             this.dataGridViewTextBoxColumn8.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
             this.dataGridViewTextBoxColumn8.Frozen = true;
             this.dataGridViewTextBoxColumn8.HeaderText = "Nombre";
+            this.dataGridViewTextBoxColumn8.MinimumWidth = 10;
             this.dataGridViewTextBoxColumn8.Name = "dataGridViewTextBoxColumn8";
             this.dataGridViewTextBoxColumn8.Width = 350;
             // 
@@ -1771,16 +1784,18 @@
             this.dataGridViewTextBoxColumn9.AutoSizeMode = System.Windows.Forms.DataGridViewAutoSizeColumnMode.None;
             this.dataGridViewTextBoxColumn9.Frozen = true;
             this.dataGridViewTextBoxColumn9.HeaderText = "Enviado(S/N)";
+            this.dataGridViewTextBoxColumn9.MinimumWidth = 10;
             this.dataGridViewTextBoxColumn9.Name = "dataGridViewTextBoxColumn9";
             this.dataGridViewTextBoxColumn9.ReadOnly = true;
+            this.dataGridViewTextBoxColumn9.Width = 200;
             // 
             // messagesmstab
             // 
             this.messagesmstab.BackColor = System.Drawing.Color.White;
             this.messagesmstab.Controls.Add(this.panel15);
-            this.messagesmstab.Location = new System.Drawing.Point(4, 20);
+            this.messagesmstab.Location = new System.Drawing.Point(8, 24);
             this.messagesmstab.Name = "messagesmstab";
-            this.messagesmstab.Size = new System.Drawing.Size(919, 514);
+            this.messagesmstab.Size = new System.Drawing.Size(911, 506);
             this.messagesmstab.TabIndex = 2;
             this.messagesmstab.Text = "Mensajes SMS";
             // 
@@ -1807,7 +1822,7 @@
             this.panel15.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panel15.Location = new System.Drawing.Point(0, 0);
             this.panel15.Name = "panel15";
-            this.panel15.Size = new System.Drawing.Size(919, 514);
+            this.panel15.Size = new System.Drawing.Size(911, 506);
             this.panel15.TabIndex = 0;
             // 
             // label5
@@ -1815,7 +1830,7 @@
             this.label5.AutoSize = true;
             this.label5.Location = new System.Drawing.Point(208, 152);
             this.label5.Name = "label5";
-            this.label5.Size = new System.Drawing.Size(165, 34);
+            this.label5.Size = new System.Drawing.Size(324, 72);
             this.label5.TabIndex = 57;
             this.label5.Text = "1024; 678 wabutt form size\r\n57; -23 app tab location";
             // 
@@ -1826,7 +1841,7 @@
             this.manymessages2cb.ForeColor = System.Drawing.Color.Black;
             this.manymessages2cb.Location = new System.Drawing.Point(17, 119);
             this.manymessages2cb.Name = "manymessages2cb";
-            this.manymessages2cb.Size = new System.Drawing.Size(241, 21);
+            this.manymessages2cb.Size = new System.Drawing.Size(463, 40);
             this.manymessages2cb.TabIndex = 56;
             this.manymessages2cb.Text = "Enviar Varios textos en un solo envio";
             this.manymessages2cb.UseVisualStyleBackColor = false;
@@ -1919,7 +1934,7 @@
             this.label73.ForeColor = System.Drawing.Color.Black;
             this.label73.Location = new System.Drawing.Point(20, 5);
             this.label73.Name = "label73";
-            this.label73.Size = new System.Drawing.Size(86, 17);
+            this.label73.Size = new System.Drawing.Size(164, 36);
             this.label73.TabIndex = 38;
             this.label73.Text = "Total a Enviar";
             // 
@@ -1961,7 +1976,7 @@
             this.label76.ForeColor = System.Drawing.Color.Black;
             this.label76.Location = new System.Drawing.Point(289, 5);
             this.label76.Name = "label76";
-            this.label76.Size = new System.Drawing.Size(60, 17);
+            this.label76.Size = new System.Drawing.Size(115, 36);
             this.label76.TabIndex = 35;
             this.label76.Text = "Enviados";
             // 
@@ -1987,7 +2002,7 @@
             this.label77.ForeColor = System.Drawing.Color.Black;
             this.label77.Location = new System.Drawing.Point(150, 5);
             this.label77.Name = "label77";
-            this.label77.Size = new System.Drawing.Size(82, 17);
+            this.label77.Size = new System.Drawing.Size(156, 36);
             this.label77.TabIndex = 0;
             this.label77.Text = "No Enviados";
             // 
@@ -1998,7 +2013,7 @@
             this.senddatetime2cb.ForeColor = System.Drawing.Color.Black;
             this.senddatetime2cb.Location = new System.Drawing.Point(17, 96);
             this.senddatetime2cb.Name = "senddatetime2cb";
-            this.senddatetime2cb.Size = new System.Drawing.Size(142, 21);
+            this.senddatetime2cb.Size = new System.Drawing.Size(271, 40);
             this.senddatetime2cb.TabIndex = 45;
             this.senddatetime2cb.Text = "Enviar Fecha y Hora";
             this.senddatetime2cb.UseVisualStyleBackColor = false;
@@ -2009,7 +2024,7 @@
             this.label78.ForeColor = System.Drawing.Color.White;
             this.label78.Location = new System.Drawing.Point(10, 353);
             this.label78.Name = "label78";
-            this.label78.Size = new System.Drawing.Size(62, 17);
+            this.label78.Size = new System.Drawing.Size(118, 36);
             this.label78.TabIndex = 48;
             this.label78.Text = "Progreso";
             // 
@@ -2020,7 +2035,7 @@
             this.sendfullname2cb.ForeColor = System.Drawing.Color.Black;
             this.sendfullname2cb.Location = new System.Drawing.Point(17, 25);
             this.sendfullname2cb.Name = "sendfullname2cb";
-            this.sendfullname2cb.Size = new System.Drawing.Size(176, 21);
+            this.sendfullname2cb.Size = new System.Drawing.Size(335, 40);
             this.sendfullname2cb.TabIndex = 35;
             this.sendfullname2cb.Text = "Enviar Nombre Completo";
             this.sendfullname2cb.UseVisualStyleBackColor = false;
@@ -2061,7 +2076,7 @@
             this.loadmessage2lbl.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(240)))), ((int)(((byte)(38)))), ((int)(((byte)(99)))));
             this.loadmessage2lbl.Location = new System.Drawing.Point(15, 400);
             this.loadmessage2lbl.Name = "loadmessage2lbl";
-            this.loadmessage2lbl.Size = new System.Drawing.Size(130, 15);
+            this.loadmessage2lbl.Size = new System.Drawing.Size(256, 32);
             this.loadmessage2lbl.TabIndex = 46;
             this.loadmessage2lbl.Text = "Estado: No Conectado";
             // 
@@ -2071,7 +2086,7 @@
             this.label80.ForeColor = System.Drawing.Color.Black;
             this.label80.Location = new System.Drawing.Point(299, 53);
             this.label80.Name = "label80";
-            this.label80.Size = new System.Drawing.Size(66, 17);
+            this.label80.Size = new System.Drawing.Size(129, 36);
             this.label80.TabIndex = 43;
             this.label80.Text = "Segundos";
             // 
@@ -2103,10 +2118,10 @@
             this.tabPage14.BackColor = System.Drawing.Color.White;
             this.tabPage14.Controls.Add(this.label81);
             this.tabPage14.Controls.Add(this.sms1txt);
-            this.tabPage14.Location = new System.Drawing.Point(4, 20);
+            this.tabPage14.Location = new System.Drawing.Point(8, 24);
             this.tabPage14.Name = "tabPage14";
             this.tabPage14.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage14.Size = new System.Drawing.Size(471, 468);
+            this.tabPage14.Size = new System.Drawing.Size(463, 460);
             this.tabPage14.TabIndex = 0;
             this.tabPage14.Text = "Mensaje 1";
             // 
@@ -2117,7 +2132,7 @@
             this.label81.ForeColor = System.Drawing.Color.Black;
             this.label81.Location = new System.Drawing.Point(3, 6);
             this.label81.Name = "label81";
-            this.label81.Size = new System.Drawing.Size(69, 18);
+            this.label81.Size = new System.Drawing.Size(141, 37);
             this.label81.TabIndex = 4;
             this.label81.Text = "Contenido";
             // 
@@ -2139,10 +2154,10 @@
             this.tabPage15.BackColor = System.Drawing.Color.White;
             this.tabPage15.Controls.Add(this.label82);
             this.tabPage15.Controls.Add(this.sms2txt);
-            this.tabPage15.Location = new System.Drawing.Point(4, 20);
+            this.tabPage15.Location = new System.Drawing.Point(8, 24);
             this.tabPage15.Name = "tabPage15";
             this.tabPage15.Padding = new System.Windows.Forms.Padding(3);
-            this.tabPage15.Size = new System.Drawing.Size(471, 468);
+            this.tabPage15.Size = new System.Drawing.Size(463, 460);
             this.tabPage15.TabIndex = 1;
             this.tabPage15.Text = "Mensaje 2";
             // 
@@ -2153,7 +2168,7 @@
             this.label82.ForeColor = System.Drawing.Color.Black;
             this.label82.Location = new System.Drawing.Point(3, 6);
             this.label82.Name = "label82";
-            this.label82.Size = new System.Drawing.Size(69, 18);
+            this.label82.Size = new System.Drawing.Size(141, 37);
             this.label82.TabIndex = 6;
             this.label82.Text = "Contenido";
             // 
@@ -2176,9 +2191,9 @@
             this.tabPage16.BackColor = System.Drawing.Color.White;
             this.tabPage16.Controls.Add(this.label83);
             this.tabPage16.Controls.Add(this.sms3txt);
-            this.tabPage16.Location = new System.Drawing.Point(4, 20);
+            this.tabPage16.Location = new System.Drawing.Point(8, 24);
             this.tabPage16.Name = "tabPage16";
-            this.tabPage16.Size = new System.Drawing.Size(471, 468);
+            this.tabPage16.Size = new System.Drawing.Size(463, 460);
             this.tabPage16.TabIndex = 2;
             this.tabPage16.Text = "Mensaje 3";
             // 
@@ -2189,7 +2204,7 @@
             this.label83.ForeColor = System.Drawing.Color.Black;
             this.label83.Location = new System.Drawing.Point(3, 6);
             this.label83.Name = "label83";
-            this.label83.Size = new System.Drawing.Size(69, 18);
+            this.label83.Size = new System.Drawing.Size(141, 37);
             this.label83.TabIndex = 6;
             this.label83.Text = "Contenido";
             // 
@@ -2211,9 +2226,9 @@
             this.tabPage17.BackColor = System.Drawing.Color.White;
             this.tabPage17.Controls.Add(this.label84);
             this.tabPage17.Controls.Add(this.sms4txt);
-            this.tabPage17.Location = new System.Drawing.Point(4, 20);
+            this.tabPage17.Location = new System.Drawing.Point(8, 24);
             this.tabPage17.Name = "tabPage17";
-            this.tabPage17.Size = new System.Drawing.Size(471, 468);
+            this.tabPage17.Size = new System.Drawing.Size(463, 460);
             this.tabPage17.TabIndex = 3;
             this.tabPage17.Text = "Mensaje 4";
             // 
@@ -2224,7 +2239,7 @@
             this.label84.ForeColor = System.Drawing.Color.Black;
             this.label84.Location = new System.Drawing.Point(3, 6);
             this.label84.Name = "label84";
-            this.label84.Size = new System.Drawing.Size(69, 18);
+            this.label84.Size = new System.Drawing.Size(141, 37);
             this.label84.TabIndex = 8;
             this.label84.Text = "Contenido";
             // 
@@ -2246,9 +2261,9 @@
             this.tabPage18.BackColor = System.Drawing.Color.White;
             this.tabPage18.Controls.Add(this.label85);
             this.tabPage18.Controls.Add(this.sms5txt);
-            this.tabPage18.Location = new System.Drawing.Point(4, 20);
+            this.tabPage18.Location = new System.Drawing.Point(8, 24);
             this.tabPage18.Name = "tabPage18";
-            this.tabPage18.Size = new System.Drawing.Size(471, 468);
+            this.tabPage18.Size = new System.Drawing.Size(463, 460);
             this.tabPage18.TabIndex = 4;
             this.tabPage18.Text = "Mensaje 5";
             // 
@@ -2259,7 +2274,7 @@
             this.label85.ForeColor = System.Drawing.Color.Black;
             this.label85.Location = new System.Drawing.Point(3, 6);
             this.label85.Name = "label85";
-            this.label85.Size = new System.Drawing.Size(69, 18);
+            this.label85.Size = new System.Drawing.Size(141, 37);
             this.label85.TabIndex = 8;
             this.label85.Text = "Contenido";
             // 
@@ -2281,7 +2296,7 @@
             this.eachmessagetiming2txt.Font = new System.Drawing.Font("Consolas", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.eachmessagetiming2txt.Location = new System.Drawing.Point(246, 49);
             this.eachmessagetiming2txt.Name = "eachmessagetiming2txt";
-            this.eachmessagetiming2txt.Size = new System.Drawing.Size(44, 23);
+            this.eachmessagetiming2txt.Size = new System.Drawing.Size(44, 38);
             this.eachmessagetiming2txt.TabIndex = 42;
             this.eachmessagetiming2txt.Text = "30";
             // 
@@ -2292,7 +2307,7 @@
             this.preventblock2cb.ForeColor = System.Drawing.Color.Black;
             this.preventblock2cb.Location = new System.Drawing.Point(17, 73);
             this.preventblock2cb.Name = "preventblock2cb";
-            this.preventblock2cb.Size = new System.Drawing.Size(173, 21);
+            this.preventblock2cb.Size = new System.Drawing.Size(332, 40);
             this.preventblock2cb.TabIndex = 39;
             this.preventblock2cb.Text = "Evitar bloqueo de cuenta";
             this.preventblock2cb.UseVisualStyleBackColor = false;
@@ -2304,7 +2319,7 @@
             this.eachmessagetiming2cb.ForeColor = System.Drawing.Color.Black;
             this.eachmessagetiming2cb.Location = new System.Drawing.Point(17, 49);
             this.eachmessagetiming2cb.Name = "eachmessagetiming2cb";
-            this.eachmessagetiming2cb.Size = new System.Drawing.Size(201, 21);
+            this.eachmessagetiming2cb.Size = new System.Drawing.Size(384, 40);
             this.eachmessagetiming2cb.TabIndex = 37;
             this.eachmessagetiming2cb.Text = "Hacer pausa entre cada envio";
             this.eachmessagetiming2cb.UseVisualStyleBackColor = false;
@@ -2357,7 +2372,7 @@
             // 
             // WAButtfrm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(12F, 27F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(967, 663);
             this.Controls.Add(this.apppanel);
