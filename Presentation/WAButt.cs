@@ -243,6 +243,9 @@ namespace Presentation
                         MessageBoxIcon.Error
                     );
                     this.Close();
+
+
+
                 }
                 catch (Exception ex)
                 {
@@ -1025,9 +1028,8 @@ namespace Presentation
 
         private void ExportDgvToGmailCore(DataGridView grid)
         {
-            // Ajusta estos índices si tus columnas están en otro orden:
-            const int PhoneColIndex = 0;     // Columna con el teléfono
-            const int FirstNameColIndex = 1; // Columna con el nombre
+            const int PhoneColIndex = 0;      // Columna con el número
+            const int FirstNameColIndex = 1;  // Columna con el nombre
 
             if (grid == null || grid.Rows.Cast<DataGridViewRow>().All(r => r.IsNewRow))
             {
@@ -1039,7 +1041,7 @@ namespace Presentation
             using (var sfd = new SaveFileDialog
             {
                 Filter = "CSV (*.csv)|*.csv",
-                FileName = "contactos.csv",
+                FileName = "contactos_google.csv",
                 AddExtension = true,
                 OverwritePrompt = true
             })
@@ -1049,30 +1051,47 @@ namespace Presentation
 
                 try
                 {
-                    // UTF-8 con BOM para acentos/ñ correctos en Excel y Gmail
                     using (var sw = new StreamWriter(sfd.FileName, false, new UTF8Encoding(true)))
                     {
-                        // Encabezados que Gmail reconoce
-                        sw.WriteLine("Name,Given Name,Phone 1 - Type,Phone 1 - Value");
+                        // Header reconocido por Google Contacts (como tu ejemplo)
+                        sw.WriteLine(
+                            "First Name,Middle Name,Last Name,Phonetic First Name,Phonetic Middle Name,Phonetic Last Name," +
+                            "Name Prefix,Name Suffix,Nickname,File As,Organization Name,Organization Title,Organization Department," +
+                            "Birthday,Notes,Photo,Labels,Phone 1 - Label,Phone 1 - Value"
+                        );
 
                         foreach (DataGridViewRow row in grid.Rows)
                         {
                             if (row.IsNewRow) continue;
 
-                            // NO normalizamos: tomamos el valor tal cual
-                            string firstName = Convert.ToString(row.Cells[FirstNameColIndex].Value) ?? string.Empty;
-                            string phoneRaw = Convert.ToString(row.Cells[PhoneColIndex].Value) ?? string.Empty;
+                            string name = Convert.ToString(row.Cells[FirstNameColIndex].Value) ?? "";
+                            string phone = Convert.ToString(row.Cells[PhoneColIndex].Value) ?? "";
 
-                            string name = firstName;       // si solo tienes nombre, úsalo como Name
-                            string phoneType = "Mobile";   // puedes cambiar a Home/Work si aplica
+                            name = name.Trim();
+                            phone = phone.Trim();
 
-                            sw.WriteLine(
-                                $"{Csv(name)},{Csv(firstName)},{Csv(phoneType)},{Csv(phoneRaw)}"
-                            );
+                            if (string.IsNullOrWhiteSpace(name) && string.IsNullOrWhiteSpace(phone))
+                                continue;
+
+                            // NO normalizar: se manda tal cual.
+                            // Solo evitamos teléfonos vacíos (porque Google lo ignora)
+                            if (string.IsNullOrWhiteSpace(phone))
+                                continue;
+
+                            sw.WriteLine(string.Join(",",
+                                Csv(name),      // First Name
+                                Csv(""), Csv(""), Csv(""), Csv(""), Csv(""), // Middle/Last/Phonetic*
+                                Csv(""), Csv(""), Csv(""), Csv(""),         // Prefix/Suffix/Nickname/File As
+                                Csv(""), Csv(""), Csv(""),                  // Org Name/Title/Dept
+                                Csv(""), Csv(""), Csv(""),                  // Birthday/Notes/Photo
+                                Csv("* myContacts"),                         // Labels (igual a tu ejemplo)
+                                Csv("Mobile"),                               // Phone 1 - Label
+                                Csv(phone)                                   // Phone 1 - Value
+                            ));
                         }
                     }
 
-                    MessageBox.Show("Datos exportados correctamente!", "Observación",
+                    MessageBox.Show("CSV listo para importar en Google Contacts.", "OK",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (IOException ex)
@@ -1088,6 +1107,58 @@ namespace Presentation
             }
         }
 
+        private static string Csv(string value)
+        {
+            if (value == null) return "\"\"";
+            value = value.Replace("\"", "\"\"");
+            return $"\"{value}\"";
+        }
+
+
+        private static string SanitizePhoneForGoogle(string raw)
+        {
+            if (string.IsNullOrWhiteSpace(raw)) return "";
+
+            raw = raw.Trim();
+
+            // Si el grid te lo dio como "9.87654E+08" o similar, intenta rescatar dígitos
+            // (esto pasa si el dato se trató como número en algún punto)
+            // Igual: la limpieza de abajo lo deja en dígitos.
+
+            var sb = new StringBuilder();
+            bool plusKept = false;
+
+            foreach (char c in raw)
+            {
+                if (char.IsDigit(c))
+                    sb.Append(c);
+                else if (c == '+' && !plusKept && sb.Length == 0)
+                {
+                    sb.Append('+');
+                    plusKept = true;
+                }
+            }
+
+            var cleaned = sb.ToString();
+
+            // Si queda muy corto, probablemente no es teléfono
+            // Ajusta el mínimo según tu caso (Perú móvil suele 9 dígitos)
+            if (cleaned.Length < 7) return "";
+
+            // Si NO empieza con +, opcional: agrega +51 (Perú) si detectas 9 dígitos
+            // Cambia +51 por tu país si aplica.
+            if (!cleaned.StartsWith("+"))
+            {
+                // ejemplo Perú:
+                if (cleaned.Length == 9) cleaned = "+51" + cleaned;
+                // si ya viene con 51 pero sin +:
+                else if (cleaned.StartsWith("51") && cleaned.Length >= 11) cleaned = "+" + cleaned;
+            }
+
+            return cleaned;
+        }
+
+       
         private void exportDgvToGmail()
         {
             ExportDgvToGmailCore(contactsdgv);
@@ -1095,15 +1166,7 @@ namespace Presentation
 
         // ---- Helper ----
         // No alteramos el contenido; solo hacemos el escape CSV cuando hace falta.
-        private static string Csv(string value)
-        {
-            if (value == null) return string.Empty;
-
-            bool mustQuote = value.Contains(',') || value.Contains('"') || value.Contains('\r') || value.Contains('\n');
-            if (mustQuote)
-                return "\"" + value.Replace("\"", "\"\"") + "\"";
-            return value;
-        }
+       
         private void exportDgvToGmail2()
         {
             ExportDgvToGmailCore(contacts2dgv);
@@ -2820,7 +2883,7 @@ namespace Presentation
                     var contacts = _viewModel.ContactService.ImportFromTextFile(sfd.FileName);
 
                     // Clear and setup DataGridView using helper
-                    SetupContactGridColumns(contactsdgv);
+                    SetupContactGridColumns(contactsdgv);   
 
                     // Load contacts to DataGridView
                     _viewModel.ContactService.LoadToDataGridView(contactsdgv, contacts);
@@ -4091,6 +4154,11 @@ namespace Presentation
         }
 
         private void apppanel_Paint(object sender, PaintEventArgs e)
+        {
+
+        }
+
+        private void contactsdgv_KeyDown(object sender, KeyEventArgs e)
         {
 
         }

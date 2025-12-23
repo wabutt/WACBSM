@@ -23,6 +23,27 @@ namespace Presentation
 
         public static class WASelectors
         {
+
+            public static By AttachMediaInput =>
+    By.CssSelector("input[type='file'][accept*='image'], input[type='file'][accept*='video']");
+
+            // XPath “solo imagen” (si lo quieres estrictamente)
+            public static By AttachImageInput =>
+                By.XPath("//input[@type='file' and @accept and contains(@accept,'image')]");
+
+            // Fallback amplio (imagen o video, evita documentos)
+            public static By AttachMediaInputFallback =>
+                By.XPath("//input[@type='file' and @accept and (contains(@accept,'image') or contains(@accept,'video'))]");
+            public static By AttachPhotosVideos =>
+                By.XPath("//div[@role='application']//li[@role='button' and .//span[contains(normalize-space(.),'Fotos y videos') or contains(normalize-space(.),'Photos and videos')]]");
+
+            public static By AttachPhotosVideosByIcon =>
+                By.XPath("//div[@role='application']//li[@role='button' and .//title[normalize-space(.)='ic-filter-filled']]");
+
+
+
+
+
             // Search
             // 1) CSS moderno (Chrome 105+): padre <button> que CONTIENE el span del icono
             public static By SearchButton => By.CssSelector("button:has(span[data-icon*='search'])");
@@ -39,6 +60,10 @@ namespace Presentation
                 // 3) Fallback por tabindex que suele usar el buscador
                 "div.lexical-rich-text-input div[contenteditable='true'][role='textbox'][data-lexical-editor='true'][tabindex='3']"
             );
+           
+
+
+
 
             // Messaging
             public static By MessageInput => By.CssSelector("div.lexical-rich-text-input div[contenteditable='true'][role='textbox'][data-lexical-editor='true']");
@@ -46,16 +71,11 @@ namespace Presentation
 
             // Attachments
             public static By AttachButton =>
-    By.XPath("//button[.//span[@data-icon='plus-rounded']]");
-
-            public static By AttachImageInput =>
-    By.CssSelector("input[type='file'][accept*='image']");
+             By.XPath("//button[@type='button' and (@aria-label='Adjuntar' or @aria-label='Attach') and .//span[@data-icon='plus-rounded']]");
 
 
-            public static readonly By AttachImageInputFallback =
-                By.CssSelector("input[type='file'][accept*='image']");
-            public static By AttachPhotosVideos =>
-    By.XPath("//li[@role='button']//span[contains(text(),'Fotos') or contains(text(),'Photos')]");
+            // Solo imágenes (si realmente quieres SOLO image)
+            //public static By AttachImageInput =>By.CssSelector("input[type='file'][accept*='image']");
 
 
 
@@ -73,10 +93,7 @@ namespace Presentation
     By.XPath("//div[@role='grid' and not(.//div[@role='gridcell'])]");
 
 
-
-
             public static By AttachDocumentInput => By.CssSelector("input[accept*='*'][type='file']");
-
 
 
             public static readonly By ImageCaptionInDialog =
@@ -151,29 +168,39 @@ namespace Presentation
             {
                 var abs = Path.GetFullPath(filePath);
 
-                // 1) Abre menú del clip
-                var attachBtn = WaitForElement(WASelectors.AttachButton, 10);
-                if (attachBtn == null) throw new NoSuchElementException("No encontré el botón Adjuntar (clip).");
+                // 1) Click en el clip "+"
+                var attachBtn = WaitForElement(WASelectors.AttachButton, 10)
+                    ?? throw new NoSuchElementException("No encontré el botón Adjuntar (clip).");
                 attachBtn.Click();
-                Thread.Sleep(300);
-                HoverAndClickPhotosVideos();
-                // 2) Localiza el input con varios intentos
-                IWebElement fileInput = WaitForElement(WASelectors.AttachImageInput, 5);
+                Thread.Sleep(150);
 
-                
-             
+                // 2) Click “Fotos y videos”
+                var photos = WaitForElement(WASelectors.AttachPhotosVideos, 4)
+                    ?? throw new NoSuchElementException("No encontré 'Fotos y videos' en el menú.");
+                photos.Click();
+                Thread.Sleep(150);
 
-                if (fileInput == null)
-                    fileInput = WaitForElement(WASelectors.AttachImageInputFallback, 5);
+                // 3) Buscar input (solo 1 selector)
+                var fileInput = GetLastFileInput(WASelectors.AttachMediaInput, 5);
+
+                // Retry único: reabrir menú + reclick si no apareció el input
                 if (fileInput == null)
                 {
-                    // Último recurso: XPath amplio
-                    try { fileInput = driver.FindElement(By.XPath("//input[@type='file' and contains(@accept,'image')]")); }
-                    catch { /* ignore */ }
-                }
-                if (fileInput == null) throw new NoSuchElementException("No encontré el input de archivo para Fotos/Videos.");
+                    attachBtn = WaitForElement(WASelectors.AttachButton, 5);
+                    attachBtn?.Click();
+                    Thread.Sleep(150);
 
-                // 3) Envío del archivo (si está oculto, forzamos visible y reintentamos)
+                    photos = WaitForElement(WASelectors.AttachPhotosVideos, 3);
+                    photos?.Click();
+                    Thread.Sleep(150);
+
+                    fileInput = GetLastFileInput(WASelectors.AttachMediaInput, 5);
+                }
+
+                if (fileInput == null)
+                    throw new NoSuchElementException("No apareció el input type=file de media.");
+
+                // 4) SendKeys
                 try
                 {
                     fileInput.SendKeys(abs);
@@ -184,11 +211,13 @@ namespace Presentation
                     js.ExecuteScript(
                         "arguments[0].style.display='block';" +
                         "arguments[0].style.visibility='visible';" +
-                        "arguments[0].removeAttribute('hidden');", fileInput);
+                        "arguments[0].removeAttribute('hidden');",
+                        fileInput
+                    );
                     fileInput.SendKeys(abs);
                 }
 
-                Thread.Sleep(1000 + preventblocktiming);
+                Thread.Sleep(800 + preventblocktiming);
                 Console.WriteLine($"✓ Imagen adjuntada: {Path.GetFileName(abs)}");
             }
             catch (Exception ex)
@@ -198,42 +227,44 @@ namespace Presentation
         }
 
 
+        // Helper: devuelve el último <input type=file> que matchee (WhatsApp suele tener varios)
+        private IWebElement GetLastFileInput(By selector, int timeoutSec)
+        {
+            try
+            {
+                var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(timeoutSec));
+                return wait.Until(drv =>
+                {
+                    var els = drv.FindElements(selector);
+                    if (els == null || els.Count == 0) return null;
+
+                    // WhatsApp suele inyectar uno nuevo: el último normalmente es el correcto
+                    var last = els[els.Count - 1];
+                    return (last.Displayed || last.Enabled) ? last : last; // igual sirve para SendKeys
+                });
+            }
+            catch { return null; }
+        }
+
+
+
+
         /// <summary>
         /// Adjuntar imagen con caption
         /// </summary>
         /// 
-        public void HoverAndClickPhotosVideos()
-        {
-            var item = WaitForElement(WASelectors.AttachPhotosVideos, 8);
-            if (item == null)
-                throw new NoSuchElementException("No se encontró 'Fotos y videos'");
 
-            Actions actions = new Actions(driver);
-
-            actions
-                .MoveToElement(item)
-                .Pause(TimeSpan.FromMilliseconds(300))
-                .Build()
-                .Perform();
-        }
 
         public void ImageTextMessage(string filePath, string caption)
         {
             try
             {
-                ContactMessage(caption);
+                
                 
                 ImageMessage(filePath);
-
-                var abs = Path.GetFullPath(filePath);
-               
-
-
-
-              
                 
                 Thread.Sleep(300);
-                /*
+              
                 // 2. Buscar caja de caption
                 var captionBox = WaitForElement(WASelectors.ImageCaptionInDialog, 8);
 
@@ -254,7 +285,7 @@ namespace Presentation
                     TypeIntoContentEditable(captionBox, caption);
                     Thread.Sleep(500);
                 }
-                */
+           
                 //Thread.Sleep(preventblocktiming);
 
                 // 4. Enviar

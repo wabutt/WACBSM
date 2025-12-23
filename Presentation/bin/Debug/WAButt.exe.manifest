@@ -1495,14 +1495,14 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="WAButt.exe" size="1120768">
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="WAButt.exe" size="1125376">
       <assemblyIdentity name="WAButt" version="1.0.0.0" language="neutral" processorArchitecture="amd64" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>ndRdWvM31CgrAbUaETfr091JWTGa8dzBq06By2deXdM=</dsig:DigestValue>
+        <dsig:DigestValue>l+CFg10XXVod5CnyPoAHQjfYOq/BOQwEJzoCf21gJ5Y=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
