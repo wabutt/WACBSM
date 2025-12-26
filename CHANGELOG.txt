@@ -1,0 +1,30 @@
+﻿WAButt - Historial de Cambios
+================================
+
+Version 1.0.0.15 (25/12/2025)
+--------------------------------
+[NUEVO]
+* Sistema de almacenamiento de licencias optimizado
+* Validacion de HWID en archivo portable
+* Proteccion anti-cracking mejorada
+
+[MEJORAS]
+* Reduccion de consumo de memoria en Chrome
+* Optimizacion de velocidad de envio de mensajes
+* Interfaz mas responsive
+
+[CORRECCIONES]
+* Corregido error al copiar license.dat entre PCs
+* Solucionado problema de XanderUI en inicio
+* Mejoras en manejo de errores de red
+
+[TECNICO]
+* Migracion a AES-256 para encriptacion
+* Actualizacion de ChromeDriver a ultima version
+* Implementacion de Costura.Fody para single-file
+
+================================
+Versiones anteriores:
+
+Version 1.0.0.14
+* Version base

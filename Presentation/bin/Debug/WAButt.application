@@ -7,14 +7,14 @@
     <framework targetVersion="4.6.1" profile="Full" supportedRuntime="4.0.30319" />
   </compatibleFrameworks>
   <dependency>
-    <dependentAssembly dependencyType="install" codebase="WAButt.exe.manifest" size="92959">
+    <dependentAssembly dependencyType="install" codebase="WAButt.exe.manifest" size="12513">
       <assemblyIdentity name="WAButt.exe" version="1.0.0.0" publicKeyToken="0000000000000000" language="neutral" processorArchitecture="amd64" type="win32" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>tfuXk2ObU8FGUW4D4jtE7xzCxq2pDiqjAmpzlKbXC8w=</dsig:DigestValue>
+        <dsig:DigestValue>cmNurJ0jWj4AAmMZ/Tht250O8nmc05kiBNYpx2bOh50=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>

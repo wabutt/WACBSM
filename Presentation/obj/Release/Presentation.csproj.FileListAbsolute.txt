@@ -125,3 +125,30 @@ F:\butt rework\Presentation\obj\Release\WAButt.TrustInfo.xml
 F:\butt rework\Presentation\obj\Release\WAButt.exe.manifest
 F:\butt rework\Presentation\obj\Release\WAButt.application
 F:\butt rework\Presentation\obj\Release\Presentation.csproj.CopyComplete
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Release\runtimes\win\native\selenium-manager.exe
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Release\runtimes\linux\native\selenium-manager
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Release\runtimes\osx\native\selenium-manager
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Release\WAButt.exe.config
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Release\WAButt.exe.manifest
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Release\WAButt.application
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Release\WAButt.exe
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Release\WAButt.pdb
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Release\Domain.dll.config
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Release\DataAccess.dll.config
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Release\MySql.Data.xml
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\Presentation.csproj.AssemblyReference.cache
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\WAButt.exe.config
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\Presentation.ExtractContacts.resources
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\Presentation.LoadWindow.resources
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\Presentation.WAButtfrm.resources
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\Presentation.Properties.Resources.resources
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\Presentation.csproj.GenerateResource.cache
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\Presentation.csproj.CoreCompileInputs.cache
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\Presentation.csproj.Fody.CopyLocal.cache
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\Presentation.csproj.Fody.RuntimeCopyLocal.cache
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\WAButt.TrustInfo.xml
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\WAButt.exe.manifest
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\WAButt.application
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\Presentation.csproj.CopyComplete
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\WAButt.exe
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\WAButt.pdb

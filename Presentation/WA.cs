@@ -648,40 +648,69 @@ namespace Presentation
                 {
                     ct.ThrowIfCancellationRequested();
 
-                    // Configurar servicio
+                    Console.WriteLine("Abriendo Chrome para WhatsApp...");
+
+                    // ✅ Configurar servicio
                     service = ChromeDriverService.CreateDefaultService(driverDir);
                     service.HideCommandPromptWindow = true;
                     service.SuppressInitialDiagnosticInformation = true;
 
-                    // Configurar opciones
+                    // ✅ Configurar opciones con optimizaciones
                     var options = new ChromeOptions();
+
+                    // Argumentos básicos
                     options.AddArguments(
                         $"--user-data-dir={userDataRoot}",
                         $"--profile-directory={profileName}",
-                        "--window-size=850,650",
+                        "--window-size=850,650",  // O usa "--window-size=850,650" si prefieres tamaño fijo
                         "--disable-notifications",
                         "--no-default-browser-check",
                         "--disable-popup-blocking",
-                        "--disable-blink-features=AutomationControlled",
                         "--lang=es-PE"
                     );
 
-                    // Reducir detección de automatización
+                    // ✅ Anti-detección de automatización
+                    options.AddArgument("--disable-blink-features=AutomationControlled");
                     options.AddExcludedArgument("enable-automation");
+
+                    // ✅ Optimizaciones de rendimiento
+                    options.AddArguments(
+                        "--disable-gpu",
+                        "--no-sandbox",
+                        "--disable-dev-shm-usage"
+                    );
+
+                    // ✅ Reducción de consumo de memoria (OPCIONAL - descomenta si necesitas)
+                    options.AddArguments(
+                        "--disable-extensions",
+                        "--disable-plugins",
+                         //"--disable-images",                    // ⚠️ Desactiva imágenes (WhatsApp puede no funcionar bien)
+                        // "--blink-settings=imagesEnabled=false", // ⚠️ Igual que el anterior
+                        "--disk-cache-size=1",
+                        "--media-cache-size=1",
+                        "--aggressive-cache-discard",
+                        "--disable-application-cache"
+                    );
+
+                    // ✅ Configuración de carga de página
                     options.PageLoadStrategy = PageLoadStrategy.Normal;
 
-                    // Crear driver
+                    // ✅ Preferencias adicionales para evitar detección
+                    options.AddUserProfilePreference("credentials_enable_service", false);
+                    options.AddUserProfilePreference("profile.password_manager_enabled", false);
+
+                    // ✅ Crear driver
                     driver = new ChromeDriver(service, options);
 
-                    // Configurar timeouts
+                    // ✅ Configurar timeouts
                     driver.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(60);
                     driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(5);
                     driver.Manage().Timeouts().AsynchronousJavaScript = TimeSpan.FromSeconds(30);
 
-                    // Inicializar wait
+                    // ✅ Inicializar wait
                     _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
 
-                    // Navegar a WhatsApp
+                    // ✅ Navegar a WhatsApp
                     driver.Navigate().GoToUrl("https://web.whatsapp.com/");
 
                     driverstate = true;

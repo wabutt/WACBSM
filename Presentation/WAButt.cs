@@ -78,30 +78,15 @@ namespace Presentation
 
         public WAButtfrm()
         {
-            // Initialize ViewModel and Services
             _viewModel = new MainViewModel();
 
-            // Leer licencia guardada
-            _licenseKey = Properties.Settings.Default.LicenseKey;
-
-            AutoUpdater.InstalledVersion = Version.Parse("1.0.0.14");
-            UserModel user = new UserModel();
-
-            if (!InternetHelper.CheckForInternetConnection())
-            {
-                MessageBox.Show("No cuenta con acceso a internet, le recomendamos intentar mas tarde.",
-                    "Observación", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                this.Load += (sender, e) => { this.Close(); };
-                return;
-            }
-
-            // Initialize ChromeDriver asynchronously using service
+            // ChromeDriver en background
             Task.Run(async () =>
             {
                 if (!await _viewModel.ChromeDriverService.EnsureChromeDriverAsync())
                 {
                     this.Invoke((MethodInvoker)delegate {
-                        this.Load += (sender, e) => { this.Close(); };
+                        Application.Exit();
                     });
                     return;
                 }
@@ -111,350 +96,88 @@ namespace Presentation
             InitializeComponent();
             CheckForIllegalCrossThreadCalls = false;
 
-            updatestart();
-            ExecuteStart();
-
-            // Validación de licencia al cargar el formulario
-            this.Load += async (sender, e) =>
+            try
             {
                 apptab.Visible = false;
+            }
+            catch (NullReferenceException ex) when (ex.Source == "XanderUI.dll")
+            {
+                Console.WriteLine("⚠ XanderUI NullRef (ignorado)");
+            }
 
+            ExecuteStart();
+
+            this.Load += WAButtfrm_Load;
+        }
+
+        private async void WAButtfrm_Load(object sender, EventArgs e)
+        {
+            // Cargar licencia y mostrar en título
+            string licenseKey = LicenseStorage.LoadLicense();
+
+            if (!string.IsNullOrWhiteSpace(licenseKey))
+            {
                 try
                 {
-                   
-                    int attempts = 0;
-                    const int maxAttempts = 3;
+                    var result = await _viewModel.LicenseService.ValidateAPIKeyAsync(licenseKey);
 
-                    while (attempts < maxAttempts)
+                    if (result != null && result.IsValid)
                     {
-                        attempts++;
-
-                        // 1) Si NO hay licencia guardada, pedirla
-                        if (string.IsNullOrWhiteSpace(_licenseKey))
+                        string plan = string.IsNullOrWhiteSpace(result.Plan) ? "SIN PLAN" : result.Plan.ToUpper();
+                        string expText = "Sin vencimiento";
+                        if (result.ExpiresAt.HasValue)
                         {
-                            var entered = PromptForLicenseKey();
-                            _licenseKey = string.IsNullOrWhiteSpace(entered) ? null : entered.Trim();
+                            expText = "Vence: " + result.ExpiresAt.Value.ToShortDateString();
                         }
-
-                        // 2) Si el usuario no ingresó nada, cerrar
-                        if (string.IsNullOrWhiteSpace(_licenseKey))
-                        {
-                            MessageBox.Show(
-                                "No se ingresó ninguna licencia. La aplicación se cerrará.",
-                                "Licencia requerida",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Warning
-                            );
-                            this.Close();
-                            return;
-                        }
-
-                        // 3) Validar contra el backend usando LicenseService
-                        var result = await _viewModel.LicenseService.ValidateAPIKeyAsync(_licenseKey);
-
-                        // Si hubo error técnico (red / servidor) => result == null
-                        if (result == null)
-                        {
-                            // Ya se mostró MessageBox dentro de LicenseService
-                            this.Close();
-                            return;
-                        }
-
-                        // 4) Si la licencia ES válida → éxito
-                        if (result.IsValid)
-                        {
-                            Console.WriteLine("Licencia válida para HWID: " + user.GetMachineGuid());
-
-                            // Guardar la licencia en Settings para próximos arranques
-                            Properties.Settings.Default.LicenseKey = _licenseKey;
-                            Properties.Settings.Default.Save();
-
-                            // Construir texto para la ventana (título)
-                            string plan = string.IsNullOrWhiteSpace(result.Plan)
-                                ? "SIN PLAN"
-                                : result.Plan.ToUpper();
-
-                            string expText = "Sin vencimiento";
-                            if (result.ExpiresAt.HasValue)
-                            {
-                                expText = "Vence: " + result.ExpiresAt.Value.ToShortDateString();
-                            }
-
-                            this.Text = $"WAButt - Licencia: {plan} - {expText}";
-
-                            // Desbloquear UI
-                            apptab.Visible = true;
-                            return;
-                        }
-
-                        // 5) La licencia NO es válida (incluye casos: borrada, expirada, suspendida, etc.)
-                        //    Aquí damos contexto y opción de ingresar otra.
-
-                        string msg = result.Message ?? "Licencia no válida.";
-
-                        // Puedes tunear este flag si quieres solo para ciertos mensajes:
-                        bool ofrecerNuevaLicencia = true;
-
-                        if (ofrecerNuevaLicencia)
-                        {
-                            var userChoice = MessageBox.Show(
-                                "La licencia configurada ya no es válida:\n\n" +
-                                msg +
-                                "\n\n¿Desea ingresar otra licencia ahora?",
-                                "Licencia no válida",
-                                MessageBoxButtons.YesNo,
-                                MessageBoxIcon.Warning
-                            );
-
-                            if (userChoice == DialogResult.Yes)
-                            {
-                                // Limpiar licencia guardada y volver al while (nuevo intento)
-                                _licenseKey = null;
-                                Properties.Settings.Default.LicenseKey = string.Empty;
-                                Properties.Settings.Default.Save();
-                                continue; // vuelve al while, intentará de nuevo
-                            }
-                            else
-                            {
-                                // Usuario no quiere ingresar otra → cerrar
-                                this.Close();
-                                return;
-                            }
-                        }
-                        else
-                        {
-                            // Caso en el que NO quieras ofrecer nueva licencia (por ejemplo, max devices)
-                            MessageBox.Show(
-                                msg,
-                                "Licencia no válida",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Warning
-                            );
-                            this.Close();
-                            return;
-                        }
+                        this.Text = $"WAButt - Licencia: {plan} - {expText}";
                     }
-
-                    // Si salió del while por demasiados intentos
-                    MessageBox.Show(
-                        "Se excedió el número de intentos de activación. La aplicación se cerrará.",
-                        "Error de licencia",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error
-                    );
-                    this.Close();
-
-
-
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    MessageBox.Show(
-                        "Error al validar la licencia.\n" + ex.Message,
-                        "Error",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error
-                    );
-                    this.Close();
-                }
-            };
+                catch { }
+            }
 
-
-        }
-
-        /// <summary>
-        /// Simple modal dialog to ask user for the license key.
-        /// </summary>
-        private string PromptForLicenseKey(string initialValue = "")
-        {
-            using (var form = new Form())
-            using (var lblTitle = new Label())
-            using (var lblHint = new Label())
-            using (var textBox = new TextBox())
-            using (var buttonOk = new Button())
-            using (var buttonCancel = new Button())
+            // Mostrar formulario
+            try
             {
-                form.Text = "Activar licencia";
-                form.StartPosition = FormStartPosition.CenterScreen;
-                form.FormBorderStyle = FormBorderStyle.FixedDialog;
-                form.MinimizeBox = false;
-                form.MaximizeBox = false;
-                form.ClientSize = new Size(420, 160);
-                form.Font = new Font("Segoe UI", 9F);
-
-                // Título
-                lblTitle.Text = "Ingrese su código de licencia:";
-                lblTitle.AutoSize = true;
-                lblTitle.Location = new Point(12, 15);
-
-                // Hint / ayuda
-                lblHint.Text = "Ejemplo: XXXX-XXXX-XXXX-XXXX";
-                lblHint.AutoSize = true;
-                lblHint.ForeColor = Color.DimGray;
-                lblHint.Location = new Point(12, 35);
-
-                // TextBox para la licencia
-                textBox.SetBounds(12, 55, 396, 23);
-                textBox.Text = initialValue ?? string.Empty;
-                textBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-                textBox.CharacterCasing = CharacterCasing.Upper;   // fuerza mayúsculas
-
-                // Botón OK
-                buttonOk.Text = "Aceptar";
-                buttonOk.DialogResult = DialogResult.OK;
-                buttonOk.SetBounds(242, 105, 80, 27);
-                buttonOk.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-
-                // Botón Cancelar
-                buttonCancel.Text = "Cancelar";
-                buttonCancel.DialogResult = DialogResult.Cancel;
-                buttonCancel.SetBounds(328, 105, 80, 27);
-                buttonCancel.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
-
-                form.AcceptButton = buttonOk;
-                form.CancelButton = buttonCancel;
-
-                form.Controls.AddRange(new Control[]
-                {
-            lblTitle,
-            lblHint,
-            textBox,
-            buttonOk,
-            buttonCancel
-                });
-
-                // Cuando se muestra el form, enfocar y seleccionar todo
-                form.Shown += (s, e) =>
-                {
-                    textBox.Focus();
-                    textBox.SelectAll();
-                };
-
-                var dialogResult = form.ShowDialog();
-
-                if (dialogResult == DialogResult.OK)
-                {
-                    var value = (textBox.Text ?? string.Empty).Trim();
-                    return string.IsNullOrEmpty(value) ? null : value;
-                }
-
-                return null;
+                apptab.Visible = true;
+            }
+            catch (NullReferenceException ex) when (ex.Source == "XanderUI.dll")
+            {
+                Console.WriteLine("⚠ XanderUI NullRef (ignorado)");
             }
         }
 
 
 
 
-
-
-
-
-        private async Task DwchromedriverAsync()
+        private void AutoUpdater_ApplicationExitEvent()
         {
+            Console.WriteLine("Cerrando aplicación para actualizar...");
+
             try
             {
-                KillWebDriver();
-
-                string driverDir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                    "tempfilesWAButt", "webdriver"
-                );
-                Directory.CreateDirectory(driverDir);
-
-                string exePath = Path.Combine(driverDir, "chromedriver.exe");
-                string versionFile = Path.Combine(driverDir, "chromedriverversion.txt");
-                string zipPath = Path.Combine(driverDir, "chromedriver.zip");
-
-                // Check if already up to date
-                if (File.Exists(versionFile) && File.Exists(exePath))
-                {
-                    string currentVersion = File.ReadAllText(versionFile);
-                    if (currentVersion == chromedriverversion)
-                    {
-                        Console.WriteLine("✓ ChromeDriver already up to date");
-                        return;
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Updating from {currentVersion} to {chromedriverversion}");
-                    }
-                }
-
-                // Delete old files
-                if (File.Exists(exePath)) File.Delete(exePath);
-                if (File.Exists(zipPath)) File.Delete(zipPath);
-
-                // NEW: Chrome for Testing download URL
-                chromedriverdwlink = $"https://storage.googleapis.com/chrome-for-testing-public/{chromedriverversion}/win64/chromedriver-win64.zip";
-
-                Console.WriteLine($"Downloading ChromeDriver from: {chromedriverdwlink}");
-
-                using (WebClient client = new WebClient())
-                {
-                    await client.DownloadFileTaskAsync(chromedriverdwlink, zipPath);
-                    Console.WriteLine("✓ Download complete");
-                }
-
-                // Extract
-                FastZip fastZip = new FastZip();
-                fastZip.ExtractZip(zipPath, driverDir, "");
-
-                // NEW: Chrome for Testing extracts to chromedriver-win64 subfolder
-                string extractedFolder = Path.Combine(driverDir, "chromedriver-win64");
-                if (Directory.Exists(extractedFolder))
-                {
-                    string extractedExe = Path.Combine(extractedFolder, "chromedriver.exe");
-                    if (File.Exists(extractedExe))
-                    {
-                        File.Copy(extractedExe, exePath, true);
-                        Directory.Delete(extractedFolder, true);
-                        Console.WriteLine("✓ Extracted from chromedriver-win64 folder");
-                    }
-                }
-
-                // Clean up
-                File.Delete(zipPath);
-                File.WriteAllText(versionFile, chromedriverversion);
-
-                Console.WriteLine("✓ ChromeDriver installed successfully");
+                wa?.CloseWDriver();
+                wa?.CloseWDriver2();
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"✗ Error: {ex.Message}");
-                throw;
-            }
-        }
-        private void KillWebDriver()
-        {
-            try
-            {
-                foreach (var p in Process.GetProcessesByName("chromedriver"))
-                {
-                    try { p.Kill(); p.WaitForExit(2000); }
-                    catch { }
-                }
-            }
-            catch {  }
-        }
-
-        private void updatestart()
-        {
-            try
-            {
-                AutoUpdater.Mandatory = true;
-                AutoUpdater.UpdateMode = Mode.Forced;
-                AutoUpdater.ShowSkipButton = false;
-                AutoUpdater.ShowRemindLaterButton = false;
-                AutoUpdater.DownloadPath = Environment.CurrentDirectory;
-                AutoUpdater.Start("https://raw.githubusercontent.com/wabutt/itsmevsauce/master/AutoUpdater.xml");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Update error: {ex.Message}");
+                Console.WriteLine($"Error: {ex.Message}");
             }
         }
         
+
+       
+        /// <summary>
+        /// Simple modal dialog to ask user for the license key.
+        /// </summary>
+        
+
+        private Version GetCurrentVersion()
+        {
+            return System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
+        }
+
+
+
         private async Task SendDocument(string filePath, string message, Actions action, string contactNumber)
         {
             wa.ContactFile(filePath);
@@ -517,53 +240,7 @@ namespace Presentation
                 }
             }, cancellationToken.Token);
         }
-        public async Task<bool> ChromeDriverStateAsync()
-        {
-            if (!Environment.Is64BitOperatingSystem)
-            {
-                MessageBox.Show("El SO actual es Arquitectura 32 bits, actualizar a 64 bits para continuar",
-                    "Observación", MessageBoxButtons.OK, MessageBoxIcon.Hand);
-                return false;
-            }
-
-            try
-            {
-                await FetchChromeDriverVersionAsync();
-                await DwchromedriverAsync();
-                return true;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message, "Observación", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return false;
-            }
-        }
-        private async Task<string> FetchChromeDriverVersionAsync()
-        {
-            try
-            {
-                // NEW: Chrome for Testing JSON API (replaces deprecated googleapis)
-                using (var client = new WebClient())
-                {
-                    string json = await client.DownloadStringTaskAsync(
-                        "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions.json"
-                    );
-
-                    dynamic versionData = JsonConvert.DeserializeObject(json);
-                    chromedriverversion = versionData.channels.Stable.version.ToString();
-
-                    Console.WriteLine($"✓ Latest ChromeDriver: {chromedriverversion}");
-                    return chromedriverversion;
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"✗ Error fetching version: {ex.Message}");
-                // Fallback to recent stable version
-                chromedriverversion = "131.0.6778.87";
-                return chromedriverversion;
-            }
-        }
+       
         private async Task SendImageOrVideo(string filePath, string message, Actions action, string contactNumber)
         {
             if (!CheckAttachMessageStatus())
@@ -1115,49 +792,6 @@ namespace Presentation
         }
 
 
-        private static string SanitizePhoneForGoogle(string raw)
-        {
-            if (string.IsNullOrWhiteSpace(raw)) return "";
-
-            raw = raw.Trim();
-
-            // Si el grid te lo dio como "9.87654E+08" o similar, intenta rescatar dígitos
-            // (esto pasa si el dato se trató como número en algún punto)
-            // Igual: la limpieza de abajo lo deja en dígitos.
-
-            var sb = new StringBuilder();
-            bool plusKept = false;
-
-            foreach (char c in raw)
-            {
-                if (char.IsDigit(c))
-                    sb.Append(c);
-                else if (c == '+' && !plusKept && sb.Length == 0)
-                {
-                    sb.Append('+');
-                    plusKept = true;
-                }
-            }
-
-            var cleaned = sb.ToString();
-
-            // Si queda muy corto, probablemente no es teléfono
-            // Ajusta el mínimo según tu caso (Perú móvil suele 9 dígitos)
-            if (cleaned.Length < 7) return "";
-
-            // Si NO empieza con +, opcional: agrega +51 (Perú) si detectas 9 dígitos
-            // Cambia +51 por tu país si aplica.
-            if (!cleaned.StartsWith("+"))
-            {
-                // ejemplo Perú:
-                if (cleaned.Length == 9) cleaned = "+51" + cleaned;
-                // si ya viene con 51 pero sin +:
-                else if (cleaned.StartsWith("51") && cleaned.Length >= 11) cleaned = "+" + cleaned;
-            }
-
-            return cleaned;
-        }
-
        
         private void exportDgvToGmail()
         {
@@ -1265,7 +899,7 @@ namespace Presentation
                 using (var sr = new StreamReader(ofd.FileName, Encoding.UTF8, true))
                 using (var csv = new CsvReader(sr, cfg))
                 {
-                    // Leer encabezados
+                    // Leer encabezadosw
                     csv.Read();
                     csv.ReadHeader();
 
@@ -1464,50 +1098,7 @@ namespace Presentation
 
 
             return true;
-        }/*
-        private void PrepareForSending2()
-        {
-            stopbtnclicked2 = false;
-            rowcount2 = contacts2dgv.RowCount - 1;
-            send2pbr.Value = 0;
-            send2pbr.Maximum = rowcount2;
-            totalmessages2lbl.Text = rowcount2.ToString();
-            sendedmessage2 = 0;
-            notsendedmessage2 = 0;
-
-            start2btn.Enabled = false;
-            pause2btn.Enabled = true;
-            stop2btn.Enabled = true;
-            logout2btn.Enabled = false;
-            connectgoobtn.Enabled = false;
-
-            loadmessage2lbl.Text = "Estado: Conectado...";
-            contacts2dgv.AllowUserToAddRows = false;
-            contacts2dgv.AllowUserToDeleteRows = false;
-
-            wa.preventblocktiming2 = preventblock2cb.Checked ? 4000 : 0;
-            eachmessagetiming2 = eachmessagetiming2cb.Checked
-                ? ValidationHelper.SafeInt(eachmessagetiming2txt.Text) * 1000
-                : 0;
         }
-
-        private void FinalizeSending2()
-        {
-            if (!stopbtnclicked2)
-            {
-                MessageBox.Show("SMS enviados correctamente!", "Éxito");
-            }
-
-            stop2btn.Enabled = false;
-            pause2btn.Enabled = false;
-            start2btn.Enabled = true;
-            logout2btn.Enabled = true;
-            connectgoobtn.Enabled = true;
-
-            notsendedmessage2lbl.Text = (rowcount2 - sendedmessage2).ToString();
-            contacts2dgv.AllowUserToAddRows = true;
-            contacts2dgv.AllowUserToDeleteRows = true;
-        }*/
         private string PrepareSMSMessage(string contactName)
         {
             string message = sms1txt.Text;
@@ -1621,478 +1212,9 @@ namespace Presentation
             }
 
         }
-        /*
-        private async Task Excecutesendtask()
-        {
-            if (!InternetHelper.CheckForInternetConnection())
-            {
-                MessageBox.Show("No cuenta con acceso a internet, no puedes continuar.", "Observación",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
+        
+        
 
-            ClearEmptyRows(contactsdgv);
-
-            if (contactsdgv.Rows.Count < 2)
-            {
-                MessageBox.Show("No existen contactos a los que enviar!", "Observación",
-                    MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            if (wa.IsBrowserClosed())
-            {
-                MessageBox.Show("El navegador está cerrado, no se puede enviar mensajes!, conecte otra vez presionando <Conectar WhatsApp>",
-                    "Observación", MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-                return;
-            }
-
-            // Verifica sesión WA
-            if (!wa.IfConnected(By.XPath("//div[@contenteditable='true']")))
-            {
-                MessageBox.Show("Debe escanear el código QR para empezar a enviar", "Observación",
-                    MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-                return;
-            }
-
-
-            // ---- Setup UI ----
-            ToggleUiSendingState(isSending: true);
-
-            rowcount = contactsdgv.RowCount - 1;
-            sendpbr.Value = 0;
-            sendpbr.Maximum = rowcount;
-            totalmessageslbl.Text = rowcount.ToString();
-
-            sendedmessage = 0;
-            notsendedmessage = 0;
-            notsendedmessagelbl.Text = sendedmessage.ToString();
-            sendedmessagelbl.Text = notsendedmessage.ToString();
-
-            // Timings
-            wa.preventblocktiming = preventblockcb.Checked ? 4000 : 0;
-            eachmessagetiming = eachmessagetimingcb.Checked
-                ? Math.Max(0, ValidationHelper.SafeInt(eachmessagetimingtxt.Text)) * 1000
-                : 0;
-
-            // Prepara textos base (se respetan saltos con <br/> y sin normalizar teléfonos)
-            var messages = new List<string>
-            {
-                m1txt.Text.Replace("\n", "<br/>"),
-                m2txt.Text.Replace("\n", "<br/>"),
-                m3txt.Text.Replace("\n", "<br/>"),
-                m4txt.Text.Replace("\n", "<br/>"),
-                m5txt.Text.Replace("\n", "<br/>")
-            };
-
-            int count = 0;
-            string filename = filenametxt.Text?.Trim();
-            bool hasFile = !string.IsNullOrEmpty(filename);
-
-            try
-            {
-                foreach (DataGridViewRow fila in contactsdgv.Rows)
-                {
-                    if (fila.IsNewRow) continue;
-
-                    if (!InternetHelper.CheckForInternetConnection())
-                    {
-                        StopForNoInternet();
-                        break;
-                    }
-
-                    // Variables por fila
-                    string actualnumber = Convert.ToString(fila.Cells[0].Value);
-                    string actualname   = Convert.ToString(fila.Cells[1].Value);
-
-                    if (string.IsNullOrWhiteSpace(actualnumber))
-                    {
-                        MarkNotSent(fila);
-                        UpdateProgress(++count);
-                        continue;
-                    }
-
-                    // Aplicar pausa manual si corresponde (una sola vez)
-                    await MaybeApplyManualPauseAsync(fila.Index);
-
-                    // Pausa de usuario (pausetiming) si está activa
-                    await MaybeApplyUserPauseAsync();
-
-                    // Componer mensaje (una sola vez)
-                    string messageToSend = ComposeMessage(messages, actualname);
-
-                    // Abrir chat
-                    bool chatOpened = await OpenChatAsync(actualnumber, cancellationToken.Token);
-                    if (!chatOpened)
-                    {
-                        TryCleanEditor();
-                        MarkNotSent(fila);
-                        UpdateProgress(++count);
-                        continue;
-                    }
-
-                    // Enviar según tipo
-                    bool sentOk = false;
-                    try
-                    {
-                        if (hasFile)
-                        {
-                            sentOk = await SendWithFileAsync(filetype, filename, messageToSend, actualnumber, cancellationToken.Token);
-                        }
-                        else
-                        {
-                            sentOk = await SendTextOnlyAsync(messageToSend, cancellationToken.Token);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                        sentOk = false;
-                    }
-
-                    if (sentOk)
-                    {
-                       
-                        fila.Cells[2].Value = "S";
-                        sendedmessage++;
-                        sendedmessagelbl.Text = sendedmessage.ToString();
-
-
-
-
-                        //TIMING SOFT ALGO TO PREVENT BLOCKING
-                        await Task.Delay(wa.NextPreventDelayMs(), eachmessagetoken.Token);
-
-
-
-
-
-                        // Pausa configurable entre mensajes
-                        //EACHMESSAGE TIMING FROM TEXTBOX
-                        if (eachmessagetiming > 0 && wa.clickstate)
-                            await Task.Delay(eachmessagetiming, eachmessagetoken.Token);
-                    }
-                    else
-                    {
-                        TryCleanEditor();
-                        MarkNotSent(fila);
-                    }
-
-                    UpdateProgress(++count);
-                }
-
-                if (!stopbtnclicked)
-                {
-                    MessageBox.Show("Mensajes enviados correctamente! ", "Éxito",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-
-                notsendedmessagelbl.Text = Convert.ToString(rowcount - sendedmessage);
-            }
-            catch (OperationCanceledException)
-            {
-                // Cancelado por tokens: no hacemos nada extra.
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
-            finally
-            {
-                ToggleUiSendingState(isSending: false);
-                contactsdgv.AllowUserToAddRows = true;
-                contactsdgv.AllowUserToDeleteRows = true;
-            }
-        }
-        */
-        /* ==================== Helpers ==================== */
-
-        // Migrated to ValidationHelper.SafeInt()
-
-        // Habilita/deshabilita controles durante el envío
-        private void ToggleUiSendingState(bool isSending)
-        {
-            startbtn.Enabled = !isSending;
-            pausebtn.Enabled = isSending;
-            stopbtn.Enabled = isSending;
-            logoutbtn.Enabled = !isSending;
-            uploadbtn.Enabled = !isSending;
-            clearfilenamebtn.Enabled = !isSending;
-            connectwabtn.Enabled = !isSending;
-
-            contactsdgv.AllowUserToAddRows = !isSending;
-            contactsdgv.AllowUserToDeleteRows = !isSending;
-            loadmessagelbl.Text = isSending ? "Estado: Conectado . . ." : "Estado: Inactivo";
-        }
-
-        // Pausa manual cada N mensajes (severalpausetxt)
-        private async Task MaybeApplyManualPauseAsync(int rowIndex)
-        {
-            if (string.IsNullOrWhiteSpace(severalpausetxt.Text)) return;
-
-            int threshold = ValidationHelper.SafeInt(severalpausetxt.Text);
-            if (threshold <= 0) return;
-
-            if (rowIndex == threshold && !severalpausetoken.IsCancellationRequested)
-            {
-                MessageBox.Show(
-                    "El envio se pausó debido al <# mensajes para Pausar> designado en esta sección.\n" +
-                    "Recomendamos esta pausa para no ser bloqueado en WhatsApp.\n" +
-                    $"La pausa suele durar 15 minutos y se empezó el <{getTimeNow()}>, actualmente se pausa cada {severalpausetxt.Text} mensajes",
-                    "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
-
-                await Task.Delay(TimeSpan.FromSeconds(900), severalpausetoken.Token);
-            }
-        }
-
-        // Pausa de usuario (pausetiming) si aplica
-        private async Task MaybeApplyUserPauseAsync()
-        {
-            if (pausetiming != 0)
-            {
-                try
-                {
-                    // Si ya tienes pausetimingaction que bloquea, puedes llamarla con Task.Run
-                    await Task.Run(() => pausetimingaction(pausetiming, pauseToken.Token), pauseToken.Token);
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                }
-                finally
-                {
-                    pausetiming = 0;
-                }
-            }
-        }
-
-        // Arma el mensaje final (elige aleatorio si corresponde, reemplaza {nombre} y {fecha})
-        private string ComposeMessage(IList<string> messages, string actualname)
-        {
-            string msg = string.Empty;
-
-            if (manymessagescb.Checked)
-            {
-                var indices = NotEmptyMessages();       // Asumo que devuelve índices válidos
-                if (indices.Count > 0)
-                {
-                    var rnd = new Random();
-                    msg = messages[indices[rnd.Next(indices.Count)]];
-                }
-            }
-            else
-            {
-                msg = messages[0];
-            }
-
-            if (sendfullnamecb.Checked)
-            {
-                msg = Regex.Replace(msg, "{nombre}",
-                    string.IsNullOrWhiteSpace(actualname) ? "" : actualname);
-            }
-
-            if (senddatetimecb.Checked)
-            {
-                DateTime actualdate = getTimeNow();
-                msg = Regex.Replace(msg, "{fecha}", actualdate.ToString("dddd, dd MMMM yyyy HH:mm"));
-            }
-
-            return msg;
-        }
-
-        // Abrir chat del contacto
-        private async Task<bool> OpenChatAsync(string actualnumber, CancellationToken ct)
-        {
-            return await Task.Run(() =>
-            {
-                try
-                {
-                    var action = new Actions(WA.driver);
-                    wa.ClickSearchIcon();
-                    wa.ContactSearch(actualnumber);
-                    action.SendKeys(Keys.Space).Build().Perform();
-
-                    wa.ContactClick();
-                    Task.Delay(2000).Wait();
-                    return wa.clickstate;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    return false;
-                }
-            }, ct);
-        }
-
-        // Enviar solo texto
-        private async Task<bool> SendTextOnlyAsync(string message, CancellationToken ct)
-        {
-            return await Task.Run(() =>
-            {
-                try
-                {
-                    var action = new Actions(WA.driver);
-                    wa.ContactMessage(message);
-                    Task.Delay(1000 + wa.preventblocktiming).Wait();
-                    wa.ContactActionEnter();
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    return false;
-                }
-            }, ct);
-        }
-
-        // Enviar con archivo (I=imagen/video, A=audio, D=documento)
-        // Mantiene tu lógica de adjunto + texto cuando aplica
-        private async Task<bool> SendWithFileAsync(string filetype, string filename, string message, string number, CancellationToken ct)
-        {
-            return await Task.Run(() =>
-            {
-                try
-                {
-                    var action = new Actions(WA.driver);
-
-                    if (filetype == "I")
-                    {
-                        if (!CheckAttachMessageStatus())
-                        {
-                            wa.ImageMessage(filename);
-                            Task.Delay(1000 + wa.preventblocktiming).Wait();
-                            wa.ContactSend(By.XPath(WA.SendIADButton));
-                        }
-                        else
-                        {
-                            if (FileHelper.IsImageFile(filename))
-                            {
-                                wa.ImageTextMessage(filename, message);
-                                Task.Delay(1000 + wa.preventblocktiming).Wait();
-                            }
-                            else if (FileHelper.IsVideoFile(filename))
-                            {
-                                wa.VideoTextMessage(filename, message);
-                                action.SendKeys(".").Build().Perform();
-                                action.SendKeys(Keys.Backspace + Keys.Backspace + Keys.Backspace + Keys.Backspace).Build().Perform();
-                                Task.Delay(1000 + wa.preventblocktiming).Wait();
-                                wa.ContactSend(By.XPath(WA.SendIADButton));
-                            }
-                            else
-                            {
-                                // Fallback: envia imagen y luego texto aparte
-                                wa.ImageMessage(filename);
-                                Task.Delay(1000 + wa.preventblocktiming).Wait();
-                                wa.ContactSend(By.XPath(WA.SendIADButton));
-
-                                Task.Delay(1000 + wa.preventblocktiming).Wait();
-                                wa.ClickSearchIcon();
-                                wa.ContactSearch(number);
-                                action.SendKeys(Keys.Space).Build().Perform();
-                                wa.ContactClick();
-                                Task.Delay(1000 + wa.preventblocktiming).Wait();
-
-                                wa.ContactMessage(message);
-                                action.SendKeys("A").Build().Perform();
-                                action.SendKeys(Keys.Backspace + Keys.Backspace + Keys.Backspace + Keys.Backspace).Build().Perform();
-                                wa.ContactActionEnter();
-                            }
-                        }
-
-                        return true;
-                    }
-                    else if (filetype == "A")
-                    {
-                        wa.ContactFileAudio(filename);
-                        wa.ContactSend(By.XPath(WA.SendIADButton));
-                        Task.Delay(1000 + wa.preventblocktiming).Wait();
-
-                        // Si no hay campo de texto adjunto, enviar texto por separado
-                        if (!CheckAttachMessageStatus())
-                        {
-                            wa.ClickSearchIcon();
-                            wa.ContactSearch(number);
-                            action.SendKeys(Keys.Space).Build().Perform();
-                            wa.ContactClick();
-                            Task.Delay(1000 + wa.preventblocktiming).Wait();
-
-                            wa.ContactMessage(message);
-                            action.SendKeys("A").Build().Perform();
-                            action.SendKeys(Keys.Backspace + Keys.Backspace + Keys.Backspace + Keys.Backspace).Build().Perform();
-                            wa.ContactActionEnter();
-                        }
-
-                        return true;
-                    }
-                    else if (filetype == "D")
-                    {
-                        wa.ContactFile(filename);
-                        wa.ContactSend(By.XPath(WA.SendIADButton));
-                        Task.Delay(1000 + wa.preventblocktiming).Wait();
-
-                        if (!CheckAttachMessageStatus())
-                        {
-                            wa.ClickSearchIcon();
-                            wa.ContactSearch(number);
-                            action.SendKeys(Keys.Space).Build().Perform();
-                            wa.ContactClick();
-                            Task.Delay(1000 + wa.preventblocktiming).Wait();
-
-                            wa.ContactMessage(message);
-                            action.SendKeys("A").Build().Perform();
-                            action.SendKeys(Keys.Backspace + Keys.Backspace + Keys.Backspace + Keys.Backspace).Build().Perform();
-                            Task.Delay(1000 + wa.preventblocktiming).Wait();
-                            wa.ContactActionEnter();
-                        }
-
-                        return true;
-                    }
-
-                    // Tipo desconocido => solo texto
-                    wa.ContactMessage(message);
-                    wa.ContactActionEnter();
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex.Message);
-                    return false;
-                }
-            }, ct);
-        }
-
-        // Limpieza rápida del editor cuando falla la apertura o envío
-        private void TryCleanEditor()
-        {
-            try
-            {
-                var action = new Actions(WA.driver);
-                action.SendKeys(Keys.Backspace + Keys.Backspace + Keys.Backspace + Keys.Backspace).Build().Perform();
-            }
-            catch { /* no-op */ }
-        }
-
-        private void MarkNotSent(DataGridViewRow fila)
-        {
-            fila.Cells[2].Value = "N";
-            notsendedmessage++;
-            notsendedmessagelbl.Text = notsendedmessage.ToString();
-        }
-
-        private void UpdateProgress(int count)
-        {
-            if (count <= rowcount)
-                sendpbr.Value = count;
-        }
-
-        private void StopForNoInternet()
-        {
-            stopbtn.Enabled = false;
-            pausebtn.Enabled = false;
-            startbtn.Enabled = true;
-            MessageBox.Show("Se detuvieron los envíos de WA debido a que no cuenta con acceso a internet.",
-                "Observación", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
 
         #region  TASK 2 SMS
         private async Task Excecutesendtask2()
@@ -2762,15 +1884,6 @@ namespace Presentation
             }
         }
 
-        private string DecodeEncodedNonAsciiCharacters(string value)
-        {
-            return Regex.Replace(
-                value,
-                @"\\u(?<Value>[a-zA-Z0-9]{4})",
-                m => {
-                    return ((char)int.Parse(m.Groups["Value"].Value, NumberStyles.HexNumber)).ToString();
-                });
-        }
         private List<int> NotEmptyMessages()
         {
             List<int> result = new List<int>();
@@ -3240,24 +2353,7 @@ namespace Presentation
         }
         private static DateTime getTimeNow()
         {
-            /*
-                var client = new TcpClient("time.nist.gov", 13);
-                using (var streamReader = new StreamReader(client.GetStream()))
-                {
-
-
-
-                    var response = streamReader.ReadToEnd();
-                    var utcDateTimeString = response.Substring(7, 17);
-                    var localDateTime = DateTime.ParseExact(utcDateTimeString, "yy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal);
-
-                    return localDateTime;
-
-
-
-                }
-                */
-
+       
 
 
             DateTime localDate = DateTime.Now;
@@ -3271,11 +2367,7 @@ namespace Presentation
 
 
         }
-        private void getcontactsfromgroupbtn_Click(object sender, EventArgs e)
-        {
-            // wa.GetContactsFromGroup();
-        }
-        // Migrated to ValidationHelper.IsDigitsOnly()
+       
         private void severalpausetxt_KeyPress(object sender, KeyPressEventArgs e)
         {
             InputNumbers(sender, e);

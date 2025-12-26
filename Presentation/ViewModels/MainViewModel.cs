@@ -38,36 +38,7 @@ namespace Presentation.ViewModels
             Settings = new ApplicationSettingsModel();
         }
 
-        /// <summary>
-        /// Load application settings
-        /// </summary>
-        public void LoadSettings()
-        {
-            Settings = SettingsService.LoadSettings();
-        }
 
-        /// <summary>
-        /// Save application settings
-        /// </summary>
-        public void SaveSettings()
-        {
-            SettingsService.SaveSettings(Settings);
-        }
-
-        /// <summary>
-        /// Reset WhatsApp progress
-        /// </summary>
-        public void ResetWhatsAppProgress(int totalContacts)
-        {
-            WhatsAppProgress = new ProgressModel(totalContacts);
-        }
-
-        /// <summary>
-        /// Reset SMS progress
-        /// </summary>
-        public void ResetSMSProgress(int totalContacts)
-        {
-            SMSProgress = new ProgressModel(totalContacts);
-        }
+        
     }
 }

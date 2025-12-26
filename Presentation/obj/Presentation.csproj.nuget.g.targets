@@ -8,5 +8,7 @@
     <Import Project="$(NuGetPackageRoot)microsoft.bcl.asyncinterfaces\8.0.0\buildTransitive\net461\Microsoft.Bcl.AsyncInterfaces.targets" Condition="Exists('$(NuGetPackageRoot)microsoft.bcl.asyncinterfaces\8.0.0\buildTransitive\net461\Microsoft.Bcl.AsyncInterfaces.targets')" />
     <Import Project="$(NuGetPackageRoot)system.text.json\8.0.5\buildTransitive\net461\System.Text.Json.targets" Condition="Exists('$(NuGetPackageRoot)system.text.json\8.0.5\buildTransitive\net461\System.Text.Json.targets')" />
     <Import Project="$(NuGetPackageRoot)selenium.webdriver\4.38.0\buildTransitive\Selenium.WebDriver.targets" Condition="Exists('$(NuGetPackageRoot)selenium.webdriver\4.38.0\buildTransitive\Selenium.WebDriver.targets')" />
+    <Import Project="$(NuGetPackageRoot)fody\6.8.2\build\Fody.targets" Condition="Exists('$(NuGetPackageRoot)fody\6.8.2\build\Fody.targets')" />
+    <Import Project="$(NuGetPackageRoot)costura.fody\6.0.0\build\Costura.Fody.targets" Condition="Exists('$(NuGetPackageRoot)costura.fody\6.0.0\build\Costura.Fody.targets')" />
   </ImportGroup>
 </Project>
