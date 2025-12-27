@@ -621,6 +621,24 @@ namespace Presentation
         /// </summary>
         public async Task LaunchBrowser(CancellationToken ct = default)
         {
+            Console.WriteLine("=== DIAGNÓSTICO ===");
+            Console.WriteLine($"Driver: {(driver == null ? "null" : "existe")}");
+            Console.WriteLine($"State: {driverstate}");
+
+            var driverPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                "tempfilesWAButt", "webdriver", "chromedriver.exe"
+            );
+            Console.WriteLine($"ChromeDriver existe: {File.Exists(driverPath)}");
+
+            if (File.Exists(driverPath))
+            {
+                var size = new FileInfo(driverPath).Length;
+                Console.WriteLine($"ChromeDriver tamaño: {size} bytes");
+            }
+
+            Console.WriteLine("===================");
+
             try
             {
                 // Verificar si ya existe una instancia
@@ -641,95 +659,90 @@ namespace Presentation
             Directory.CreateDirectory(driverDir);
             Directory.CreateDirectory(userDataRoot);
 
-            await Task.Run(() =>
+            ChromeDriverService service = null;
+
+            try
             {
-                ChromeDriverService service = null;
-                try
-                {
-                    ct.ThrowIfCancellationRequested();
+                ct.ThrowIfCancellationRequested();
 
-                    Console.WriteLine("Abriendo Chrome para WhatsApp...");
+                Console.WriteLine("Abriendo Chrome para WhatsApp...");
 
-                    // ✅ Configurar servicio
-                    service = ChromeDriverService.CreateDefaultService(driverDir);
-                    service.HideCommandPromptWindow = true;
-                    service.SuppressInitialDiagnosticInformation = true;
+                // Configurar servicio
+                service = ChromeDriverService.CreateDefaultService(driverDir);
+                service.HideCommandPromptWindow = true;
+                service.SuppressInitialDiagnosticInformation = true;
 
-                    // ✅ Configurar opciones con optimizaciones
-                    var options = new ChromeOptions();
+                // Configurar opciones
+                var options = new ChromeOptions();
 
-                    // Argumentos básicos
-                    options.AddArguments(
-                        $"--user-data-dir={userDataRoot}",
-                        $"--profile-directory={profileName}",
-                        "--window-size=850,650",  // O usa "--window-size=850,650" si prefieres tamaño fijo
-                        "--disable-notifications",
-                        "--no-default-browser-check",
-                        "--disable-popup-blocking",
-                        "--lang=es-PE"
-                    );
+                options.AddArguments(
+                    $"--user-data-dir={userDataRoot}",
+                    $"--profile-directory={profileName}",
+                    "--window-size=850,650",
+                    "--disable-notifications",
+                    "--no-default-browser-check",
+                    "--disable-popup-blocking",
+                    "--lang=es-PE"
+                );
 
-                    // ✅ Anti-detección de automatización
-                    options.AddArgument("--disable-blink-features=AutomationControlled");
-                    options.AddExcludedArgument("enable-automation");
+                options.AddArgument("--disable-blink-features=AutomationControlled");
+                options.AddExcludedArgument("enable-automation");
 
-                    // ✅ Optimizaciones de rendimiento
-                    options.AddArguments(
-                        "--disable-gpu",
-                        "--no-sandbox",
-                        "--disable-dev-shm-usage"
-                    );
+                options.AddArguments(
+                    "--disable-gpu",
+                    "--no-sandbox",
+                    "--disable-dev-shm-usage",
+                    "--disable-extensions",
+                    "--disable-plugins",
+                    "--disk-cache-size=1",
+                    "--media-cache-size=1",
+                    "--aggressive-cache-discard",
+                    "--disable-application-cache"
+                );
 
-                    // ✅ Reducción de consumo de memoria (OPCIONAL - descomenta si necesitas)
-                    options.AddArguments(
-                        "--disable-extensions",
-                        "--disable-plugins",
-                         //"--disable-images",                    // ⚠️ Desactiva imágenes (WhatsApp puede no funcionar bien)
-                        // "--blink-settings=imagesEnabled=false", // ⚠️ Igual que el anterior
-                        "--disk-cache-size=1",
-                        "--media-cache-size=1",
-                        "--aggressive-cache-discard",
-                        "--disable-application-cache"
-                    );
+                options.PageLoadStrategy = PageLoadStrategy.Normal;
+                options.AddUserProfilePreference("credentials_enable_service", false);
+                options.AddUserProfilePreference("profile.password_manager_enabled", false);
 
-                    // ✅ Configuración de carga de página
-                    options.PageLoadStrategy = PageLoadStrategy.Normal;
+                // ✅ Crear driver SIN Task.Run (ejecutar en el thread actual)
+                driver = new ChromeDriver(service, options);
 
-                    // ✅ Preferencias adicionales para evitar detección
-                    options.AddUserProfilePreference("credentials_enable_service", false);
-                    options.AddUserProfilePreference("profile.password_manager_enabled", false);
+                driver.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(60);
+                driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(5);
+                driver.Manage().Timeouts().AsynchronousJavaScript = TimeSpan.FromSeconds(30);
 
-                    // ✅ Crear driver
-                    driver = new ChromeDriver(service, options);
+                _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
 
-                    // ✅ Configurar timeouts
-                    driver.Manage().Timeouts().PageLoad = TimeSpan.FromSeconds(60);
-                    driver.Manage().Timeouts().ImplicitWait = TimeSpan.FromSeconds(5);
-                    driver.Manage().Timeouts().AsynchronousJavaScript = TimeSpan.FromSeconds(30);
+                driver.Navigate().GoToUrl("https://web.whatsapp.com/");
 
-                    // ✅ Inicializar wait
-                    _wait = new WebDriverWait(driver, TimeSpan.FromSeconds(20));
+                driverstate = true;
+                Console.WriteLine("✓ WhatsApp Web iniciado correctamente");
+            }
+            catch (OperationCanceledException)
+            {
+                Console.WriteLine("⚠️ Inicio cancelado");
+                driverstate = false;
 
-                    // ✅ Navegar a WhatsApp
-                    driver.Navigate().GoToUrl("https://web.whatsapp.com/");
+                try { driver?.Quit(); } catch { }
+                try { driver?.Dispose(); } catch { }
+                driver = null;
 
-                    driverstate = true;
-                    Console.WriteLine("✓ WhatsApp Web iniciado correctamente");
-                }
-                catch (OperationCanceledException)
-                {
-                    Console.WriteLine("⚠️ Inicio cancelado");
-                    driverstate = false;
-                    service?.Dispose();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"✗ Error iniciando WhatsApp: {ex.Message}");
-                    driverstate = false;
-                    service?.Dispose();
-                    throw;
-                }
-            }, ct);
+                service?.Dispose();
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Error iniciando WhatsApp: {ex.Message}");
+                Console.WriteLine($"StackTrace: {ex.StackTrace}");
+                driverstate = false;
+
+                try { driver?.Quit(); } catch { }
+                try { driver?.Dispose(); } catch { }
+                driver = null;
+
+                service?.Dispose();
+                throw;
+            }
         }
 
         #endregion
@@ -1573,7 +1586,8 @@ namespace Presentation
         {
             try
             {
-                var title = driver?.Title;
+                if (driver == null) return true;
+                var title = driver.Title;
                 return false;
             }
             catch
@@ -1631,19 +1645,44 @@ namespace Presentation
         /// </summary>
         public void CloseWDriver()
         {
-            if (driverstate)
+            try
             {
-                try
+                if (driver != null)
                 {
-                    driver?.Quit();
-                    driver = null;
-                    driverstate = false;
-                    Console.WriteLine("✓ WhatsApp cerrado");
+                    try
+                    {
+                        // ✅ Verificar si el proceso está vivo antes de cerrar
+                        var title = driver.Title; // Test si responde
+                        driver.Quit();
+                        Console.WriteLine("✓ WhatsApp cerrado correctamente");
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        Console.WriteLine("⚠️ Driver ya estaba cerrado");
+                    }
+                    catch (WebDriverException)
+                    {
+                        Console.WriteLine("⚠️ Proceso de Chrome ya no existe");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"⚠️ Error cerrando: {ex.Message}");
+                    }
+                    finally
+                    {
+                        try { driver?.Dispose(); } catch { }
+                        driver = null;
+                    }
                 }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"⚠️ Error cerrando WhatsApp: {ex.Message}");
-                }
+
+                driverstate = false;
+                Console.WriteLine("✓ Estado reseteado");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error en CloseWDriver: {ex.Message}");
+                driver = null;
+                driverstate = false;
             }
         }
 

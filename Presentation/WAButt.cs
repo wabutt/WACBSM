@@ -92,7 +92,9 @@ namespace Presentation
                 }
             });
 
-            CheckUserProfileExist();
+            // ❌ QUITAR ESTA LÍNEA
+            // CheckUserProfileExist();
+
             InitializeComponent();
             CheckForIllegalCrossThreadCalls = false;
 
@@ -112,7 +114,10 @@ namespace Presentation
 
         private async void WAButtfrm_Load(object sender, EventArgs e)
         {
-            // Cargar licencia y mostrar en título
+            // ✅ PRIMERO: Verificar contactos guardados
+            CheckUserProfileExist();
+
+            // ✅ SEGUNDO: Cargar licencia y mostrar en título
             string licenseKey = LicenseStorage.LoadLicense();
 
             if (!string.IsNullOrWhiteSpace(licenseKey))
@@ -135,7 +140,7 @@ namespace Presentation
                 catch { }
             }
 
-            // Mostrar formulario
+            // ✅ TERCERO: Mostrar formulario
             try
             {
                 apptab.Visible = true;
@@ -670,21 +675,32 @@ namespace Presentation
             Process.Start("https://es.piliapp.com/twitter-symbols/");
         }
 
+        private CancellationTokenSource _connectCancellation;
+
         private async void connectwabtn_Click(object sender, EventArgs e)
         {
-
             if (!InternetHelper.CheckForInternetConnection())
             {
                 MessageBox.Show("No cuenta con acceso a internet.", "Error");
                 return;
             }
 
+            // ✅ Cancelar operación anterior si existe
+            _connectCancellation?.Cancel();
+            _connectCancellation = new CancellationTokenSource();
+
+            // Cerrar driver anterior
             wa.CloseWDriver();
+
+            // Matar procesos zombies
+            KillChromeDriverProcesses();
 
             try
             {
+                connectwabtn.Enabled = false;
                 loadmessagelbl.Text = "Estado: Conectando...";
-                await wa.LaunchBrowser();
+
+                await wa.LaunchBrowser(_connectCancellation.Token);
 
                 if (wa.driverstate)
                 {
@@ -692,15 +708,55 @@ namespace Presentation
                     controls(true);
                     logoutbtn.Enabled = true;
                 }
+                else
+                {
+                    loadmessagelbl.Text = "Estado: Error al conectar";
+                    MessageBox.Show("No se pudo iniciar Chrome. Verifica que Chrome esté instalado.", "Error");
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                loadmessagelbl.Text = "Estado: Cancelado";
+                Console.WriteLine("Conexión cancelada por el usuario");
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error: {ex.Message}", "Error");
+                loadmessagelbl.Text = "Estado: Error";
+                MessageBox.Show($"Error al conectar WhatsApp:\n{ex.Message}", "Error");
+                Console.WriteLine($"Error completo: {ex}");
             }
+            finally
+            {
+                connectwabtn.Enabled = true;
+            }
+        }
 
-
-
-
+        private void KillChromeDriverProcesses()
+        {
+            try
+            {
+                var processes = System.Diagnostics.Process.GetProcessesByName("chromedriver");
+                foreach (var process in processes)
+                {
+                    try
+                    {
+                        if (!process.HasExited)
+                        {
+                            process.Kill();
+                            process.WaitForExit(2000);
+                            Console.WriteLine($"✓ Proceso zombie eliminado: {process.Id}");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"⚠️ No se pudo matar proceso {process.Id}: {ex.Message}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error matando procesos: {ex.Message}");
+            }
         }
 
         private void ExportDgvToGmailCore(DataGridView grid)

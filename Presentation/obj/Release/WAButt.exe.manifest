@@ -4,7 +4,7 @@
   <description asmv2:iconFile="whatsapp (1).ico" xmlns="urn:schemas-microsoft-com:asm.v1" />
   <application />
   <entryPoint>
-    <assemblyIdentity name="WAButt" version="1.0.0.15" language="neutral" processorArchitecture="msil" />
+    <assemblyIdentity name="WAButt" version="1.0.0.16" language="neutral" processorArchitecture="msil" />
     <commandLine file="WAButt.exe" parameters="" />
   </entryPoint>
   <trustInfo>
@@ -139,14 +139,14 @@
     </dependentAssembly>
   </dependency>
   <dependency>
-    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="WAButt.exe" size="9404416">
-      <assemblyIdentity name="WAButt" version="1.0.0.15" language="neutral" processorArchitecture="msil" />
+    <dependentAssembly dependencyType="install" allowDelayedBinding="true" codebase="WAButt.exe" size="9402880">
+      <assemblyIdentity name="WAButt" version="1.0.0.16" language="neutral" processorArchitecture="msil" />
       <hash>
         <dsig:Transforms>
           <dsig:Transform Algorithm="urn:schemas-microsoft-com:HashTransforms.Identity" />
         </dsig:Transforms>
         <dsig:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256" />
-        <dsig:DigestValue>VtTa+ZefMG+I4ixJF/DGmEC+YJVwikZavOtN8g8no+k=</dsig:DigestValue>
+        <dsig:DigestValue>3tHcq/iG0SF6dO6sHvXoVxq5AS0icPHdEF9yBMHTUyw=</dsig:DigestValue>
       </hash>
     </dependentAssembly>
   </dependency>
