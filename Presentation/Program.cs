@@ -36,10 +36,7 @@ namespace Presentation
                 return false;
             }
 
-            // Verificar actualizaciones PRIMERO
-            CheckForUpdates();
-
-            // Validar licencia
+            // 🔒 WALL #1: Validar licencia PRIMERO
             string licenseKey = LicenseStorage.LoadLicense();
 
             int attempts = 0;
@@ -79,6 +76,9 @@ namespace Presentation
 
                     // Guardar licencia válida
                     LicenseStorage.SaveLicense(licenseKey);
+
+                    // 🔒 WALL #2: Verificar actualizaciones (solo si licencia válida)
+                    CheckForUpdates();
 
                     return true;
                 }

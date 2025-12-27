@@ -79,14 +79,17 @@ namespace Presentation
 
 
 
+            // Selector principal: funciona CON y SIN foto de perfil
             public static By FirstSearchResult =>
-                By.XPath("//div[@role='gridcell' and .//img]");
-            // Fallback 1: Buscar por imagen de avatar
-            public static By FirstSearchResultWithAvatar =>
-                By.CssSelector("div[role='gridcell'][tabindex='0'] img");
+                By.XPath("//div[@role='gridcell'][@tabindex='0']");
 
-            // Fallback 2: XPath combinado
-            public static By FirstSearchResultXPath => By.XPath("//div[@role='gridcell'][@tabindex='0'][.//img[@alt]]");
+            // Fallback 1: gridcell sin tabindex (en caso de cambios en WhatsApp)
+            public static By FirstSearchResultWithAvatar =>
+                By.CssSelector("div[role='gridcell']");
+
+            // Fallback 2: búsqueda en grid completo
+            public static By FirstSearchResultXPath =>
+                By.XPath("//div[@role='grid']//div[@role='gridcell'][1]");
 
             // Mensaje de "no encontrado"
             public static By NoResultsMessage =>
@@ -1080,11 +1083,12 @@ namespace Presentation
 
         private IWebElement FindClickableElement()
         {
+            // Intentar múltiples selectores (ahora soportan contactos CON y SIN foto de perfil)
             var selectors = new[]
             {
-        new { Name = "FirstSearchResult", By = WASelectors.FirstSearchResult, Timeout = 4 },
-        new { Name = "WithAvatar", By = WASelectors.FirstSearchResultWithAvatar, Timeout = 3 },
-        new { Name = "XPath", By = WASelectors.FirstSearchResultXPath, Timeout = 2 }
+        new { Name = "GridCell[tabindex=0]", By = WASelectors.FirstSearchResult, Timeout = 4 },
+        new { Name = "GridCell genérico", By = WASelectors.FirstSearchResultWithAvatar, Timeout = 3 },
+        new { Name = "Primer GridCell del Grid", By = WASelectors.FirstSearchResultXPath, Timeout = 2 }
     };
 
             foreach (var sel in selectors)
@@ -1331,11 +1335,19 @@ namespace Presentation
             try
             {
                 var attachBtn = WaitForElement(WASelectors.AttachButton, 10);
-                attachBtn?.Click();
+                if (attachBtn == null)
+                    throw new NoSuchElementException("No encontré el botón Adjuntar (clip).");
+
+                attachBtn.Click();
                 Thread.Sleep(500);
 
-                var fileInput = WaitForElement(WASelectors.AttachDocumentInput, 10);
-                fileInput?.SendKeys(filePath);
+                // Usar GetLastFileInput para mayor robustez
+                var fileInput = GetLastFileInput(WASelectors.AttachDocumentInput, 10);
+
+                if (fileInput == null)
+                    throw new NoSuchElementException("No apareció el input de documento.");
+
+                fileInput.SendKeys(filePath);
 
                 Thread.Sleep(2000 + preventblocktiming);
                 Console.WriteLine($"✓ Documento adjuntado: {Path.GetFileName(filePath)}");
@@ -1354,12 +1366,19 @@ namespace Presentation
             try
             {
                 var attachBtn = WaitForElement(WASelectors.AttachButton, 10);
-                attachBtn?.Click();
+                if (attachBtn == null)
+                    throw new NoSuchElementException("No encontré el botón Adjuntar (clip).");
+
+                attachBtn.Click();
                 Thread.Sleep(500);
 
-                // Los audios usan el mismo input que imágenes
-                var fileInput = WaitForElement(WASelectors.AttachImageInput, 10);
-                fileInput?.SendKeys(audioPath);
+                // Los audios se suben como documentos en WhatsApp Web
+                var fileInput = GetLastFileInput(WASelectors.AttachDocumentInput, 10);
+
+                if (fileInput == null)
+                    throw new NoSuchElementException("No apareció el input de documento/audio.");
+
+                fileInput.SendKeys(audioPath);
 
                 Thread.Sleep(1000 + preventblocktiming);
                 Console.WriteLine($"✓ Audio adjuntado: {Path.GetFileName(audioPath)}");

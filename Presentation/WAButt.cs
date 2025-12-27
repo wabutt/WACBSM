@@ -107,7 +107,7 @@ namespace Presentation
                 Console.WriteLine("⚠ XanderUI NullRef (ignorado)");
             }
 
-            ExecuteStart();
+            // ExecuteStart() movido a WAButtfrm_Load para ejecutar después de pasar los walls
 
             this.Load += WAButtfrm_Load;
         }
@@ -149,6 +149,9 @@ namespace Presentation
             {
                 Console.WriteLine("⚠ XanderUI NullRef (ignorado)");
             }
+
+            // ✅ CUARTO: Inicializar estado de la aplicación (restaurar datos guardados)
+            ExecuteStart();
         }
 
 
@@ -690,10 +693,24 @@ namespace Presentation
             _connectCancellation = new CancellationTokenSource();
 
             // Cerrar driver anterior
-            wa.CloseWDriver();
+            try
+            {
+                wa.CloseWDriver();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error cerrando driver: {ex.Message}");
+            }
 
             // Matar procesos zombies
-            KillChromeDriverProcesses();
+            try
+            {
+                KillChromeDriverProcesses();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error eliminando procesos zombies: {ex.Message}");
+            }
 
             try
             {
@@ -740,16 +757,23 @@ namespace Presentation
                 {
                     try
                     {
-                        if (!process.HasExited)
-                        {
-                            process.Kill();
-                            process.WaitForExit(2000);
-                            Console.WriteLine($"✓ Proceso zombie eliminado: {process.Id}");
-                        }
+                        // Intentar matar directamente sin verificar HasExited
+                        // (HasExited puede lanzar InvalidOperationException en algunos casos)
+                        process.Kill();
+                        process.WaitForExit(2000);
+                        Console.WriteLine("✓ Proceso chromedriver eliminado");
+                    }
+                    catch (InvalidOperationException)
+                    {
+                        // El proceso ya terminó, ignorar
+                    }
+                    catch (System.ComponentModel.Win32Exception)
+                    {
+                        // No hay permisos o proceso inaccesible, ignorar
                     }
                     catch (Exception ex)
                     {
-                        Console.WriteLine($"⚠️ No se pudo matar proceso {process.Id}: {ex.Message}");
+                        Console.WriteLine($"⚠️ Error eliminando chromedriver: {ex.Message}");
                     }
                 }
             }
