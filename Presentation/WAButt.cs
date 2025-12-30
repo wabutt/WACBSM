@@ -67,6 +67,10 @@ namespace Presentation
         private int eachmessagetiming = 0;
         private int eachmessagetiming2 = 0;
 
+        // Variables para triggers de pausa humanizados (N±2)
+        private int variablePauseTrigger = 0;
+        private int variablePauseTrigger2 = 0;
+
         public string chromedriverversion;
         public string chromedriverdwlink;
 
@@ -157,34 +161,12 @@ namespace Presentation
 
 
 
-        private void AutoUpdater_ApplicationExitEvent()
-        {
-            Console.WriteLine("Cerrando aplicación para actualizar...");
-
-            try
-            {
-                wa?.CloseWDriver();
-                wa?.CloseWDriver2();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Error: {ex.Message}");
-            }
-        }
-        
 
        
         /// <summary>
         /// Simple modal dialog to ask user for the license key.
         /// </summary>
         
-
-        private Version GetCurrentVersion()
-        {
-            return System.Reflection.Assembly.GetExecutingAssembly().GetName().Version;
-        }
-
-
 
         private async Task SendDocument(string filePath, string message, Actions action, string contactNumber)
         {
@@ -201,7 +183,16 @@ namespace Presentation
                 wa.ContactClick();
                 await Task.Delay(1000, cancellationToken.Token);
 
+                // Tiempo de "pensar" antes de escribir
+                int thinkingDelay = _viewModel.TimingService.GetThinkingDelay();
+                await Task.Delay(thinkingDelay, cancellationToken.Token);
+
                 wa.ContactMessage(message);
+
+                // Tiempo de "revisar" antes de enviar
+                int reviewDelay = _viewModel.TimingService.GetReviewDelay();
+                await Task.Delay(reviewDelay, cancellationToken.Token);
+
                 wa.ContactActionEnter();
             }
         }
@@ -236,8 +227,17 @@ namespace Presentation
                     action.SendKeys(Keys.Backspace).Build().Perform();
                     await Task.Delay(500, cancellationToken.Token);
 
+                    // Tiempo de "pensar" antes de escribir (0.8-2.5 seg)
+                    int thinkingDelay = _viewModel.TimingService.GetThinkingDelay();
+                    await Task.Delay(thinkingDelay, cancellationToken.Token);
+                    Console.WriteLine($"   🤔 Pensando: {thinkingDelay}ms");
+
                     wa.ContactMessage(message);
-                    await Task.Delay(1000 + wa.preventblocktiming, cancellationToken.Token);
+
+                    // Tiempo de "revisar" antes de enviar (0.4-1.8 seg)
+                    int reviewDelay = _viewModel.TimingService.GetReviewDelay();
+                    await Task.Delay(reviewDelay, cancellationToken.Token);
+                    Console.WriteLine($"   👀 Revisando: {reviewDelay}ms");
 
                     wa.ContactActionEnter();
                     Console.WriteLine("✓ Text message sent");
@@ -282,7 +282,16 @@ namespace Presentation
                     wa.ContactClick();
                     await Task.Delay(1000, cancellationToken.Token);
 
+                    // Tiempo de "pensar" antes de escribir
+                    int thinkingDelay = _viewModel.TimingService.GetThinkingDelay();
+                    await Task.Delay(thinkingDelay, cancellationToken.Token);
+
                     wa.ContactMessage(message);
+
+                    // Tiempo de "revisar" antes de enviar
+                    int reviewDelay = _viewModel.TimingService.GetReviewDelay();
+                    await Task.Delay(reviewDelay, cancellationToken.Token);
+
                     wa.ContactActionEnter();
                 }
             }
@@ -567,8 +576,13 @@ namespace Presentation
         {
             if (eachmessagetiming > 0)
             {
+                // Aplicar dispersión aleatoria ±20% al tiempo entre mensajes
+                int delayWithDispersion = _viewModel.TimingService.GetAntiBlockDelay(eachmessagetiming);
+
+                Console.WriteLine($"⏱ Delay entre mensajes: {delayWithDispersion}ms (base: {eachmessagetiming}ms)");
+
                 await _viewModel.TimingService.ApplyDelayAsync(
-                    eachmessagetiming,
+                    delayWithDispersion,
                     eachmessagetoken.Token,
                     pauseToken.Token);
             }
@@ -1142,6 +1156,17 @@ namespace Presentation
             eachmessagetiming = eachmessagetimingcb.Checked
                 ? ValidationHelper.SafeInt(eachmessagetimingtxt.Text) * 1000
                 : 0;
+
+            // Calcular trigger de pausa variable (N±2) al inicio
+            if (!string.IsNullOrEmpty(severalpausetxt.Text))
+            {
+                int pauseEvery = ValidationHelper.SafeInt(severalpausetxt.Text);
+                variablePauseTrigger = _viewModel.TimingService.GetVariablePauseTrigger(pauseEvery);
+            }
+            else
+            {
+                variablePauseTrigger = 0;
+            }
         }
 
         private async Task<bool> ValidatePreSendConditions()
@@ -1237,20 +1262,24 @@ namespace Presentation
         }
         private async Task HandlePausePoints(int currentIndex)
         {
-            if (string.IsNullOrEmpty(severalpausetxt.Text)) return;
+            if (variablePauseTrigger <= 0) return;
 
-            int pauseEvery = ValidationHelper.SafeInt(severalpausetxt.Text);
-
-            if (currentIndex == pauseEvery && !severalpausetoken.IsCancellationRequested)
+            // Pausar cuando llegue al trigger calculado (N±2)
+            if (currentIndex == variablePauseTrigger && !severalpausetoken.IsCancellationRequested)
             {
+                // Duración variable de pausa (12-18 minutos)
+                TimeSpan pauseDuration = _viewModel.TimingService.GetVariablePauseDuration();
+                int minutes = (int)pauseDuration.TotalMinutes;
+
                 MessageBox.Show(
-                    $"Pausa automática después de {pauseEvery} mensajes.\nEsperando 15 minutos...",
+                    $"Pausa automática después de {currentIndex} mensajes.\nEsperando {minutes} minutos...",
                     "Pausa", MessageBoxButtons.OK, MessageBoxIcon.Information
                 );
 
                 try
                 {
-                    await Task.Delay(TimeSpan.FromMinutes(15), severalpausetoken.Token);
+                    await Task.Delay(pauseDuration, severalpausetoken.Token);
+                    Console.WriteLine($"✓ Pausa completada ({minutes} min)");
                 }
                 catch (OperationCanceledException)
                 {
@@ -1414,6 +1443,17 @@ namespace Presentation
                                         eachmessagetiming2 = eachmessagetiming2cb.Checked
                                             ? ValidationHelper.SafeInt(eachmessagetiming2txt.Text) * 1000
                                             : 0;
+
+                                        // Calcular trigger de pausa variable (N±2) para SMS
+                                        if (!string.IsNullOrEmpty(severalpause2txt.Text))
+                                        {
+                                            int pauseEvery2 = ValidationHelper.SafeInt(severalpause2txt.Text);
+                                            variablePauseTrigger2 = _viewModel.TimingService.GetVariablePauseTrigger(pauseEvery2);
+                                        }
+                                        else
+                                        {
+                                            variablePauseTrigger2 = 0;
+                                        }
 
 
 
@@ -1733,34 +1773,37 @@ namespace Presentation
                                     activatemanymessages = true;
 
 
-                                    if (severalpause2txt.Text != "")
+                                    if (variablePauseTrigger2 > 0)
                                     {
-
-
-                                        if (fila.Index == ValidationHelper.SafeInt(severalpause2txt.Text) && !severalpausetoken2.IsCancellationRequested)
+                                        // Pausar cuando llegue al trigger calculado (N±2)
+                                        if (fila.Index == variablePauseTrigger2 && !severalpausetoken2.IsCancellationRequested)
                                         {
+                                            // Duración variable de pausa (12-18 minutos)
+                                            TimeSpan pauseDuration = _viewModel.TimingService.GetVariablePauseDuration();
+                                            int minutes = (int)pauseDuration.TotalMinutes;
 
-                                            Console.WriteLine("<<<<<<<<<<<<<<<<<<<este es la cuenta ctual de la fila  " + fila.Index);
-                                            MessageBox.Show("El envio se pausó debido al <# mensajes para Pausar> designado en esta sección.\nRecomendamos esta pausa para no ser bloqueado en WhatsApp.\nLa pausa suele durar 15 minutos y se empezo el <" + getTimeNow() + ">, actualmente se pausa cada " + severalpausetxt.Text + " mensajes", "Observación", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                            Console.WriteLine($"📊 Pausa SMS en mensaje {fila.Index}");
+                                            MessageBox.Show(
+                                                $"Pausa automática de SMS después de {fila.Index} mensajes.\n" +
+                                                $"Esperando {minutes} minutos para evitar bloqueos.\n" +
+                                                $"Inicio: {getTimeNow()}",
+                                                "Pausa SMS",
+                                                MessageBoxButtons.OK,
+                                                MessageBoxIcon.Information
+                                            );
 
                                             await Task.Run(() =>
                                             {
                                                 try
                                                 {
-                                                    Task.Delay(TimeSpan.FromSeconds(900), severalpausetoken2.Token).Wait();
-
+                                                    Task.Delay(pauseDuration, severalpausetoken2.Token).Wait();
+                                                    Console.WriteLine($"✓ Pausa SMS completada ({minutes} min)");
                                                 }
                                                 catch (Exception ex)
                                                 {
-
                                                     Console.WriteLine(ex.Message);
                                                 }
-
-
                                             });
-
-
-
                                         }
 
 
@@ -1771,19 +1814,18 @@ namespace Presentation
                                     {
                                         try
                                         {
-                                            Task.Delay(eachmessagetiming2, eachmessagetoken2.Token).Wait();
-
-
+                                            if (eachmessagetiming2 > 0)
+                                            {
+                                                // Aplicar dispersión aleatoria ±20% al tiempo entre mensajes SMS
+                                                int delayWithDispersion = _viewModel.TimingService.GetAntiBlockDelay(eachmessagetiming2);
+                                                Console.WriteLine($"⏱ Delay SMS: {delayWithDispersion}ms (base: {eachmessagetiming2}ms)");
+                                                Task.Delay(delayWithDispersion, eachmessagetoken2.Token).Wait();
+                                            }
                                         }
                                         catch (Exception ex)
                                         {
-
                                             Console.WriteLine(ex.Message.ToString());
                                         }
-
-
-
-
                                     });
 
 
