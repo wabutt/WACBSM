@@ -273,6 +273,7 @@
             this.audioToolStripMenuItem.Name = "audioToolStripMenuItem";
             this.audioToolStripMenuItem.Size = new System.Drawing.Size(173, 38);
             this.audioToolStripMenuItem.Text = "Audio";
+            this.audioToolStripMenuItem.Visible = false;
             this.audioToolStripMenuItem.Click += new System.EventHandler(this.audioToolStripMenuItem_Click);
             // 
             // documentoToolStripMenuItem
@@ -281,6 +282,7 @@
             this.documentoToolStripMenuItem.Name = "documentoToolStripMenuItem";
             this.documentoToolStripMenuItem.Size = new System.Drawing.Size(173, 38);
             this.documentoToolStripMenuItem.Text = "Documento";
+            this.documentoToolStripMenuItem.Visible = false;
             this.documentoToolStripMenuItem.Click += new System.EventHandler(this.documentoToolStripMenuItem_Click);
             // 
             // cmsgmail

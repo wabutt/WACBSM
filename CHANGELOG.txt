@@ -1,7 +1,7 @@
 ﻿WAButt - Historial de Cambios
 ================================
 
-Version 1.0.0.17 (26/12/2025)
+Version 1.0.0.19 (30/12/2025)
 --------------------------------
 [NUEVO]
 * Sistema de almacenamiento de licencias optimizado

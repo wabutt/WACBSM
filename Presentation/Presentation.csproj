@@ -151,6 +151,12 @@
     <!-- ViewModels -->
     <Compile Include="ViewModels\MainViewModel.cs" />
     <!-- Original Files -->
+    <Compile Include="AttachmentManager.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="AttachmentManager.Designer.cs">
+      <DependentUpon>AttachmentManager.cs</DependentUpon>
+    </Compile>
     <Compile Include="ExtractContacts.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -174,6 +180,9 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <EmbeddedResource Include="AttachmentManager.resx">
+      <DependentUpon>AttachmentManager.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="ExtractContacts.resx">
       <DependentUpon>ExtractContacts.cs</DependentUpon>
     </EmbeddedResource>

@@ -43,6 +43,10 @@ namespace Presentation
         public string filetype;
         public static StringBuilder strex;
 
+        // Sistema de múltiples adjuntos aleatorios
+        private List<string> _attachmentPaths = new List<string>();
+        private static readonly Random _attachmentRandom = new Random();
+
         private CancellationTokenSource cancellationToken;
         private CancellationTokenSource pauseToken;
         private CancellationTokenSource eachmessagetoken;
@@ -589,10 +593,142 @@ namespace Presentation
         }
         private void uploadbtn_Click(object sender, EventArgs e)
         {
+            // Abrir AttachmentManager con lista existente
+            using (AttachmentManager attachmentManager = new AttachmentManager(_attachmentPaths))
+            {
+                if (attachmentManager.ShowDialog() == DialogResult.OK)
+                {
+                    // Actualizar lista de adjuntos
+                    _attachmentPaths = new List<string>(attachmentManager.AttachmentPaths);
 
-            cmsupload.Show(Cursor.Position.X, Cursor.Position.Y);
+                    // Actualizar display en UI
+                    UpdateAttachmentDisplay();
 
+                    // Establecer filetype
+                    filetype = _attachmentPaths.Count > 0 ? "I" : null;
+                }
+            }
 
+        }
+
+        /// <summary>
+        /// Actualizar el display de filenametxt con el conteo de adjuntos
+        /// </summary>
+        private void UpdateAttachmentDisplay()
+        {
+            if (_attachmentPaths == null || _attachmentPaths.Count == 0)
+            {
+                filenametxt.Clear();
+                return;
+            }
+
+            if (_attachmentPaths.Count == 1)
+            {
+                filenametxt.Text = _attachmentPaths[0];
+            }
+            else
+            {
+                filenametxt.Text = $"{_attachmentPaths.Count} imágenes seleccionadas";
+            }
+        }
+
+        /// <summary>
+        /// Obtener un path aleatorio de la lista de adjuntos
+        /// Retorna null si no hay adjuntos
+        /// Retorna el único path si solo hay 1
+        /// Retorna path aleatorio si hay múltiples
+        /// </summary>
+        private string GetRandomAttachmentPath()
+        {
+            if (_attachmentPaths == null || _attachmentPaths.Count == 0)
+            {
+                return null;
+            }
+
+            if (_attachmentPaths.Count == 1)
+            {
+                return _attachmentPaths[0];
+            }
+
+            // Seleccionar aleatoriamente
+            int randomIndex = _attachmentRandom.Next(0, _attachmentPaths.Count);
+            string selectedPath = _attachmentPaths[randomIndex];
+
+            Console.WriteLine($"🎲 Imagen aleatoria: {Path.GetFileName(selectedPath)} ({randomIndex + 1}/{_attachmentPaths.Count})");
+
+            return selectedPath;
+        }
+
+        /// <summary>
+        /// Validar todos los adjuntos antes de comenzar el envío
+        /// </summary>
+        private bool ValidateAttachmentsBeforeSend()
+        {
+            if (_attachmentPaths == null || _attachmentPaths.Count == 0)
+            {
+                return true; // No hay adjuntos que validar
+            }
+
+            AttachmentService attachmentService = new AttachmentService();
+            List<string> invalidFiles = new List<string>();
+            List<string> missingFiles = new List<string>();
+
+            foreach (string path in _attachmentPaths.ToList())
+            {
+                if (!File.Exists(path))
+                {
+                    missingFiles.Add(Path.GetFileName(path));
+                    _attachmentPaths.Remove(path);
+                    continue;
+                }
+
+                string errorMessage;
+                if (!attachmentService.ValidateAttachment(path, out errorMessage))
+                {
+                    invalidFiles.Add($"{Path.GetFileName(path)}: {errorMessage}");
+                    _attachmentPaths.Remove(path);
+                }
+            }
+
+            if (missingFiles.Count > 0 || invalidFiles.Count > 0)
+            {
+                string message = "";
+
+                if (missingFiles.Count > 0)
+                {
+                    message += "Archivos faltantes (removidos):\n" +
+                        string.Join("\n", missingFiles) + "\n\n";
+                }
+
+                if (invalidFiles.Count > 0)
+                {
+                    message += "Archivos inválidos (removidos):\n" +
+                        string.Join("\n", invalidFiles) + "\n\n";
+                }
+
+                if (_attachmentPaths.Count == 0)
+                {
+                    message += "No quedan archivos válidos.";
+                    MessageBox.Show(message, "Error de validación",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return false;
+                }
+                else
+                {
+                    message += $"Archivos válidos restantes: {_attachmentPaths.Count}\n\n¿Continuar?";
+                    var result = MessageBox.Show(message, "Advertencia",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+                    if (result == DialogResult.No)
+                    {
+                        return false;
+                    }
+                }
+
+                UpdateAttachmentDisplay();
+            }
+
+            return true;
         }
 
         private void imagenYVideoToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1060,6 +1196,12 @@ namespace Presentation
 
         private async void startbtn_Click(object sender, EventArgs e)
         {
+            // Validar adjuntos antes de comenzar
+            if (!ValidateAttachmentsBeforeSend())
+            {
+                return; // Detener si la validación falla
+            }
+
             cancellationToken = new CancellationTokenSource();
             pauseToken = new CancellationTokenSource();
             eachmessagetoken = new CancellationTokenSource();
@@ -2040,6 +2182,13 @@ namespace Presentation
         {
             filenametxt.Clear();
 
+            // Limpiar lista de adjuntos
+            if (_attachmentPaths != null)
+            {
+                _attachmentPaths.Clear();
+            }
+
+            filetype = null;
         }
 
         private void savebtn_Click(object sender, EventArgs e)
@@ -2899,7 +3048,9 @@ namespace Presentation
             token.ThrowIfCancellationRequested();
 
             // Send message/file
-            await SendMessageOrFile(messageToSend, filenametxt.Text, contactNumber);
+            // Obtener adjunto aleatorio si hay múltiples, sino usar el texto del campo
+            string attachmentToSend = GetRandomAttachmentPath() ?? filenametxt.Text;
+            await SendMessageOrFile(messageToSend, attachmentToSend, contactNumber);
 
             fila.Cells[2].Value = "S";
             sendedmessage++;
