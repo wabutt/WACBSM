@@ -180,3 +180,4 @@ C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\Presentation.csproj
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\WAButt.exe
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\WAButt.pdb
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\Presentation.AttachmentManager.resources
+C:\Users\Operaciones1\Downloads\WACBSM\Presentation\obj\Release\Presentation.AttachmentManager.resources

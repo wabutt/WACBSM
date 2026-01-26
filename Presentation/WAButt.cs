@@ -29,6 +29,7 @@ using Presentation.Models;
 using Presentation.Services;
 using Presentation.Helpers;
 using Presentation.ViewModels;
+using Infrastructure;
 
 namespace Presentation
 {
@@ -88,15 +89,30 @@ namespace Presentation
         {
             _viewModel = new MainViewModel();
 
-            // ChromeDriver en background
-            Task.Run(async () =>
+            // ChromeDriver en background - usa FetchDriver que verifica compatibilidad con Chrome instalado
+            Task.Run(() =>
             {
-                if (!await _viewModel.ChromeDriverService.EnsureChromeDriverAsync())
+                try
                 {
+                    var driverDir = Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                        "tempfilesWAButt", "webdriver"
+                    );
+                    FetchDriver.EnsureMatchingChromeDriver(driverDir);
+                    Console.WriteLine("✓ ChromeDriver verificado/actualizado correctamente");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"✗ Error con ChromeDriver: {ex.Message}");
                     this.Invoke((MethodInvoker)delegate {
+                        MessageBox.Show(
+                            $"Error al verificar ChromeDriver:\n{ex.Message}\n\nAsegúrese de tener Google Chrome instalado.",
+                            "Error ChromeDriver",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error
+                        );
                         Application.Exit();
                     });
-                    return;
                 }
             });
 

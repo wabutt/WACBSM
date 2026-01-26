@@ -1,19 +1,21 @@
-﻿using System;
+using System;
 using System.IO;
-using System.IO.Compression;   // ⚠️ Agrega ref a System.IO.Compression y System.IO.Compression.FileSystem
 using System.Linq;
 using System.Net;
 using System.Diagnostics;
-using Microsoft.Win32;
-using Newtonsoft.Json.Linq;    // via Newtonsoft.Json
+using Newtonsoft.Json.Linq;
 using ICSharpCode.SharpZipLib.Zip;
 
 namespace Infrastructure
 {
     public static class FetchDriver
     {
-        // Punto de entrada: asegura un chromedriver que coincida con el major de Chrome instalado.
-        // Devuelve la ruta al chromedriver.exe
+        private const string CHROME_FOR_TESTING_API = "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json";
+
+        /// <summary>
+        /// Asegura que exista la última versión Stable de ChromeDriver.
+        /// Si el usuario tiene una versión de Chrome diferente, se recomienda actualizar Chrome.
+        /// </summary>
         public static string EnsureMatchingChromeDriver(string driverDir)
         {
             if (string.IsNullOrWhiteSpace(driverDir))
@@ -21,29 +23,49 @@ namespace Infrastructure
 
             Directory.CreateDirectory(driverDir);
 
-            int chromeMajor = GetInstalledChromeMajor();
             var driverExe = Path.Combine(driverDir, "chromedriver.exe");
 
-            // ¿Ya hay driver del mismo major?
+            // Obtener la última versión Stable y su URL de descarga
+            string latestVersion;
+            string downloadUrl;
+            GetLatestStableVersion(out latestVersion, out downloadUrl);
+
+            Console.WriteLine($"Última versión Stable de ChromeDriver: {latestVersion}");
+
+            // Verificar si ya existe el driver con la versión correcta
             if (File.Exists(driverExe))
             {
                 try
                 {
                     var info = FileVersionInfo.GetVersionInfo(driverExe);
-                    var product = info.ProductVersion ?? info.FileVersion; // "142.0.x.x"
-                    if (!string.IsNullOrWhiteSpace(product))
+                    var currentVersion = info.ProductVersion ?? info.FileVersion;
+
+                    if (!string.IsNullOrWhiteSpace(currentVersion))
                     {
-                        int currentMajor;
-                        if (int.TryParse(product.Split('.')[0], out currentMajor) && currentMajor == chromeMajor)
-                            return driverExe;
+                        // Comparar major.minor.build (ignorar revision)
+                        var currentParts = currentVersion.Split('.');
+                        var latestParts = latestVersion.Split('.');
+
+                        if (currentParts.Length >= 3 && latestParts.Length >= 3)
+                        {
+                            bool sameVersion = currentParts[0] == latestParts[0] &&
+                                               currentParts[1] == latestParts[1] &&
+                                               currentParts[2] == latestParts[2];
+
+                            if (sameVersion)
+                            {
+                                Console.WriteLine($"✓ ChromeDriver {currentVersion} ya está actualizado");
+                                return driverExe;
+                            }
+                        }
                     }
                 }
-                catch { /* re-descargar si falla */ }
+                catch { /* re-descargar si falla la verificación */ }
             }
 
-            // Descarga el que corresponda
-            var version = FetchChromedriverVersionForMajor(chromeMajor);
-            DownloadAndExtractChromedriver(version, driverDir);
+            // Descargar la última versión
+            Console.WriteLine($"Descargando ChromeDriver {latestVersion}...");
+            DownloadAndExtractChromedriver(downloadUrl, driverDir);
 
             // A veces queda en subcarpetas (chromedriver-win64\chromedriver.exe)
             var nested = Directory
@@ -54,13 +76,18 @@ namespace Infrastructure
             {
                 try
                 {
-                    // Copia y borra el original para compatibilidad con .NET Framework
                     File.Copy(nested, driverExe, true);
                     try { File.Delete(nested); } catch { }
+
+                    // Limpiar carpeta vacía
+                    var nestedDir = Path.GetDirectoryName(nested);
+                    if (nestedDir != null && Directory.Exists(nestedDir) && !Directory.EnumerateFileSystemEntries(nestedDir).Any())
+                    {
+                        try { Directory.Delete(nestedDir); } catch { }
+                    }
                 }
                 catch
                 {
-                    // Si no pudo copiar, al menos usa el nested
                     driverExe = nested;
                 }
             }
@@ -68,148 +95,96 @@ namespace Infrastructure
             if (!File.Exists(driverExe))
                 throw new FileNotFoundException("No se pudo ubicar chromedriver.exe tras la extracción.");
 
+            Console.WriteLine($"✓ ChromeDriver {latestVersion} instalado correctamente");
             return driverExe;
         }
 
-        // ---- Helpers ----
-
-        private static int GetInstalledChromeMajor()
+        /// <summary>
+        /// Obtiene la última versión Stable y su URL de descarga desde Chrome for Testing API
+        /// </summary>
+        private static void GetLatestStableVersion(out string version, out string downloadUrl)
         {
-            // 1) HKCU\BLBeacon
-            try
-            {
-                var v = Registry.GetValue(
-                    @"HKEY_CURRENT_USER\Software\Google\Chrome\BLBeacon",
-                    "version",
-                    null
-                ) as string;
+            version = null;
+            downloadUrl = null;
 
-                int major;
-                if (!string.IsNullOrWhiteSpace(v) && int.TryParse(v.Split('.')[0], out major))
-                    return major;
-            }
-            catch { /* ignore */ }
-
-            // 2) FileVersion de chrome.exe
-            var candidates = new[]
-            {
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),     "Google","Chrome","Application","chrome.exe"),
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Google","Chrome","Application","chrome.exe")
-            };
-
-            foreach (var exe in candidates)
-            {
-                if (File.Exists(exe))
-                {
-                    var fv = FileVersionInfo.GetVersionInfo(exe).FileVersion; // "142.0.7444.61"
-                    int major;
-                    if (!string.IsNullOrWhiteSpace(fv) && int.TryParse(fv.Split('.')[0], out major))
-                        return major;
-                }
-            }
-
-            throw new InvalidOperationException("No se pudo detectar la versión de Google Chrome instalada.");
-        }
-
-        private static string FetchChromedriverVersionForMajor(int major)
-        {
-            // 1) Endpoint clásico por major
-            var url = "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_" + major;
             try
             {
                 using (var wc = new WebClient())
                 {
-                    var v = wc.DownloadString(url);
-                    if (!string.IsNullOrWhiteSpace(v)) return v.Trim();
-                }
-            }
-            catch { /* fallback */ }
-
-            // 2) Fallback: Chrome for Testing JSON
-            const string cft = "https://googlechromelabs.github.io/chrome-for-testing/last-known-good-versions-with-downloads.json";
-            try
-            {
-                using (var wc = new WebClient())
-                {
-                    var json = wc.DownloadString(cft);
+                    var json = wc.DownloadString(CHROME_FOR_TESTING_API);
                     var data = JObject.Parse(json);
 
-                    // busca un canal cuyo major coincida
-                    var channels = data["channels"];
-                    if (channels != null)
+                    var stable = data["channels"]?["Stable"];
+                    if (stable != null)
                     {
-                        foreach (var prop in channels.Children<JProperty>())
+                        version = stable["version"]?.ToString();
+
+                        // Buscar URL para win64
+                        var downloads = stable["downloads"]?["chromedriver"];
+                        if (downloads != null)
                         {
-                            var vToken = prop.Value["version"];
-                            if (vToken != null)
+                            foreach (var item in downloads)
                             {
-                                var vStr = vToken.ToString();
-                                int mj;
-                                if (int.TryParse(vStr.Split('.')[0], out mj) && mj == major)
-                                    return vStr;
+                                if (item["platform"]?.ToString() == "win64")
+                                {
+                                    downloadUrl = item["url"]?.ToString();
+                                    break;
+                                }
+                            }
+
+                            // Fallback a win32 si no hay win64
+                            if (string.IsNullOrEmpty(downloadUrl))
+                            {
+                                foreach (var item in downloads)
+                                {
+                                    if (item["platform"]?.ToString() == "win32")
+                                    {
+                                        downloadUrl = item["url"]?.ToString();
+                                        break;
+                                    }
+                                }
                             }
                         }
-
-                        // último recurso: usa stable
-                        var stable = channels["stable"]?["version"];
-                        if (stable != null) return stable.ToString();
                     }
                 }
             }
-            catch { /* ignore */ }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error obteniendo versión desde API: {ex.Message}");
+            }
 
-            throw new InvalidOperationException("No se pudo resolver la versión de ChromeDriver para el major " + major + ".");
+            // Fallback hardcoded si falla el API
+            if (string.IsNullOrEmpty(version) || string.IsNullOrEmpty(downloadUrl))
+            {
+                version = "131.0.6778.87";
+                downloadUrl = $"https://storage.googleapis.com/chrome-for-testing-public/{version}/win64/chromedriver-win64.zip";
+                Console.WriteLine($"Usando versión fallback: {version}");
+            }
         }
 
-        private static void DownloadAndExtractChromedriver(string version, string driverDir)
+        private static void DownloadAndExtractChromedriver(string url, string driverDir)
         {
-            // limpia drivers previos
+            // Limpiar drivers previos
             try
             {
                 foreach (var f in Directory.EnumerateFiles(driverDir, "chromedriver*.exe", SearchOption.AllDirectories))
                     TryDelete(f);
             }
-            catch { /* ignore */ }
+            catch { }
 
             var zipPath = Path.Combine(driverDir, "chromedriver.zip");
 
-            // Fuentes ordenadas (CfT público + mirrors + storage clásico)
-            var urls = new[]
-            {
-                "https://storage.googleapis.com/chrome-for-testing-public/" + version + "/win64/chromedriver-win64.zip",
-                "https://storage.googleapis.com/chrome-for-testing-public/" + version + "/win32/chromedriver-win32.zip",
-                "https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/" + version + "/win64/chromedriver-win64.zip",
-                "https://edgedl.me.gvt1.com/edgedl/chrome/chrome-for-testing/" + version + "/win32/chromedriver-win32.zip",
-                "https://chromedriver.storage.googleapis.com/" + version + "/chromedriver_win64.zip",
-                "https://chromedriver.storage.googleapis.com/" + version + "/chromedriver_win32.zip"
-            };
-
-            Exception last = null;
-            foreach (var url in urls)
-            {
-                try
-                {
-                    using (var wc = new WebClient())
-                    {
-                        wc.DownloadFile(url, zipPath);
-                    }
-                    var fi = new FileInfo(zipPath);
-                    if (fi.Length < 100000) throw new Exception("Zip sospechosamente pequeño.");
-                    last = null;
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    last = ex;
-                    TryDelete(zipPath);
-                }
-            }
-
-            if (last != null)
-                throw new InvalidOperationException("No se pudo descargar ChromeDriver compatible.", last);
-
             try
             {
+                using (var wc = new WebClient())
+                {
+                    wc.DownloadFile(url, zipPath);
+                }
+
+                var fi = new FileInfo(zipPath);
+                if (fi.Length < 100000)
+                    throw new Exception("Archivo descargado sospechosamente pequeño.");
+
                 FastZip fastZip = new FastZip();
                 fastZip.ExtractZip(zipPath, driverDir, "");
                 Console.WriteLine("✓ Extracción completada");

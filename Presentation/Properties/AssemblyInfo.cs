@@ -34,6 +34,6 @@ using System.Runtime.InteropServices;
 // [assembly: AssemblyVersion("1.0.*")]
 
 // ✓ ACTUALIZADO - Esta es la versión que AutoUpdater leerá
-[assembly: AssemblyVersion("1.0.0.19")]
-[assembly: AssemblyFileVersion("1.0.0.19")]
-[assembly: AssemblyInformationalVersion("1.0.0.19")]
+[assembly: AssemblyVersion("1.0.0.21")]
+[assembly: AssemblyFileVersion("1.0.0.21")]
+[assembly: AssemblyInformationalVersion("1.0.0.21")]

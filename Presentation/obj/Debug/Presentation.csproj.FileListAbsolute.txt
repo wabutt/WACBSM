@@ -391,3 +391,4 @@ C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Debug\Presentation.csproj.F
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Debug\Presentation.csproj.Fody.RuntimeCopyLocal.cache
 C:\Users\Operaciones1\Downloads\WACBSM\Presentation\obj\Debug\Presentation.csproj.Fody.CopyLocal.cache
 C:\Users\Operaciones1\Downloads\WACBSM\Presentation\obj\Debug\Presentation.csproj.Fody.RuntimeCopyLocal.cache
+C:\Users\Operaciones1\Downloads\WACBSM\Presentation\obj\Debug\Presentation.AttachmentManager.resources
