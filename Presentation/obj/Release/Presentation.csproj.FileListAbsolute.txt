@@ -165,6 +165,7 @@ C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Release\DataAccess.dll.conf
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\bin\Release\MySql.Data.xml
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\Presentation.csproj.AssemblyReference.cache
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\WAButt.exe.config
+C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\Presentation.AttachmentManager.resources
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\Presentation.ExtractContacts.resources
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\Presentation.LoadWindow.resources
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\Presentation.WAButtfrm.resources
@@ -179,4 +180,3 @@ C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\WAButt.application
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\Presentation.csproj.CopyComplete
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\WAButt.exe
 C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\WAButt.pdb
-C:\Mac\Home\Documents\GitHub\WACBSM\Presentation\obj\Release\Presentation.AttachmentManager.resources
